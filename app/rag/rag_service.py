@@ -55,15 +55,15 @@ def _score_chunk(question_tokens: Set[str], chunk: KnowledgeChunk) -> float:
 def answer_from_knowledge(question: str, top_k: int = 3) -> str:
     if not KNOWLEDGE_CHUNKS:
         return (
-            "Trenutno nimam dostopa do podatkov s spletne strani Kovačnik. "
-            "Poskusite kasneje ali preverite www.kovacnik.com."
+            "Trenutno nimam dostopa do podatkov zdravstvenega centra. "
+            "Poskusite kasneje ali preverite uradno spletno stran."
         )
 
     question_tokens = _tokenize(question) - STOPWORDS
     if not question_tokens:
         return (
             "Na podlagi dosedanjih podatkov težko razumem vprašanje. "
-            "Poskusite vprašati npr. 'Kaj ponujate za vikend kosila?' ali 'Koliko nočitev najmanj moram rezervirati julija?'"
+            "Poskusite vprašati npr. 'Kako poteka naročanje?' ali 'Katere preglede izvajate?'"
         )
 
     scored: List[tuple[float, KnowledgeChunk]] = []
@@ -75,7 +75,7 @@ def answer_from_knowledge(question: str, top_k: int = 3) -> str:
     if not scored:
         return (
             "Trenutno v podatkih ne najdem jasnega odgovora na to vprašanje. "
-            "Predlagam, da nas kontaktirate preko info@kovacnik.com ali preverite www.kovacnik.com."
+            "Predlagam, da nas kontaktirate neposredno ali preverite uradno spletno stran."
         )
 
     scored.sort(key=lambda pair: pair[0], reverse=True)

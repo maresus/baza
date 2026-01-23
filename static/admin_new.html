@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zdravstveni center – Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0891b2;
+      --primary-dark: #0e7490;
+      --primary-light: #22d3ee;
+      --accent: #14b8a6;
+      --accent-light: #5eead4;
+      --bg: #f0fdfa;
+      --card: #ffffff;
+      --text: #134e4a;
+      --text-muted: #5f9ea0;
+      --border: #99f6e4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --pending: #fbbf24;
+      --shadow: 0 4px 20px rgba(8, 145, 178, 0.1);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 { font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .header-actions { display: flex; gap: 8px; }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+    .btn-primary { background: white; color: var(--primary); }
+    .btn-primary:hover { background: var(--bg); }
+    .btn-secondary { background: rgba(255,255,255,0.2); color: white; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.3); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 16px; }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-badge {
+      background: var(--card);
+      border-radius: 8px;
+      padding: 10px 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .stat-badge .num { font-weight: 700; font-size: 1.2rem; color: var(--primary); }
+    .stat-badge.pending { border-left: 3px solid var(--pending); }
+    .stat-badge.confirmed { border-left: 3px solid var(--success); }
+
+    /* Pending section - TOP */
+    .pending-section {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      overflow: hidden;
+      border: 2px solid var(--pending);
+    }
+    .pending-header {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: white;
+      padding: 12px 16px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pending-list { max-height: 200px; overflow-y: auto; }
+    .pending-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pending-item:last-child { border-bottom: none; }
+    .pending-item:hover { background: #fffbeb; }
+    .pending-info { flex: 1; min-width: 200px; }
+    .pending-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .pending-info p { font-size: 12px; color: var(--text-muted); }
+    .pending-actions { display: flex; gap: 6px; }
+    .empty-pending { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+    /* Calendar section */
+    .calendar-section {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .mini-calendar {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .day-schedule {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .calendar-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .calendar-title { font-weight: 700; font-size: 14px; }
+    .view-toggle { display: flex; gap: 4px; }
+    .view-btn {
+      padding: 6px 12px;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .view-btn.active { background: white; color: var(--primary); }
+    .nav-btns { display: flex; gap: 6px; }
+    .nav-btn {
+      padding: 6px 12px;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.3); }
+
+    /* Service type filter */
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      padding: 10px 16px;
+      background: #f0fdfa;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover { background: var(--bg); border-color: var(--primary); }
+    .filter-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    /* Week view - compact */
+    .week-grid {
+      display: grid;
+      grid-template-columns: 50px repeat(7, 1fr);
+    }
+    .week-day-header {
+      padding: 8px 4px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f0fdfa;
+      border-bottom: 1px solid var(--border);
+    }
+    .week-day-header.today { background: #ccfbf1; }
+    .week-day-header small { display: block; font-weight: 400; color: var(--text-muted); }
+    .time-label {
+      padding: 2px 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+      background: #f8fffe;
+      border-bottom: 1px solid var(--border);
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .day-cell {
+      min-height: 32px;
+      border-bottom: 1px solid var(--border);
+      border-left: 1px solid var(--border);
+      padding: 1px;
+      font-size: 10px;
+      overflow: hidden;
+    }
+    .day-cell.today { background: rgba(20, 184, 166, 0.08); }
+    .day-cell:hover { background: rgba(20, 184, 166, 0.05); }
+
+    /* Month view */
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .month-day-header {
+      padding: 8px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f0fdfa;
+      border-bottom: 1px solid var(--border);
+    }
+    .month-cell {
+      min-height: 80px;
+      border-bottom: 1px solid var(--border);
+      border-left: 1px solid var(--border);
+      padding: 4px;
+      font-size: 10px;
+    }
+    .month-cell:nth-child(7n+1) { border-left: none; }
+    .month-cell.today { background: rgba(20, 184, 166, 0.1); }
+    .month-cell.other-month { background: #f8fffe; opacity: 0.5; }
+    .month-cell .day-num {
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    .month-cell.today .day-num {
+      background: var(--primary);
+      color: white;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .month-cell.selected {
+      border: 2px solid var(--primary) !important;
+      background: rgba(8, 145, 178, 0.1) !important;
+    }
+
+    /* Appointment chips */
+    .appt {
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent-light) 100%);
+      color: var(--text);
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 9px;
+      margin: 1px 0;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .appt:hover { opacity: 0.9; transform: scale(1.02); }
+    .appt.pending { background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%); }
+    .appt.confirmed { background: linear-gradient(135deg, #86efac 0%, #4ade80 100%); }
+    .appt.processing { background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%); }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: var(--card);
+      border-radius: var(--radius);
+      max-width: 560px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    .modal-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { font-size: 1rem; }
+    .modal-close {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .modal-body { padding: 16px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full { grid-column: span 2; }
+    .form-group label { font-weight: 600; font-size: 12px; color: var(--text); }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 8px 10px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+    .modal-footer {
+      padding: 12px 16px;
+      background: var(--bg);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Slot picker compact */
+    .slot-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    .slot-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .slot-btn:hover:not(:disabled) { background: var(--primary); color: white; }
+    .slot-btn:disabled { background: #fee2e2; color: #991b1b; cursor: not-allowed; }
+    .slot-btn.selected { background: var(--primary); color: white; }
+
+    /* Toast */
+    .toast-container { position: fixed; top: 16px; right: 16px; z-index: 2000; }
+    .toast {
+      background: var(--card);
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      margin-bottom: 8px;
+      font-size: 13px;
+      animation: slideIn 0.3s ease;
+      border-left: 4px solid var(--primary);
+    }
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: span 1; }
+      .pending-item { flex-direction: column; align-items: flex-start; }
+      .calendar-section { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <h1>🏥 Zdravstveni center</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="loadData()">🔄 Osveži</button>
+      <button class="btn btn-primary" onclick="openNewModal()">+ Novo naročilo</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-badge pending">⏳ Čaka: <span class="num" id="stat-pending">0</span></div>
+      <div class="stat-badge confirmed">✅ Potrjeno: <span class="num" id="stat-confirmed">0</span></div>
+      <div class="stat-badge">📅 Danes: <span class="num" id="stat-today">0</span></div>
+      <div class="stat-badge">📊 Ta teden: <span class="num" id="stat-week">0</span></div>
+      <div class="stat-badge" style="flex: 1; min-width: 200px;">
+        <input type="text" id="search-input" placeholder="🔍 Išči po imenu..."
+               style="border: none; background: transparent; outline: none; width: 100%; font-size: 13px;"
+               oninput="handleSearch(this.value)" />
+      </div>
+    </div>
+
+    <!-- PENDING ON TOP -->
+    <div class="pending-section" id="pending-section">
+      <div class="pending-header">
+        <span>⏳ Čakajo na potrditev</span>
+        <span id="pending-count">0</span>
+      </div>
+      <div class="pending-list" id="pending-list">
+        <div class="empty-pending">Ni čakajočih naročil 🎉</div>
+      </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar-section">
+      <!-- Leva stran: Mini koledar -->
+      <div class="mini-calendar">
+        <div class="calendar-header">
+          <div class="nav-btns">
+            <button class="nav-btn" onclick="navigate(-1)">◀</button>
+            <button class="nav-btn" onclick="goToday()">Danes</button>
+            <button class="nav-btn" onclick="navigate(1)">▶</button>
+          </div>
+          <div class="calendar-title" id="calendar-title">Januar 2026</div>
+        </div>
+        <!-- Filter po vrsti pregleda -->
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setFilter('VSE')">Vsi</button>
+          <button class="filter-btn" onclick="setFilter('Ortopedski pregled')">🦴 Ortopedski</button>
+          <button class="filter-btn" onclick="setFilter('Dermatološki pregled')">🩺 Dermatološki</button>
+          <button class="filter-btn" onclick="setFilter('Okulistični pregled')">👁️ Okulistični</button>
+          <button class="filter-btn" onclick="setFilter('Laserski poseg')">✨ Laserski</button>
+          <button class="filter-btn" onclick="setFilter('Estetski poseg')">💉 Estetski</button>
+          <button class="filter-btn" onclick="setFilter('Kozmetični salon')">💆 Kozmetični</button>
+          <button class="filter-btn" onclick="setFilter('Fizioterapija')">🏃 Fizioterapija</button>
+        </div>
+        <div id="mini-calendar-body"></div>
+      </div>
+
+      <!-- Desna stran: Terminski plan -->
+      <div class="day-schedule">
+        <div class="calendar-header">
+          <div class="calendar-title" id="day-title">Izberi dan</div>
+        </div>
+        <div id="day-schedule-body" style="overflow-y: auto; max-height: 70vh;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="edit-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Uredi naročilo</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="edit-form" onsubmit="saveAppointment(event)">
+        <div class="modal-body">
+          <input type="hidden" id="edit-id" />
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Status</label>
+              <select id="edit-status">
+                <option value="pending">⏳ Čaka</option>
+                <option value="processing">📋 V obdelavi</option>
+                <option value="confirmed">✅ Potrjeno</option>
+                <option value="rejected">❌ Zavrnjeno</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Vrsta pregleda</label>
+              <select id="edit-location" onchange="refreshSlots()">
+                <option value="Ortopedski pregled">🦴 Ortopedski</option>
+                <option value="Dermatološki pregled">🩺 Dermatološki</option>
+                <option value="Okulistični pregled">👁️ Okulistični</option>
+                <option value="Laserski poseg">✨ Laserski</option>
+                <option value="Estetski poseg">💉 Estetski</option>
+                <option value="Kozmetični salon">💆 Kozmetični</option>
+                <option value="Fizioterapija">🏃 Fizioterapija</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Datum</label>
+              <input type="date" id="edit-date" required onchange="refreshSlots()" />
+            </div>
+            <div class="form-group">
+              <label>Ura</label>
+              <input type="time" id="edit-time" />
+            </div>
+            <div class="form-group">
+              <label>Ime in priimek</label>
+              <input type="text" id="edit-name" required />
+            </div>
+            <div class="form-group">
+              <label>Telefon</label>
+              <input type="tel" id="edit-phone" required />
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="edit-email" required />
+            </div>
+            <div class="form-group">
+              <label>Datum rojstva</label>
+              <input type="text" id="edit-birth" placeholder="DD.MM.LLLL" />
+            </div>
+            <div class="form-group full">
+              <label>Prosti termini (klik izbere)</label>
+              <div class="slot-picker" id="slot-picker">Izberi datum</div>
+            </div>
+            <div class="form-group full">
+              <label>Opombe</label>
+              <textarea id="edit-notes" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" id="delete-btn" style="margin-right: auto; display: none;" onclick="deleteAppt()">🗑️ Briši</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Prekliči</button>
+          <button type="submit" class="btn btn-success">💾 Shrani</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    const API = '/api/admin';
+    let currentDate = new Date();
+    let selectedDate = new Date(); // Za day view
+    let currentFilter = 'VSE';
+    let searchTerm = '';
+    let allReservations = [];
+    let calendarData = {};
+
+    const DAYS = ['Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob', 'Ned'];
+    const MONTHS = ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'];
+    const TIMES = [];
+    for (let h = 8; h < 18; h++) {
+      TIMES.push(`${String(h).padStart(2, '0')}:00`);
+      TIMES.push(`${String(h).padStart(2, '0')}:30`);
+    }
+
+    // Helpers
+    function getMonday(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(date.setDate(diff));
+    }
+    function formatDateISO(d) { return d.toISOString().split('T')[0]; }
+    function formatDateSL(d) { return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`; }
+    function parseDate(str) {
+      if (!str) return null;
+      const parts = str.split('.');
+      if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
+      return new Date(str);
+    }
+    function isToday(d) {
+      const today = new Date();
+      return d.toDateString() === today.toDateString();
+    }
+    function isSameMonth(d1, d2) {
+      return d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
+    }
+
+    function toast(msg, type = 'info') {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    // Load
+    async function loadData() {
+      try {
+        const [resResp, statsResp] = await Promise.all([
+          fetch(`${API}/reservations?limit=500`),
+          fetch(`${API}/stats`)
+        ]);
+        const resData = await resResp.json();
+        const stats = await statsResp.json();
+        allReservations = resData.reservations || [];
+
+        document.getElementById('stat-pending').textContent = stats.po_statusu?.pending || 0;
+        document.getElementById('stat-confirmed').textContent = stats.po_statusu?.confirmed || 0;
+        document.getElementById('stat-today').textContent = stats.danes || 0;
+        document.getElementById('stat-week').textContent = stats.ta_teden || 0;
+
+        buildCalendarData();
+        renderCalendar();
+        renderPending();
+      } catch (e) {
+        console.error(e);
+        toast('Napaka pri nalaganju', 'error');
+      }
+    }
+
+    function buildCalendarData() {
+      calendarData = {};
+      // Filtriraj po vrsti pregleda
+      let filtered = currentFilter === 'VSE'
+        ? allReservations
+        : allReservations.filter(r => r.location === currentFilter);
+
+      // Filtriraj po iskalnem nizu (ime)
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(term));
+      }
+
+      filtered.forEach(r => {
+        if (!r.date) return;
+        const d = parseDate(r.date);
+        if (!d) return;
+        const key = formatDateISO(d);
+        if (!calendarData[key]) calendarData[key] = [];
+        calendarData[key].push(r);
+      });
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      // Update active button
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        const btnFilter = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+        btn.classList.toggle('active', btnFilter === filter);
+      });
+      buildCalendarData();
+      renderCalendar();
+    }
+
+    function handleSearch(value) {
+      searchTerm = value;
+      buildCalendarData();
+      renderCalendar();
+      renderPending();
+    }
+
+    // Pending
+    function renderPending() {
+      let pending = allReservations.filter(r => r.status === 'pending');
+      // Filter by search term
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        pending = pending.filter(r => (r.name || '').toLowerCase().includes(term));
+      }
+      document.getElementById('pending-count').textContent = pending.length;
+      const list = document.getElementById('pending-list');
+
+      if (!pending.length) {
+        list.innerHTML = '<div class="empty-pending">Ni čakajočih naročil 🎉</div>';
+        document.getElementById('pending-section').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('pending-section').style.display = '';
+      list.innerHTML = pending.slice(0, 10).map(r => `
+        <div class="pending-item">
+          <div class="pending-info">
+            <h4>${r.name || 'Neznano'}</h4>
+            <p>${r.location || 'Pregled'} · ${r.date || ''} ${r.time || ''} · ${r.phone || ''}</p>
+          </div>
+          <div class="pending-actions">
+            <button class="btn btn-success btn-sm" onclick="confirmAppt(${r.id})">✅ Potrdi</button>
+            <button class="btn btn-secondary btn-sm" onclick="openEdit(${r.id})">✏️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Navigation
+    function selectDay(dateStr) {
+      selectedDate = new Date(dateStr);
+      renderDaySchedule();
+    }
+
+    function navigate(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function goToday() {
+      currentDate = new Date();
+      selectedDate = new Date();
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      renderMiniCalendar();
+      renderDaySchedule();
+    }
+
+    function renderDaySchedule() {
+      const body = document.getElementById('day-schedule-body');
+      const titleEl = document.getElementById('day-title');
+      const date = selectedDate;
+      const dayNames = ['Nedelja', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota'];
+      titleEl.textContent = `${dayNames[date.getDay()]}, ${formatDateSL(date)}`;
+
+      const key = formatDateISO(date);
+      const appts = calendarData[key] || [];
+
+      let html = '<div class="week-grid" style="grid-template-columns: 80px 1fr;">';
+
+      // Časovni sloti s pol urnimi intervali (08:00 - 20:00)
+      const times = [];
+      for (let h = 8; h <= 20; h++) {
+        times.push(`${String(h).padStart(2, '0')}:00`);
+        if (h < 20) times.push(`${String(h).padStart(2, '0')}:30`);
+      }
+
+      times.forEach(time => {
+        html += `<div class="time-label" style="padding: 8px;">${time}</div>`;
+        const timeAppts = appts.filter(a => a.time === time);
+        const apptHtml = timeAppts.map(a =>
+          `<div class="appt ${a.status}" onclick="event.stopPropagation(); openEdit(${a.id})" style="font-size: 12px; padding: 6px 8px; margin: 2px;">
+            <strong>${a.name || '?'}</strong><br>
+            ${a.location || 'Pregled'}${a.phone ? ' · ' + a.phone : ''}
+          </div>`
+        ).join('');
+        const cls = isToday(date) ? 'today' : '';
+        html += `<div class="day-cell ${cls}" style="min-height: 50px; cursor: pointer; padding: 4px;" onclick="openNewModalWithTime('${time}')">${apptHtml}</div>`;
+      });
+
+      html += '</div>';
+      body.innerHTML = html;
+    }
+
+    function renderMiniCalendar() {
+      const body = document.getElementById('mini-calendar-body');
+      const titleEl = document.getElementById('calendar-title');
+      titleEl.textContent = `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+      const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      let startDay = firstDay.getDay() - 1;
+      if (startDay < 0) startDay = 6;
+
+      let html = '<div class="month-grid">';
+      // Headers
+      DAYS.forEach(d => { html += `<div class="month-day-header">${d}</div>`; });
+
+      // Empty cells before
+      for (let i = 0; i < startDay; i++) {
+        html += '<div class="month-cell other-month"></div>';
+      }
+
+      // Days
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        const key = formatDateISO(d);
+        const isSelected = formatDateISO(selectedDate) === key;
+        const cls = isToday(d) ? 'today' : '';
+        const selectedCls = isSelected ? 'selected' : '';
+        const appts = calendarData[key] || [];
+        const count = appts.length;
+        const countHtml = count > 0 ? `<div style="font-size:10px;color:var(--primary);font-weight:600;">${count} ${count === 1 ? 'termin' : 'termini'}</div>` : '';
+
+        html += `<div class="month-cell ${cls} ${selectedCls}" style="cursor: pointer; min-height: 60px; ${isSelected ? 'border: 2px solid var(--primary); background: rgba(8, 145, 178, 0.1);' : ''}" onclick="selectDay('${key}')">
+          <div class="day-num">${day}</div>
+          ${countHtml}
+        </div>`;
+      }
+
+      html += '</div>';
+      body.innerHTML = html;
+    }
+
+    // Modal
+    function openNewModal() {
+      document.getElementById('edit-id').value = '';
+      document.getElementById('modal-title').textContent = 'Novo naročilo';
+      document.getElementById('edit-form').reset();
+      document.getElementById('edit-date').value = formatDateISO(new Date());
+      document.getElementById('edit-status').value = 'confirmed';
+      document.getElementById('delete-btn').style.display = 'none';
+      refreshSlots();
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function openNewModalWithTime(time) {
+      event.stopPropagation();
+      const date = selectedDate;
+      document.getElementById('edit-id').value = '';
+      document.getElementById('modal-title').textContent = 'Novo naročilo';
+      document.getElementById('edit-form').reset();
+      document.getElementById('edit-date').value = formatDateISO(date);
+      document.getElementById('edit-time').value = time;
+      document.getElementById('edit-status').value = 'confirmed';
+      document.getElementById('delete-btn').style.display = 'none';
+      refreshSlots();
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function openEdit(id) {
+      const r = allReservations.find(a => a.id === id);
+      if (!r) return;
+      document.getElementById('modal-title').textContent = `Naročilo #${id}`;
+      document.getElementById('edit-id').value = id;
+      document.getElementById('edit-status').value = r.status || 'pending';
+      document.getElementById('edit-location').value = r.location || 'Ortopedski pregled';
+      document.getElementById('edit-date').value = r.date ? formatDateISO(parseDate(r.date)) : '';
+      document.getElementById('edit-time').value = r.time || '';
+      document.getElementById('edit-name').value = r.name || '';
+      document.getElementById('edit-phone').value = r.phone || '';
+      document.getElementById('edit-email').value = r.email || '';
+      document.getElementById('edit-birth').value = r.birth_date || '';
+      document.getElementById('edit-notes').value = r.special_needs || r.admin_notes || '';
+      document.getElementById('delete-btn').style.display = 'inline-flex';
+      refreshSlots();
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('edit-modal').classList.remove('active');
+    }
+
+    function refreshSlots() {
+      const dateVal = document.getElementById('edit-date').value;
+      const location = document.getElementById('edit-location').value;
+      const container = document.getElementById('slot-picker');
+      if (!dateVal) { container.innerHTML = 'Izberi datum'; return; }
+
+      const dayAppts = calendarData[dateVal] || [];
+      const currentTime = document.getElementById('edit-time').value;
+
+      container.innerHTML = TIMES.map(t => {
+        const taken = dayAppts.some(a => a.time === t && a.location === location);
+        const sel = t === currentTime ? 'selected' : '';
+        return `<button type="button" class="slot-btn ${sel}" ${taken ? 'disabled' : ''} onclick="selectSlot('${t}')">${t}</button>`;
+      }).join('');
+    }
+
+    function selectSlot(t) {
+      document.getElementById('edit-time').value = t;
+      document.querySelectorAll('.slot-btn').forEach(b => b.classList.toggle('selected', b.textContent === t));
+    }
+
+    async function saveAppointment(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const dateInput = document.getElementById('edit-date').value;
+      const [y, m, d] = dateInput.split('-');
+      const formattedDate = `${d}.${m}.${y}`;
+
+      // Base payload (brez status za nova naročila)
+      const basePayload = {
+        location: document.getElementById('edit-location').value,
+        date: formattedDate,
+        time: document.getElementById('edit-time').value,
+        name: document.getElementById('edit-name').value,
+        phone: document.getElementById('edit-phone').value,
+        email: document.getElementById('edit-email').value,
+        birth_date: document.getElementById('edit-birth').value,
+        special_needs: document.getElementById('edit-notes').value,
+      };
+
+      // Za urejanje dodaj status, za novo naročilo ne
+      const payload = id
+        ? { ...basePayload, status: document.getElementById('edit-status').value }
+        : basePayload;
+
+      try {
+        const url = id ? `${API}/reservations/${id}` : `${API}/reservations`;
+        const method = id ? 'PUT' : 'POST';
+        const body = id ? payload : { ...payload, reservation_type: 'table', people: 1, source: 'admin' };
+
+        const resp = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.detail || 'Napaka');
+        }
+
+        toast(id ? 'Shranjeno!' : 'Naročilo ustvarjeno!', 'success');
+        closeModal();
+        loadData();
+      } catch (err) {
+        toast(`Napaka: ${err.message}`, 'error');
+      }
+    }
+
+    async function confirmAppt(id) {
+      try {
+        const resp = await fetch(`${API}/reservations/${id}/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!resp.ok) throw new Error('Napaka');
+        toast('Potrjeno! Email poslan.', 'success');
+        loadData();
+      } catch (err) {
+        toast(`Napaka: ${err.message}`, 'error');
+      }
+    }
+
+    async function deleteAppt() {
+      const id = document.getElementById('edit-id').value;
+      if (!id) return;
+      if (!confirm('Ali ste prepričani, da želite izbrisati to naročilo?')) return;
+      try {
+        const resp = await fetch(`${API}/reservations/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.detail || 'Napaka pri brisanju');
+        }
+        toast('Naročilo izbrisano!', 'success');
+        closeModal();
+        loadData();
+      } catch (err) {
+        toast(`Napaka: ${err.message}`, 'error');
+      }
+    }
+
+    // Init
+    loadData();
+    setInterval(loadData, 60000);
+  </script>
+</body>
+</html>

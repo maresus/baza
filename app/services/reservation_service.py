@@ -6,53 +6,49 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Tuple
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    HAS_POSTGRES = True
+except ImportError:
+    HAS_POSTGRES = False
 
 from app.models.reservation import ReservationRecord
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-ROOMS = [
-    {"id": "ALJAZ", "name": "Soba ALJAŽ - Soba z balkonom (2 + 2)", "capacity": 4},
-    {
-        "id": "JULIJA",
-        "name": "Soba JULIJA - Družinska soba z balkonom (2 odrasla + 2 otroka)",
-        "capacity": 4,
-    },
-    {
-        "id": "ANA",
-        "name": "Soba ANA - Družinska soba z dvema spalnicama (2 odrasla + 2 otroka)",
-        "capacity": 4,
-    },
+# BETNAVA - Zdravstvene storitve (ordinacije)
+# Vsaka storitev deluje kot "soba" z neomejeno kapaciteto (sloti)
+SERVICES = [
+    {"id": "DERMATOLOG", "name": "Dermatološki pregled", "duration_minutes": 30},
+    {"id": "ORTOPED", "name": "Ortopedski pregled", "duration_minutes": 30},
+    {"id": "OKULIST", "name": "Okulistični pregled", "duration_minutes": 30},
+    {"id": "LASERSKI_POSEG", "name": "Laserski poseg", "duration_minutes": 30},
+    {"id": "ESTETSKI_POSEG", "name": "Estetski poseg", "duration_minutes": 30},
+    {"id": "KOZMETIKA", "name": "Kozmetični salon", "duration_minutes": 60},
 ]
-ROOM_NAME_MAP = {
-    "aljaž": "ALJAZ",
-    "aljaz": "ALJAZ",
-    "jULIJA".lower(): "JULIJA",
-    "julija": "JULIJA",
-    "ana": "ANA",
+
+SERVICE_NAME_MAP = {
+    "dermatolog": "DERMATOLOG",
+    "dermatološki": "DERMATOLOG",
+    "ortoped": "ORTOPED",
+    "ortopedski": "ORTOPED",
+    "okulist": "OKULIST",
+    "okulistični": "OKULIST",
+    "očesni": "OKULIST",
+    "laserski": "LASERSKI_POSEG",
+    "laser": "LASERSKI_POSEG",
+    "estetski": "ESTETSKI_POSEG",
+    "botox": "ESTETSKI_POSEG",
+    "filler": "ESTETSKI_POSEG",
+    "kozmetika": "KOZMETIKA",
+    "kozmetični": "KOZMETIKA",
 }
 
-DINING_ROOMS = [
-    {"id": "ORTOPEDSKI_PREGLED", "name": "Ortopedski pregled", "capacity": 999},
-    {"id": "DERMATOLOSKI_PREGLED", "name": "Dermatološki pregled", "capacity": 999},
-    {"id": "LASERSKI_POSEG", "name": "Laserski poseg", "capacity": 999},
-    {"id": "ESTETSKI_POSEG", "name": "Estetski poseg", "capacity": 999},
-    {"id": "FIZIOTERAPIJA", "name": "Fizioterapija", "capacity": 999},
-    {"id": "OKULISTICNI_PREGLED", "name": "Okulistični pregled", "capacity": 999},
-    {"id": "PREDPIS_OCAL_LEC", "name": "Predpis očal/leč", "capacity": 999},
-    {"id": "KOZMETICNI_SALON", "name": "Kozmetični salon", "capacity": 999},
-]
-TOTAL_TABLE_CAPACITY = sum(r["capacity"] for r in DINING_ROOMS)
-DEFAULT_APPOINTMENT_TYPE = DINING_ROOMS[0]["name"] if DINING_ROOMS else "Pregled"
-MAX_NIGHTS = 30
-
-ROOM_CLOSED_DAYS = set()  # brez zaprtih dni za pregleden projekt
-TABLE_OPEN_DAYS = set(range(7))  # naročanje pregledov vse dni
-LAST_LUNCH_ARRIVAL_HOUR = 20
-OPENING_START_HOUR = 7
-OPENING_END_HOUR = 20
+# Delovni dnevi in čas
+WORKING_DAYS = {0, 1, 2, 3, 4}  # Pon-Pet (0=Pon, 6=Ned)
+OPENING_START_HOUR = 8  # 8:00
+OPENING_END_HOUR = 18   # 18:00 (zadnji termin 17:30)
 
 
 class ReservationService:
@@ -62,8 +58,11 @@ class ReservationService:
         self.backup_dir = os.path.join(project_root, "backups")
         os.makedirs(self.backup_dir, exist_ok=True)
 
-        # Če ni DATABASE_URL, uporabimo SQLite (lokalni razvoj)
-        self.use_postgres = bool(DATABASE_URL)
+        # Če ni Postgres URL ali psycopg2, uporabimo SQLite (lokalni razvoj)
+        db_url = (DATABASE_URL or "").strip()
+        self.use_postgres = bool(
+            HAS_POSTGRES and (db_url.startswith("postgres://") or db_url.startswith("postgresql://"))
+        )
         if not self.use_postgres:
             self.data_dir = os.path.join(project_root, "data")
             os.makedirs(self.data_dir, exist_ok=True)
@@ -100,6 +99,14 @@ class ReservationService:
             ("confirm_via", "TEXT"),
             ("event_type", "TEXT"),
             ("special_needs", "TEXT"),
+            ("birth_date", "TEXT"),
+            ("time_window", "TEXT"),
+            # BETNAVA specific fields
+            ("service_type", "TEXT"),  # DERMATOLOG, ORTOPED, OKULIST, ...
+            ("duration_minutes", "INTEGER"),  # 30 or 60
+            ("patient_age", "INTEGER"),
+            ("patient_health_card", "TEXT"),
+            ("reason", "TEXT"),  # Razlog obiska
         ]
 
         if self.use_postgres:
@@ -134,7 +141,14 @@ class ReservationService:
                         kids_small TEXT,
                         confirm_via TEXT,
                         event_type TEXT,
-                        special_needs TEXT
+                        special_needs TEXT,
+                        birth_date TEXT,
+                        time_window TEXT,
+                        service_type TEXT,
+                        duration_minutes INTEGER,
+                        patient_age INTEGER,
+                        patient_health_card TEXT,
+                        reason TEXT
                     )
                     """
                 )
@@ -237,7 +251,14 @@ class ReservationService:
                     kids_small TEXT,
                     confirm_via TEXT,
                     event_type TEXT,
-                    special_needs TEXT
+                    special_needs TEXT,
+                    birth_date TEXT,
+                    time_window TEXT,
+                    service_type TEXT,
+                    duration_minutes INTEGER,
+                    patient_age INTEGER,
+                    patient_health_card TEXT,
+                    reason TEXT
                 )
                 """
             )
@@ -572,47 +593,54 @@ class ReservationService:
     def check_table_availability(
         self, date_str: str, time_str: str, people: int
     ) -> tuple[bool, Optional[str], list[str]]:
+        """Za zdravstveni center: preveri če je termin prost."""
         normalized_time = self._parse_time(time_str)
         if not normalized_time:
             return False, None, []
-        occupancy = self._table_room_occupancy()
-        suggestions: list[str] = []
 
-        # global limit čez oba prostora
-        total_used = 0
-        for room in DINING_ROOMS:
-            total_used += occupancy.get((date_str, normalized_time, room["name"]), 0)
-        if total_used + people > TOTAL_TABLE_CAPACITY:
-            suggestions = self.suggest_table_slots(date_str, people, limit=3)
-            return False, None, suggestions
+        # Preveri če je termin že zaseden (ne glede na vrsto pregleda)
+        # Uporabi read_reservations za vsak status posebej
+        occupied_times = set()
+        for status in ["pending", "confirmed", "processing"]:
+            existing = self.read_reservations(
+                reservation_type="table",
+                status=status,
+                limit=1000
+            )
+            for r in existing:
+                if r.get("date") == date_str and r.get("time") == normalized_time:
+                    # Termin je zaseden
+                    suggestions = self.suggest_table_slots(date_str, people, limit=3)
+                    return False, None, suggestions
 
-        for room in DINING_ROOMS:
-            key = (date_str, normalized_time, room["name"])
-            used = occupancy.get(key, 0)
-            if used + people <= room["capacity"]:
-                return True, room["name"], suggestions
-
-        suggestions = self.suggest_table_slots(date_str, people, limit=3)
-        return False, None, suggestions
+        return True, None, []
 
     def suggest_table_slots(self, date_str: str, people: int, limit: int = 3) -> list[str]:
+        """Predlagaj proste termine za zdravstveni center."""
         slots: list[str] = []
-        occupancy = self._table_room_occupancy()
         start_times = []
         for hour in range(OPENING_START_HOUR, OPENING_END_HOUR + 1):
             start_times.append(f"{hour:02d}:00")
             if hour != OPENING_END_HOUR:
                 start_times.append(f"{hour:02d}:30")
 
+        # Pridobi vse zasedene termine
+        occupied = set()
+        for status in ["pending", "confirmed", "processing"]:
+            existing = self.read_reservations(
+                reservation_type="table",
+                status=status,
+                limit=1000
+            )
+            for r in existing:
+                occupied.add((r.get("date"), r.get("time")))
+
         # 1) isti dan
         for t in start_times:
-            for room in DINING_ROOMS:
-                used = occupancy.get((date_str, t, room["name"]), 0)
-                if used + people <= room["capacity"]:
-                    slots.append(f"{date_str} ob {t} ({room['name']})")
-                    break
-            if len(slots) >= limit:
-                return slots
+            if (date_str, t) not in occupied:
+                slots.append(f"{date_str} ob {t}")
+                if len(slots) >= limit:
+                    return slots
 
         # 2) naslednji prosti termini v prihodnjih dveh tednih
         parsed_date = self._parse_date(date_str)
@@ -622,13 +650,10 @@ class ReservationService:
             candidate = parsed_date + timedelta(days=delta)
             candidate_str = candidate.strftime("%d.%m.%Y")
             for t in start_times:
-                for room in DINING_ROOMS:
-                    used = occupancy.get((candidate_str, t, room["name"]), 0)
-                    if used + people <= room["capacity"]:
-                        slots.append(f"{candidate_str} ob {t} ({room['name']})")
-                        break
-                if len(slots) >= limit:
-                    return slots
+                if (candidate_str, t) not in occupied:
+                    slots.append(f"{candidate_str} ob {t}")
+                    if len(slots) >= limit:
+                        return slots
         return slots
 
     # --- CRUD ------------------------------------------------------------
@@ -657,6 +682,14 @@ class ReservationService:
         confirm_via: Optional[str] = None,
         event_type: Optional[str] = None,
         special_needs: Optional[str] = None,
+        birth_date: Optional[str] = None,
+        time_window: Optional[str] = None,
+        # BETNAVA specific parameters
+        service_type: Optional[str] = None,
+        duration_minutes: Optional[int] = None,
+        patient_age: Optional[int] = None,
+        patient_health_card: Optional[str] = None,
+        reason: Optional[str] = None,
     ) -> int:
         created_at = datetime.now().isoformat()
         # Admin / telefon / API vnosi se avtomatsko potrdijo
@@ -664,11 +697,12 @@ class ReservationService:
             status = "confirmed"
         conn = self._conn()
         ph = self._placeholder()
-        placeholders = ", ".join([ph] * 24)
+        placeholders = ", ".join([ph] * 31)  # Changed from 26 to 31 (added 5 fields)
         sql = (
             f"INSERT INTO reservations "
             f"(date, nights, rooms, people, reservation_type, time, location, name, phone, email, note, status, created_at, source, "
-            f"admin_notes, confirmed_at, confirmed_by, guest_message, country, kids, kids_small, confirm_via, event_type, special_needs) "
+            f"admin_notes, confirmed_at, confirmed_by, guest_message, country, kids, kids_small, confirm_via, event_type, special_needs, "
+            f"birth_date, time_window, service_type, duration_minutes, patient_age, patient_health_card, reason) "
             f"VALUES ({placeholders})"
         )
         if self.use_postgres:
@@ -702,6 +736,13 @@ class ReservationService:
                     confirm_via,
                     event_type,
                     special_needs,
+                    birth_date,
+                    time_window,
+                    service_type,
+                    duration_minutes,
+                    patient_age,
+                    patient_health_card,
+                    reason,
                 ),
             )
             if self.use_postgres:
@@ -801,6 +842,14 @@ class ReservationService:
             "confirm_via",
             "event_type",
             "special_needs",
+            "birth_date",
+            "time_window",
+            # BETNAVA specific fields
+            "service_type",
+            "duration_minutes",
+            "patient_age",
+            "patient_health_card",
+            "reason",
         }
         updates = {k: v for k, v in fields.items() if k in allowed_fields and v is not None}
         if not updates:
@@ -820,6 +869,19 @@ class ReservationService:
             cur.close()
             conn.close()
 
+    def delete_reservation(self, reservation_id: int) -> bool:
+        """Izbriši rezervacijo iz baze."""
+        conn = self._conn()
+        try:
+            cur = conn.cursor()
+            ph = self._placeholder()
+            cur.execute(f"DELETE FROM reservations WHERE id = {ph}", (reservation_id,))
+            conn.commit()
+            return cur.rowcount > 0
+        finally:
+            cur.close()
+            conn.close()
+
     def _fetch_reservations(self) -> list[ReservationRecord]:
         records: list[ReservationRecord] = []
         conn = self._conn()
@@ -828,7 +890,7 @@ class ReservationService:
             cur.execute(
                 """
                 SELECT id, date, nights, rooms, people, reservation_type, time, location,
-                       name, phone, email, note, status, created_at, source
+                       name, phone, email, note, status, created_at, source, birth_date, time_window
                 FROM reservations
                 WHERE status NOT IN ('cancelled', 'rejected')
                 """
@@ -863,6 +925,8 @@ class ReservationService:
                         location=row["location"],
                         note=row["note"],
                         status=row["status"],
+                        birth_date=row["birth_date"],
+                        time_window=row["time_window"],
                     )
                 )
         finally:
@@ -935,6 +999,8 @@ class ReservationService:
                     "confirm_via",
                     "event_type",
                     "special_needs",
+                    "birth_date",
+                    "time_window",
                 ]
             )
             for row in rows:
@@ -965,10 +1031,49 @@ class ReservationService:
                         row.get("confirm_via", ""),
                         row.get("event_type", ""),
                         row.get("special_needs", ""),
+                        row.get("birth_date", ""),
+                        row.get("time_window", ""),
                     ]
                 )
         return backup_path
 
+    def pick_time_slot(
+        self,
+        date_str: str,
+        location: Optional[str],
+        window: Optional[str],
+        start_hour: int = OPENING_START_HOUR,
+        end_hour: int = OPENING_END_HOUR,
+    ) -> Optional[str]:
+        """Izberi prvi prost 30-min slot glede na okno (dopoldne/popoldne)."""
+        if not date_str:
+            return None
+        reservations = self.read_reservations(limit=2000, reservation_type="table")
+        occupied: set[str] = set()
+        for r in reservations:
+            if r.get("status") in {"rejected", "cancelled"}:
+                continue
+            if r.get("date") != date_str:
+                continue
+            if location and r.get("location") != location:
+                continue
+            if r.get("time"):
+                occupied.add(str(r.get("time")))
+        window_norm = (window or "").lower()
+        slot_start = start_hour
+        slot_end = end_hour
+        if "dopold" in window_norm:
+            slot_end = min(slot_end, 12)
+        elif "popold" in window_norm:
+            slot_start = max(slot_start, 12)
+        slots = []
+        for hour in range(slot_start, slot_end):
+            for minute in (0, 30):
+                slots.append(f"{hour:02d}:{minute:02d}")
+        for slot in slots:
+            if slot not in occupied:
+                return slot
+        return None
     # --- conversation logging -------------------------------------------
     def log_conversation(
         self,

@@ -25,8 +25,11 @@ import smtplib
 import resend
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
+import uuid
 
 # ============================================================
 # KONFIGURACIJA - bere iz .env ali environment variables
@@ -157,51 +160,58 @@ def _guest_room_confirmation_html(data: Dict[str, Any]) -> str:
 
 
 def _guest_table_confirmation_html(data: Dict[str, Any]) -> str:
-    """Email gostu - potrditev rezervacije MIZE."""
+    """Email gostu - potrditev naročila pregleda v zdravstvenem centru."""
+    # Pridobi service type iz podatkov
+    service_type = data.get('service_type', '').upper()
+    service_names = {
+        'DERMATOLOG': 'Dermatološki pregled',
+        'ORTOPED': 'Ortopedski pregled',
+        'OKULIST': 'Okulistični pregled',
+        'LASERSKI_POSEG': 'Laserski poseg',
+        'ESTETSKI_POSEG': 'Estetski poseg',
+        'KOZMETIKA': 'Kozmetični salon',
+    }
+    service_display = service_names.get(service_type, data.get('location', 'Pregled'))
+
     content = f"""
-    <p>Pozdravljeni <strong>{data.get('name', 'gost')}</strong>,</p>
-    
-    <p>Hvala za vaše povpraševanje. Posredujemo vam povzetek:</p>
-    
+    <p>Pozdravljeni <strong>{data.get('name', 'pacient')}</strong>,</p>
+
+    <p>Hvala za vaše naročilo. Posredujemo vam povzetek:</p>
+
     {_kv_table({
+        'Vrsta pregleda': service_display,
         'Datum': data.get('date', ''),
-        'Ura prihoda': data.get('time', ''),
-        'Število oseb': str(data.get('people', '')),
-        'Otroci': f"{data.get('kids', '')} otrok ({data.get('kids_ages', '')})" if data.get('kids') else "",
-        'Vrsta pregleda/posega': data.get('location', ''),
+        'Ura': data.get('time', ''),
+        'Trajanje': f"{data.get('duration_minutes', 30)} minut",
         'Kontakt': data.get('phone', ''),
         'Email': data.get('email', ''),
-        'Opombe': data.get('note', ''),
+        'Razlog obiska': data.get('reason', ''),
     })}
-    
+
     <p style="margin-top:18px;">
-        <strong>Cena kosila:</strong> 36€/oseba<br>
-        <strong>Otroci 4-12 let:</strong> 50% popust
+        <strong>Navodila pred obiskom:</strong>
     </p>
-    
+    <ul style="margin:10px 0; padding-left:20px; color:#333;">
+        <li>Prosimo, pridite 10 minut pred naročeno uro</li>
+        <li>S seboj prinesite zdravstveno izkaznico (če jo imate)</li>
+        <li>Če imate že narejene izvide ali slike (RTG, MRI, CT), jih prinesite</li>
+    </ul>
+
     <p style="margin-top:18px;">
-        Prosimo, najavite morebitne omejitve pri hrani (vege, brez glutena, alergije).<br>
-        Poslujemo le z gotovino.
+        <strong>POMEMBNO:</strong> To je naročilo, ki ga bomo potrdili po preverjanju razpoložljivosti.
     </p>
-    
-    <p style="margin-top:18px;">
-        Več o naši ponudbi: <a href="https://zdravstveni-center.si/vikend-ponudba/" style="color:{BRAND_COLOR};">zdravstveni-center.si/vikend-ponudba</a>
-    </p>
-    
-    <p><strong>POMEMBNO:</strong> To je povpraševanje, ne potrjena rezervacija.<br>
-    Potrditev boste prejeli po pregledu.</p>
-    
+
     <p style="margin-top:18px; color:{MUTED_COLOR};">
-        Rezervacijo bomo potrdili po preverjanju razpoložljivosti.<br>
-        Za spremembe ali preklic nas kontaktirajte najkasneje 2 dni pred terminom.
+        V primeru preprečitve nas prosimo obvestite vsaj 24 ur vnaprej.<br>
+        Kontakt: <strong>02 292 77 20</strong> ali <strong>info@zdravstveni-center.si</strong>
     </p>
     """
     return _email_wrapper(content)
 
 
 def _admin_new_reservation_html(data: Dict[str, Any], confirm_url: str = "", reject_url: str = "") -> str:
-    """Email adminu - nova rezervacija čaka na obdelavo."""
-    res_type = "Soba" if data.get('reservation_type') == 'room' else "Miza"
+    """Email adminu - novo naročilo čaka na obdelavo."""
+    res_type = "Soba" if data.get('reservation_type') == 'room' else "Pregled"
     
     rows = {
         'ID': f"#{data.get('id', '?')}",
@@ -255,45 +265,137 @@ def _admin_new_reservation_html(data: Dict[str, Any], confirm_url: str = "", rej
 
 
 def _guest_confirmed_html(data: Dict[str, Any]) -> str:
-    """Email gostu - rezervacija POTRJENA."""
-    res_type = "sobe" if data.get('reservation_type') == 'room' else "mize"
-    
+    """Email pacientu - termin POTRJEN."""
+    service_type = data.get('location', 'Pregled')
+
+    # Ikone po tipu pregleda
+    icon_map = {
+        'Ortopedski pregled': '🦴',
+        'Dermatološki pregled': '🩺',
+        'Okulistični pregled': '👁️',
+        'Laserski poseg': '✨',
+        'Estetski poseg': '💉',
+        'Kozmetični salon': '💆',
+        'Fizioterapija': '🏃',
+    }
+    icon = icon_map.get(service_type, '🏥')
+
     content = f"""
-    <p>Pozdravljeni <strong>{data.get('name', 'gost')}</strong>,</p>
-    
-    <p>Z veseljem vam sporočamo, da je vaša rezervacija {res_type} <strong style="color:#22c55e;">POTRJENA</strong>.</p>
-    
+    <p>Pozdravljeni <strong>{data.get('name', 'pacient')}</strong>,</p>
+
+    <p>Vaš termin je <strong style="color:#22c55e;">POTRJEN</strong> ✅</p>
+
     {_kv_table({
-        'Datum': data.get('date', ''),
-        'Osebe': str(data.get('people', '')),
+        f'{icon} Vrsta pregleda': service_type,
+        '📅 Datum': data.get('date', ''),
+        '🕐 Ura': data.get('time', ''),
+        '📍 Lokacija': 'Zdravstveni center',
     })}
-    
+
+    <div style="background:#f0f9ff;border-left:4px solid #0891b2;padding:12px 16px;margin:20px 0;border-radius:4px;">
+        <p style="margin:0;font-weight:600;color:#0891b2;margin-bottom:8px;">ℹ️ Navodila pred pregledom:</p>
+        <ul style="margin:0;padding-left:20px;color:#134e4a;">
+            <li>Prosimo pridite <strong>10 minut pred terminom</strong></li>
+            <li>S seboj prinesite <strong>zdravstveno kartico</strong></li>
+            <li>Če imate prejšnje izvide, jih prinesite s seboj</li>
+        </ul>
+    </div>
+
     <p style="margin-top:18px;">
-        Veselimo se vašega obiska!
+        <strong>Za morebitne spremembe ali preklic:</strong><br>
+        📞 02 601 54 00<br>
+        ✉️ info@zdravstveni-center.si
     </p>
-    
-    <p style="color:{MUTED_COLOR};">
-        Za morebitne spremembe nas kontaktirajte na 02 601 54 00 ali info@zdravstveni-center.si
+
+    <p style="color:{MUTED_COLOR};font-size:12px;margin-top:24px;">
+        Priložen je tudi .ics koledar - dodajte termin v svoj koledar s klikom na priponko.
     </p>
     """
     return _email_wrapper(content)
 
 
 def _guest_rejected_html(data: Dict[str, Any]) -> str:
-    """Email gostu - rezervacija ZAVRNJENA."""
+    """Email pacientu - termin ZAVRNJEN."""
+    service_type = data.get('location', 'Pregled')
+
     content = f"""
-    <p>Pozdravljeni <strong>{data.get('name', 'gost')}</strong>,</p>
-    
-    <p>Zahvaljujemo se za vaše prijazno povpraševanje.</p>
-    
-    <p>Žal so naše zmogljivosti v izbranem terminu že zapolnjene.</p>
-    
-    <p>Verjamemo, da se kmalu najde nova priložnost, da vas gostimo.</p>
-    
-    <p>Priporočamo, da preverite proste termine pri naših sosedih na eko kmetiji Pri Baronu.</p>
-    
+    <p>Pozdravljeni <strong>{data.get('name', 'pacient')}</strong>,</p>
+
+    <p>Zahvaljujemo se za vaše zaupanje in zanimanje za termin pri nas.</p>
+
+    <p>Žal smo prisiljeni obvestiti, da vašega termina za <strong>{service_type}</strong> dne <strong>{data.get('date', '')}</strong> ob <strong>{data.get('time', '')}</strong> ne moremo potrditi.</p>
+
+    <div style="background:#fef2f2;border-left:4px solid #ef4444;padding:12px 16px;margin:20px 0;border-radius:4px;">
+        <p style="margin:0;color:#991b1b;">
+            Razlog: Termin je že zaseden ali zdravnik ni na voljo v izbranem času.
+        </p>
+    </div>
+
+    <p>Priporočamo vam, da nas kontaktirate za iskanje alternativnega termina:</p>
+
+    <p style="margin-left:16px;">
+        📞 <strong>02 601 54 00</strong><br>
+        ✉️ <strong>info@zdravstveni-center.si</strong>
+    </p>
+
     <p style="margin-top:24px;">
         Lepo vas pozdravljamo,<br>
+        <strong>Zdravstveni center</strong>
+    </p>
+    """
+    return _email_wrapper(content)
+
+
+def _guest_reminder_html(data: Dict[str, Any]) -> str:
+    """Email pacientu - OPOMNIK za termin čez 24 ur."""
+    service_type = data.get('location', 'Pregled')
+
+    # Ikone po tipu pregleda
+    icon_map = {
+        'Ortopedski pregled': '🦴',
+        'Dermatološki pregled': '🩺',
+        'Okulistični pregled': '👁️',
+        'Laserski poseg': '✨',
+        'Estetski poseg': '💉',
+        'Kozmetični salon': '💆',
+        'Fizioterapija': '🏃',
+    }
+    icon = icon_map.get(service_type, '🏥')
+
+    content = f"""
+    <p>Pozdravljeni <strong>{data.get('name', 'pacient')}</strong>,</p>
+
+    <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:14px 18px;margin:16px 0;border-radius:4px;">
+        <p style="margin:0;font-weight:700;color:#92400e;font-size:16px;">
+            ⏰ Opomnik: Vaš termin je <strong>jutri</strong>!
+        </p>
+    </div>
+
+    {_kv_table({
+        f'{icon} Vrsta pregleda': service_type,
+        '📅 Datum': data.get('date', ''),
+        '🕐 Ura': data.get('time', ''),
+        '📍 Lokacija': 'Zdravstveni center',
+    })}
+
+    <div style="background:#f0f9ff;border-left:4px solid #0891b2;padding:12px 16px;margin:20px 0;border-radius:4px;">
+        <p style="margin:0;font-weight:600;color:#0891b2;margin-bottom:8px;">ℹ️ Priprava na pregled:</p>
+        <ul style="margin:0;padding-left:20px;color:#134e4a;">
+            <li>Pridite <strong>10 minut pred terminom</strong></li>
+            <li>Prinesite <strong>zdravstveno kartico</strong></li>
+            <li>Če imate prejšnje izvide, jih prinesite s seboj</li>
+        </ul>
+    </div>
+
+    <p style="margin-top:18px;">
+        <strong>V primeru preprečitve:</strong><br>
+        Prosimo, obvestite nas <strong>čim prej</strong>, da lahko termin dodelimo drugemu pacientu.<br>
+        📞 02 601 54 00<br>
+        ✉️ info@zdravstveni-center.si
+    </p>
+
+    <p style="margin-top:24px;">
+        Veselimo se vašega obiska!<br>
         <strong>Zdravstveni center</strong>
     </p>
     """
@@ -304,25 +406,27 @@ def _guest_rejected_html(data: Dict[str, Any]) -> str:
 # SEND FUNCTIONS
 # ============================================================
 
-def _send_email(to: str, subject: str, html_body: str) -> bool:
+def _send_email(to: str, subject: str, html_body: str, ical_attachment: Optional[str] = None) -> bool:
     """
-    Pošlje email preko SMTP.
+    Pošlje email preko SMTP z opcijsko iCal priponko.
     Vrne True če uspešno, False če napaka.
-    
+
     POMEMBNO: Ta funkcija trenutno NI AKTIVNA.
     Za aktivacijo nastavi SMTP credentials v .env
     """
     if RESEND_API_KEY:
         try:
             resend.api_key = RESEND_API_KEY
-            resend.Emails.send(
-                {
-                    "from": RESEND_FROM_EMAIL,
-                    "to": to,
-                    "subject": subject,
-                    "html": html_body,
-                }
-            )
+            payload = {
+                "from": RESEND_FROM_EMAIL,
+                "to": to,
+                "subject": subject,
+                "html": html_body,
+            }
+            # iCal priponka preko Resend ni podprta, samo SMTP
+            if ical_attachment:
+                print(f"[EMAIL] Warning: iCal attachment ne deluje z Resend")
+            resend.Emails.send(payload)
             print(f"[EMAIL] Resend poslano: {subject} -> {to}")
             return True
         except Exception as e:
@@ -332,21 +436,29 @@ def _send_email(to: str, subject: str, html_body: str) -> bool:
     if not SMTP_USER or not SMTP_PASSWORD:
         print(f"[EMAIL] SMTP ni konfiguriran. Email NI poslan: {subject}")
         return False
-    
+
     try:
-        msg = MIMEMultipart('alternative')
+        msg = MIMEMultipart('mixed')
         msg['Subject'] = subject
         msg['From'] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
         msg['To'] = to
         msg['Reply-To'] = SMTP_FROM_EMAIL
-        
+
         # Plain text verzija
-        text_body = f"Sporočilo od Domačije Kovačnik. Za ogled odprite v brskalniku."
+        text_body = f"Sporočilo od zdravstvenega centra. Za ogled odprite v brskalniku."
         msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
-        
+
         # HTML verzija
         msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-        
+
+        # iCal priponka
+        if ical_attachment:
+            ical_part = MIMEBase('text', 'calendar', method='REQUEST', name='appointment.ics')
+            ical_part.set_payload(ical_attachment.encode('utf-8'))
+            ical_part.add_header('Content-Disposition', 'attachment', filename='appointment.ics')
+            ical_part.add_header('Content-Class', 'urn:content-classes:calendarmessage')
+            msg.attach(ical_part)
+
         # Pošlji
         # Port 465 = SSL, Port 587 = TLS (ali prisilno preko SMTP_SSL)
         if SMTP_PORT == 465 or SMTP_SSL:
@@ -358,10 +470,10 @@ def _send_email(to: str, subject: str, html_body: str) -> bool:
                 server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.send_message(msg)
-        
-        print(f"[EMAIL] Poslano: {subject} -> {to}")
+
+        print(f"[EMAIL] Poslano: {subject} -> {to} (iCal: {bool(ical_attachment)})")
         return True
-        
+
     except Exception as e:
         print(f"[EMAIL] Napaka pri pošiljanju: {e}")
         return False
@@ -386,14 +498,14 @@ def send_guest_confirmation(data: Dict[str, Any]) -> bool:
         return False
     
     rid = data.get('id')
-    tag = f"Rezervacija #{rid}" if rid else "Rezervacija"
+    tag = f"Naročilo #{rid}" if rid else "Naročilo"
     if data.get('reservation_type') == 'room':
         html = _guest_room_confirmation_html(data)
         subject = f"{tag} - Povpraševanje za sobo"
     else:
         html = _guest_table_confirmation_html(data)
-        subject = f"{tag} - Povpraševanje za mizo"
-    
+        subject = f"{tag} - Naročilo na pregled"
+
     return _send_email(email, subject, html)
 
 
@@ -409,26 +521,75 @@ def send_admin_notification(data: Dict[str, Any], confirm_url: str = "", reject_
     Returns:
         True če uspešno poslano
     """
-    res_type = "sobe" if data.get('reservation_type') == 'room' else "mize"
+    res_type = "sobe" if data.get('reservation_type') == 'room' else "pregleda"
     rid = data.get('id')
-    tag = f"Rezervacija #{rid}" if rid else "Rezervacija"
-    subject = f"{tag} - Nova rezervacija {res_type} – {data.get('name', 'Neznano')}"
+    tag = f"Naročilo #{rid}" if rid else "Naročilo"
+    subject = f"{tag} - Novo naročilo {res_type} – {data.get('name', 'Neznano')}"
     
     html = _admin_new_reservation_html(data, confirm_url, reject_url)
     return _send_email(ADMIN_EMAIL, subject, html)
 
 
+def _generate_ical(data: Dict[str, Any]) -> str:
+    """Generira iCal priponko za Google Calendar, Outlook, Apple Calendar."""
+    service_type = data.get('location', 'Pregled')
+    date_str = data.get('date', '')  # Format: DD.MM.LLLL
+    time_str = data.get('time', '')  # Format: HH:MM
+
+    # Pretvori datum in čas v datetime
+    try:
+        parts = date_str.split('.')
+        if len(parts) == 3:
+            day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+            hour, minute = map(int, time_str.split(':'))
+            dt_start = datetime(year, month, day, hour, minute)
+            dt_end = dt_start + timedelta(minutes=30)  # 30 min trajanje
+        else:
+            return ""
+    except:
+        return ""
+
+    # Format za iCal
+    dtstart = dt_start.strftime('%Y%m%dT%H%M%S')
+    dtend = dt_end.strftime('%Y%m%dT%H%M%S')
+    dtstamp = datetime.now().strftime('%Y%m%dT%H%M%SZ')
+    uid = f"{data.get('id', uuid.uuid4())}@zdravstveni-center.si"
+
+    ical = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Zdravstveni center//SI
+BEGIN:VEVENT
+UID:{uid}
+DTSTAMP:{dtstamp}
+DTSTART:{dtstart}
+DTEND:{dtend}
+SUMMARY:{service_type}
+DESCRIPTION:Termin pri zdravstvenem centru\\n\\nPacient: {data.get('name', '')}\\nVrsta: {service_type}
+LOCATION:Zdravstveni center
+STATUS:CONFIRMED
+SEQUENCE:0
+BEGIN:VALARM
+TRIGGER:-PT1440M
+ACTION:DISPLAY
+DESCRIPTION:Reminder: {service_type} jutri ob {time_str}
+END:VALARM
+END:VEVENT
+END:VCALENDAR"""
+    return ical
+
+
 def send_reservation_confirmed(data: Dict[str, Any]) -> bool:
-    """Pošlje gostu obvestilo da je rezervacija POTRJENA."""
+    """Pošlje gostu obvestilo da je rezervacija POTRJENA + iCal priponko."""
     email = data.get('email')
     if not email:
         return False
-    
+
     html = _guest_confirmed_html(data)
     rid = data.get('id')
-    tag = f"Rezervacija #{rid}" if rid else "Rezervacija"
-    subject = f"{tag} - Rezervacija potrjena"
-    return _send_email(email, subject, html)
+    tag = f"Termin #{rid}" if rid else "Termin"
+    subject = f"{tag} - Termin potrjen ✅"
+    ical_content = _generate_ical(data)
+    return _send_email(email, subject, html, ical_attachment=ical_content)
 
 
 def send_reservation_rejected(data: Dict[str, Any]) -> bool:

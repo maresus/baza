@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zdravstveni center – Rezervacije</title>
+  <title>Zdravstveni center – Naročila pregledov</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -293,25 +293,68 @@
       th, td { font-size: 13px; }
       .table-wrap { overflow-x: auto; }
     }
+
+    .table-day-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+      gap: 6px;
+    }
+
+    .slot {
+      border: 1px solid #e6e2da;
+      border-radius: 8px;
+      padding: 6px 8px;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.2;
+      background: #f7fafc;
+      color: #3b4a3f;
+    }
+
+    .slot.busy {
+      background: #fde7e7;
+      border-color: #f2b8b8;
+      color: #7a1f1f;
+      font-weight: 600;
+    }
+
+    .slot.free {
+      background: #e9f7f1;
+      border-color: #bfe5d3;
+      color: #1e5142;
+    }
+
+    @media (max-width: 960px) {
+      .table-day-layout {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="page">
     <header>
       <div>
-        <div class="title">🏥 Zdravstveni center - Rezervacije</div>
+        <div class="title">🏥 Zdravstveni center - Naročila pregledov</div>
         <div class="subtitle" id="current-date"></div>
       </div>
     </header>
 
     <div class="tabs" id="view-tabs">
-      <button class="tab active" id="tab-view-res" onclick="setViewTab('reservations')">📋 Rezervacije</button>
+      <button class="tab active" id="tab-view-res" onclick="setViewTab('reservations')">📋 Naročila</button>
       <button class="tab" id="tab-view-tools" onclick="setViewTab('tools')">🧰 Orodja & analitika</button>
     </div>
 
     <div class="tabs">
-      <button class="tab active" id="tab-room" onclick="setTab('room')">🛏️ Sobe</button>
-      <button class="tab" id="tab-table" onclick="setTab('table')">🩺 Pregledi</button>
+      <button class="tab" id="tab-room" onclick="setTab('room')" style="display:none;">🛏️ Sobe</button>
+      <button class="tab active" id="tab-table" onclick="setTab('table')">🩺 Pregledi</button>
       <a class="tab" id="tab-inquiries" href="/admin/inquiries">📝 Povpraševanja</a>
     </div>
 
@@ -355,8 +398,8 @@
       </div>
 
       <div class="card list-card">
-        <div style="font-weight:700; margin-bottom:6px;">Rezervacijski funnel (zadnjih 30 dni)</div>
-        <div class="muted" style="margin-bottom:10px;">Začetek → dokončana rezervacija</div>
+        <div style="font-weight:700; margin-bottom:6px;">Funnel naročil (zadnjih 30 dni)</div>
+        <div class="muted" style="margin-bottom:10px;">Začetek → dokončano naročilo</div>
         <div id="funnel-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px;"></div>
       </div>
 
@@ -374,12 +417,12 @@
 
     <div id="view-reservations">
     <div class="stats" id="stats-cards">
-      <div class="stat"><div class="label">Danes</div><div class="value" id="stat-danes">0</div><div class="hint">Rezervacije</div></div>
-      <div class="stat"><div class="label">Ta teden</div><div class="value" id="stat-teden">0</div><div class="hint">Rezervacije</div></div>
-      <div class="stat"><div class="label">Ta mesec</div><div class="value" id="stat-mesec">0</div><div class="hint">Rezervacije</div></div>
+      <div class="stat"><div class="label">Danes</div><div class="value" id="stat-danes">0</div><div class="hint">Naročila</div></div>
+      <div class="stat"><div class="label">Ta teden</div><div class="value" id="stat-teden">0</div><div class="hint">Naročila</div></div>
+      <div class="stat"><div class="label">Ta mesec</div><div class="value" id="stat-mesec">0</div><div class="hint">Naročila</div></div>
       <div class="stat"><div class="label">Potrjenih</div><div class="value" id="stat-confirmed">0</div></div>
       <div class="stat"><div class="label">Čaka</div><div class="value" id="stat-pending">0</div></div>
-      <div class="stat"><div class="label">🛏️ Sobe</div><div class="value" id="stat-room">0</div></div>
+      <div class="stat" style="display:none;"><div class="label">🛏️ Sobe</div><div class="value" id="stat-room">0</div></div>
       <div class="stat"><div class="label">🩺 Pregledi</div><div class="value" id="stat-table">0</div></div>
       <div class="stat"><div class="label">🤖 AI danes</div><div class="value" id="stat-ai-today">0</div></div>
       <div class="stat"><div class="label">🤖 AI ta mesec</div><div class="value" id="stat-ai-month">0</div></div>
@@ -408,13 +451,13 @@
   </div>
 
   <div class="inline-actions">
-    <button class="btn" onclick="openNewRoom()">+ Nova rezervacija sobe</button>
-    <button class="btn secondary" onclick="openNewTable()">+ Nova rezervacija termina</button>
+    <button class="btn" onclick="openNewTable()">+ Novo naročilo pregleda</button>
+    <button class="btn secondary" onclick="openNewRoom()" style="display:none;">+ Nova rezervacija sobe</button>
   </div>
 
   <div id="pending-container" class="card" style="margin-top:12px;"></div>
 
-  <div id="room-calendar-block" class="card" style="margin-top: 20px;">
+  <div id="room-calendar-block" class="card" style="margin-top: 20px; display:none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <button class="btn secondary" onclick="changeMonth(-1)">◀ Prejšnji</button>
       <h3 id="calendar-title" style="margin: 0;">Koledar (sobe)</h3>
@@ -443,11 +486,22 @@
     </div>
   </div>
 
-  <div id="table-calendar-block" class="card" style="margin-top: 12px; display: none;">
+  <div id="table-calendar-block" class="card" style="margin-top: 12px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <button class="btn secondary" onclick="changeMonth(-1)">◀ Prejšnji</button>
-      <h3 id="table-calendar-title" style="margin: 0;">Koledar (pregledi)</h3>
+      <h3 id="table-calendar-title" style="margin: 0;">Koledar pregledov</h3>
       <button class="btn secondary" onclick="changeMonth(1)">Naslednji ▶</button>
+    </div>
+    <div class="tabs small" id="appointment-tabs" style="margin-bottom: 10px;">
+      <button class="tab small active" data-appt="ALL" onclick="setAppointmentFilter('ALL')">Vsi pregledi</button>
+      <button class="tab small" data-appt="Ortopedski pregled" onclick="setAppointmentFilter('Ortopedski pregled')">Ortopedija</button>
+      <button class="tab small" data-appt="Dermatološki pregled" onclick="setAppointmentFilter('Dermatološki pregled')">Dermatologija</button>
+      <button class="tab small" data-appt="Okulistični pregled" onclick="setAppointmentFilter('Okulistični pregled')">Okulistika</button>
+      <button class="tab small" data-appt="Fizioterapija" onclick="setAppointmentFilter('Fizioterapija')">Fizioterapija</button>
+      <button class="tab small" data-appt="Laserski poseg" onclick="setAppointmentFilter('Laserski poseg')">Laser</button>
+      <button class="tab small" data-appt="Estetski poseg" onclick="setAppointmentFilter('Estetski poseg')">Estetika</button>
+      <button class="tab small" data-appt="Kozmetični salon" onclick="setAppointmentFilter('Kozmetični salon')">Kozmetika</button>
+      <button class="tab small" data-appt="Predpis očal/leč" onclick="setAppointmentFilter('Predpis očal/leč')">Očala/leče</button>
     </div>
     <div id="table-calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;"></div>
     <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px;">
@@ -468,7 +522,7 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
-    <h3>Vse rezervacije</h3>
+    <h3>Vsa naročila</h3>
     <div class="filters">
       <div class="filter-row">
         <select id="filter-status">
@@ -480,14 +534,12 @@
         </select>
         <select id="filter-type">
           <option value="">Vsi tipi</option>
-          <option value="room">Sobe</option>
           <option value="table">Pregledi</option>
         </select>
         <select id="filter-source">
           <option value="">Vsi viri</option>
           <option value="chat">Chatbot</option>
-          <option value="wordpress_room">WP Sobe</option>
-          <option value="wordpress_table">WP Pregledi</option>
+          <option value="wordpress_table">Spletni obrazec</option>
         </select>
         <input type="date" id="filter-date-from" />
         <input type="date" id="filter-date-to" />
@@ -637,7 +689,7 @@
   <!-- Modal pregled -->
   <div class="modal" id="edit-table-modal">
     <div class="modal-body">
-      <div class="modal-title">🩺 Uredi rezervacijo termina #<span id="table-edit-id"></span></div>
+      <div class="modal-title">🩺 Uredi naročilo termina #<span id="table-edit-id"></span></div>
       <div class="muted" id="table-edit-flags" style="margin-top:-6px; margin-bottom:10px;"></div>
       <form id="table-edit-form">
         <input type="hidden" id="table-edit-hidden-id">
@@ -657,7 +709,16 @@
           </div>
           <div class="form-group">
             <label>Čas termina</label>
-            <input type="time" id="table-edit-time" required>
+            <input type="time" id="table-edit-time">
+          </div>
+          <div class="form-group">
+            <label>Časovno okno</label>
+            <select id="table-edit-time-window">
+              <option value="">-</option>
+              <option value="Dopoldne">Dopoldne</option>
+              <option value="Popoldne">Popoldne</option>
+              <option value="Ni pomembno">Ni pomembno</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Vrsta pregleda/posega</label>
@@ -671,18 +732,6 @@
               <option value="Predpis očal/leč">Predpis očal/leč</option>
               <option value="Kozmetični salon">Kozmetični salon</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label>Število oseb</label>
-            <input type="number" id="table-edit-people" min="1" required>
-          </div>
-          <div class="form-group">
-            <label>Število otrok</label>
-            <input type="number" id="table-edit-kids" min="0">
-          </div>
-          <div class="form-group">
-            <label>Starost otrok</label>
-            <input type="text" id="table-edit-kids-ages" placeholder="npr. 5 in 3 let">
           </div>
           <div class="form-group">
             <label>Tip obiska</label>
@@ -702,11 +751,20 @@
           </div>
           <div class="form-group">
             <label>Telefon</label>
-            <input type="tel" id="table-edit-phone">
+            <input type="tel" id="table-edit-phone" required>
+          </div>
+          <div class="form-group">
+            <label>Datum rojstva</label>
+            <input type="text" id="table-edit-birth-date" placeholder="DD.MM.LLLL" required>
           </div>
         </div>
+        <div class="form-group">
+          <label>Prosti 30-min sloti</label>
+          <div id="table-edit-slots" class="message-thread">Izberi datum in vrsto pregleda za prikaz slotov.</div>
+          <button type="button" class="btn secondary" style="margin-top:6px;" onclick="renderSlotPicker(currentTableReservation)">Osveži slote</button>
+        </div>
         <div class="form-group" style="margin-top: 12px;">
-          <label>Posebne potrebe (alergije, visoki stolčki...)</label>
+          <label>Opombe (posebnosti, zdravila, želje)</label>
           <textarea id="table-edit-special-needs" rows="2"></textarea>
         </div>
         <div class="form-group">
@@ -734,7 +792,7 @@
 
   <div class="modal" id="confirm-modal">
     <div class="modal-body">
-      <div class="modal-title" id="confirm-title">Potrdi rezervacijo</div>
+      <div class="modal-title" id="confirm-title">Potrdi naročilo</div>
       <form id="confirm-form">
         <input type="hidden" id="confirm-id" />
         <input type="hidden" id="confirm-type" />
@@ -834,7 +892,7 @@
   <!-- Nov termin -->
   <div class="modal" id="new-table-modal">
     <div class="modal-body">
-      <div class="modal-title">+ Nova rezervacija termina</div>
+      <div class="modal-title">+ Novo naročilo termina</div>
       <form id="new-table-form">
         <div class="form-grid">
           <div class="form-group">
@@ -843,7 +901,16 @@
           </div>
           <div class="form-group">
             <label>Čas termina</label>
-            <input type="time" id="new-table-time" required>
+            <input type="time" id="new-table-time">
+          </div>
+          <div class="form-group">
+            <label>Časovno okno</label>
+            <select id="new-table-time-window">
+              <option value="">-</option>
+              <option value="Dopoldne">Dopoldne</option>
+              <option value="Popoldne">Popoldne</option>
+              <option value="Ni pomembno">Ni pomembno</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Vrsta pregleda/posega</label>
@@ -857,18 +924,6 @@
               <option value="Predpis očal/leč">Predpis očal/leč</option>
               <option value="Kozmetični salon">Kozmetični salon</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label>Osebe</label>
-            <input type="number" id="new-table-people" min="1" required>
-          </div>
-          <div class="form-group">
-            <label>Otroci</label>
-            <input type="number" id="new-table-kids" min="0">
-          </div>
-          <div class="form-group">
-            <label>Starost otrok</label>
-            <input type="text" id="new-table-kids-ages">
           </div>
           <div class="form-group">
             <label>Tip obiska</label>
@@ -888,11 +943,15 @@
           </div>
           <div class="form-group">
             <label>Telefon</label>
-            <input type="tel" id="new-table-phone">
+            <input type="tel" id="new-table-phone" required>
+          </div>
+          <div class="form-group">
+            <label>Datum rojstva</label>
+            <input type="text" id="new-table-birth-date" placeholder="DD.MM.LLLL" required>
           </div>
         </div>
         <div class="form-group" style="margin-top:12px;">
-          <label>Posebne potrebe</label>
+          <label>Opombe (posebnosti, zdravila, želje)</label>
           <textarea id="new-table-special-needs"></textarea>
         </div>
         <div class="modal-actions">
@@ -917,7 +976,9 @@
       'Predpis očal/leč',
       'Kozmetični salon',
     ];
-    let currentTab = 'room';
+    let currentAppointmentFilter = 'ALL';
+    let tableCalendarData = {};
+    let currentTab = 'table';
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth(); // 0-indexed
     const TABLE_CAP = 50;
@@ -932,7 +993,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       setViewTab('reservations');
-      setTab('room', true);
+      setTab('table', true);
       setInterval(loadStats, 60000);
       qs('month-select').value = calendarMonth.toString();
       qs('year-input').value = calendarYear.toString();
@@ -948,6 +1009,27 @@
       if (refreshMissedBtn) {
         refreshMissedBtn.addEventListener('click', loadMissedQuestions);
       }
+
+      // Auto-refresh slot picker ko se spremeni datum ali vrsta pregleda
+      const tableEditDate = qs('table-edit-date');
+      const tableEditLocation = qs('table-edit-location');
+      if (tableEditDate) {
+        tableEditDate.addEventListener('change', () => {
+          if (currentTableReservation) {
+            currentTableReservation.date = formatToDDMMYYYY(tableEditDate.value);
+            renderSlotPicker(currentTableReservation);
+          }
+        });
+      }
+      if (tableEditLocation) {
+        tableEditLocation.addEventListener('change', () => {
+          if (currentTableReservation) {
+            currentTableReservation.location = tableEditLocation.value;
+            renderSlotPicker(currentTableReservation);
+          }
+        });
+      }
+
       loadAll(); // auto load ob prvem prikazu
     });
 
@@ -962,6 +1044,16 @@
       qs('table-sidebar').style.display = tab === 'table' ? 'block' : 'none';
       if (!silent) {
         loadAll();
+      }
+    }
+
+    function setAppointmentFilter(type) {
+      currentAppointmentFilter = type;
+      const tabs = document.querySelectorAll('#appointment-tabs .tab');
+      tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-appt') === type));
+      if (currentTab === 'table') {
+        renderTableCalendar();
+        renderReservations(lastReservations || []);
       }
     }
 
@@ -1071,7 +1163,7 @@
     async function loadStats() {
       try {
         const res = await fetch(`${API_BASE}/stats`);
-        const data = await res.json();
+        const data = await safeJson(res);
         qs('stat-danes').textContent = data.danes ?? 0;
         qs('stat-teden').textContent = data.ta_teden ?? 0;
         qs('stat-mesec').textContent = data.ta_mesec ?? 0;
@@ -1152,7 +1244,7 @@
     async function loadUsageStats() {
       try {
         const res = await fetch(`${API_BASE}/usage_stats`);
-        const data = await res.json();
+        const data = await safeJson(res);
         qs('stat-ai-today').textContent = data.today ?? 0;
         qs('stat-ai-month').textContent = data.month ?? 0;
         qs('stat-ai-year').textContent = data.year ?? 0;
@@ -1164,7 +1256,7 @@
     async function loadQuestionStats() {
       try {
         const res = await fetch(`${API_BASE}/question_stats?limit=10`);
-        const data = await res.json();
+        const data = await safeJson(res);
         const list = data.questions || [];
         const target = qs('top-questions-list');
         if (!list.length) {
@@ -1185,7 +1277,7 @@
     async function loadLostIntents() {
       try {
         const res = await fetch(`${API_BASE}/lost_intents?limit=10`);
-        const data = await res.json();
+        const data = await safeJson(res);
         const list = data.items || [];
         const target = qs('lost-intents-list');
         if (!list.length) {
@@ -1206,13 +1298,13 @@
     async function loadFunnelStats() {
       try {
         const res = await fetch(`${API_BASE}/funnel_stats?days=30`);
-        const data = await res.json();
+        const data = await safeJson(res);
         const target = qs('funnel-grid');
         if (!target) return;
         const rows = [
           { label: 'Seje skupaj', value: data.total_sessions ?? 0 },
-          { label: 'Začete rezervacije', value: data.reservation_started ?? 0 },
-          { label: 'Dokončane rezervacije', value: data.reservation_completed ?? 0 },
+          { label: 'Začeta naročila', value: data.reservation_started ?? 0 },
+          { label: 'Dokončana naročila', value: data.reservation_completed ?? 0 },
           { label: 'Start rate', value: `${data.start_rate_pct ?? 0}%` },
           { label: 'Completion rate', value: `${data.completion_rate_pct ?? 0}%` },
         ];
@@ -1230,7 +1322,7 @@
     async function loadMissedQuestions() {
       try {
         const res = await fetch(`${API_BASE}/missed_questions?limit=5`);
-        const data = await res.json();
+        const data = await safeJson(res);
         const list = data.items || [];
         const target = qs('missed-questions-list');
         if (!list.length) {
@@ -1281,10 +1373,10 @@
       if (!container) return;
       const events = [];
       if (reservation?.created_at) {
-        events.push({ ts: reservation.created_at, label: 'Rezervacija ustvarjena' });
+        events.push({ ts: reservation.created_at, label: 'Naročilo ustvarjeno' });
       }
       if (reservation?.confirmed_at) {
-        events.push({ ts: reservation.confirmed_at, label: 'Rezervacija potrjena' });
+        events.push({ ts: reservation.confirmed_at, label: 'Naročilo potrjeno' });
       }
       (messages || []).forEach(m => {
         const direction = (m.direction || '').toLowerCase();
@@ -1310,7 +1402,7 @@
       const query = buildQuery();
       try {
         const res = await fetch(`${API_BASE}/reservations?${query}`);
-        const data = await res.json();
+        const data = await safeJson(res);
         lastReservations = data.reservations || [];
         renderPending(lastReservations);
         renderReservations(lastReservations);
@@ -1334,10 +1426,15 @@
     function renderPending(resList) {
       const container = qs('pending-container');
       if (!container) return;
-      const pending = (resList || []).filter(r => r.status === 'pending' || r.status === 'processing');
-      let html = `<h3 style="margin-bottom:8px;">Čakajoče rezervacije</h3>`;
+      const pending = (resList || [])
+        .filter(r => r.status === 'pending' || r.status === 'processing')
+        .filter(r => {
+          if (currentTab !== 'table' || currentAppointmentFilter === 'ALL') return true;
+          return r.reservation_type === 'table' && r.location === currentAppointmentFilter;
+        });
+      let html = `<h3 style="margin-bottom:8px;">Čakajoči pregledi</h3>`;
       if (!pending.length) {
-        container.innerHTML = html + `<div style="padding:10px; border:1px solid #f1e4c7; background:#fffaf0; border-radius:10px;">Ni čakajočih rezervacij ✓</div>`;
+        container.innerHTML = html + `<div style="padding:10px; border:1px solid #f1e4c7; background:#fffaf0; border-radius:10px;">Ni čakajočih pregledov ✓</div>`;
         return;
       }
       html += `<div class="date-reservations" style="border:1px solid #f1e4c7; background:#fffaf0; border-radius:10px;">`;
@@ -1347,13 +1444,14 @@
           <div class="reservation-row" style="grid-template-columns: 120px 150px 120px 100px 1fr 160px;">
             <span class="res-date">${r.date || '-'}</span>
             <span class="res-guest">${r.name || 'Gost'} ${renderGuestBadges(r)}</span>
-            <span class="res-room">${r.reservation_type === 'table' ? 'Miza' : 'Soba'}</span>
+            <span class="res-room">${r.reservation_type === 'table' ? 'Pregled' : 'Drugo'}</span>
             <span class="res-people">${r.people || '-'} oseb</span>
-            <span class="res-room">${r.location || '-'}</span>
+            <span class="res-room">${r.location || '-'} ${r.time || r.time_window ? '(' + (r.time || r.time_window) + ')' : ''}</span>
             <span class="res-actions">
               <button class="btn-inline success" onclick="openConfirm('${dataStr}')">✅ Potrdi</button>
               <button class="btn-inline danger" onclick="rejectReservation(${r.id})">❌</button>
               <button class="btn-inline" onclick="openEdit('${dataStr}')">✏️</button>
+              ${r.reservation_type === 'table' ? `<button class="btn-inline" onclick="openEdit('${dataStr}')">🕒</button>` : ''}
               <button class="btn-inline" onclick="openEmailModal('${dataStr}')">✉</button>
               <span class="msg-badge" data-msg-badge="${r.id}" style="display:none"></span>
             </span>
@@ -1370,7 +1468,11 @@
       const monthNames = ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'];
 
       const expanded = expandReservations(list);
-      const pendingList = expanded.filter(r => r.isMainDay && (r.status === 'pending' || r.status === 'processing'));
+      const filteredByType = expanded.filter(r => {
+        if (currentTab !== 'table' || currentAppointmentFilter === 'ALL') return true;
+        return r.reservation_type === 'table' && r.location === currentAppointmentFilter;
+      });
+      const pendingList = filteredByType.filter(r => r.isMainDay && (r.status === 'pending' || r.status === 'processing'));
 
       // filtriraj po izbranem datumu (če sta vnesena), sicer po prikazanem mesecu
       const dfVal = qs('filter-date-from').value;
@@ -1378,7 +1480,7 @@
       const dateFrom = dfVal ? new Date(dfVal) : null;
       const dateTo = dtVal ? new Date(dtVal) : null;
 
-      const filtered = expanded.filter(r => {
+      const filtered = filteredByType.filter(r => {
         const d = parseDDMMYYYY(r.date);
         if (!d) return false;
         if (dateFrom && d < dateFrom) return false;
@@ -1415,7 +1517,7 @@
             const dd = parseDDMMYYYY(datesWithReservations[0]);
             return `${monthNames[dd.getMonth()]} ${dd.getFullYear()}`;
           })()
-        : 'Rezervacije (filtrirano)';
+        : 'Naročila (filtrirano)';
 
       html += `<h3 style="margin:12px 0 8px;">${title}</h3>`;
 
@@ -1436,11 +1538,11 @@
             <div class="date-header" onclick="toggleGroup('${dateKey}')">
               <span>📅</span>
               <span>${dateStr}</span>
-              <span class="date-count">(${items.length} rezervacij${items.length === 1 ? 'a' : ''})</span>
+              <span class="date-count">(${items.length} naročil)</span>
               <span class="date-toggle ${isNear ? '' : 'collapsed'}" id="toggle-${dateKey}">${isNear ? '▼' : '▶'}</span>
             </div>
             <div class="date-reservations ${isNear ? '' : 'hidden'}" id="group-${dateKey}">
-              ${sortedItems.length ? sortedItems.map(r => renderReservationRow(r, false)).join('') : '<div style="padding:8px 4px;color:#7a7a7a;">Ni rezervacij.</div>'}
+              ${sortedItems.length ? sortedItems.map(r => renderReservationRow(r, false)).join('') : '<div style="padding:8px 4px;color:#7a7a7a;">Ni naročil.</div>'}
             </div>
           </div>
         `;
@@ -1476,6 +1578,25 @@
       }
       const asDate = new Date(val);
       return isNaN(asDate.getTime()) ? null : asDate;
+    }
+
+    function setCalendarToDate(dateStr) {
+      const d = parseDDMMYYYY(dateStr);
+      if (!d) return;
+      calendarMonth = d.getMonth();
+      calendarYear = d.getFullYear();
+      qs('month-select').value = calendarMonth.toString();
+      qs('year-input').value = calendarYear.toString();
+    }
+
+    async function refreshAfterSave(dateStr) {
+      setCalendarToDate(dateStr);
+      await loadReservations();
+      if (currentTab === 'room') {
+        await renderCalendar();
+      } else {
+        await renderTableCalendar();
+      }
     }
 
     function toggleGroup(dateKey) {
@@ -1541,8 +1662,9 @@
 
     function renderReservationRow(r, showDate = false) {
       const kidsInfo = r.kids ? ` (${r.kids} otrok${r.kids_small ? ': ' + r.kids_small : ''})` : '';
+      const timeLabel = r.time ? `ob ${r.time}` : (r.time_window ? `(${r.time_window})` : '');
       const roomDisplay = r.reservation_type === 'table'
-        ? `${r.location || '-'} ${r.time ? 'ob ' + r.time : ''}`
+        ? `${r.location || '-'} ${timeLabel}`.trim()
         : (r.location && !String(r.location).toLowerCase().includes('dodelimo') ? r.location : '-');
       const nightsDisplay = r.reservation_type === 'table' ? '-' : (r.nights || '-');
       const guestName = r.name || 'Gost';
@@ -1625,7 +1747,7 @@
       if (type === 'table' || type === 'miza') return true;
       const loc = (r.location || '').toLowerCase();
       if (APPOINTMENT_TYPES.some(t => loc.includes(t.toLowerCase()))) return true;
-      if (r.time) return true;
+      if (r.time || r.time_window) return true;
       if (r.event_type) return true;
       return false;
     }
@@ -1635,7 +1757,7 @@
       const isTable = isTableReservation(r);
       qs('confirm-id').value = r.id;
       qs('confirm-type').value = isTable ? 'table' : 'room';
-      qs('confirm-title').textContent = `Potrdi rezervacijo #${r.id} (${r.name || 'gost'})`;
+      qs('confirm-title').textContent = `Potrdi naročilo #${r.id} (${r.name || 'gost'})`;
       const select = qs('confirm-choice');
       const hint = qs('confirm-hint');
       select.innerHTML = '';
@@ -1687,14 +1809,13 @@
     function clearNewTableForm() {
       qs('new-table-date').value = '';
       qs('new-table-time').value = '';
+      qs('new-table-time-window').value = '';
       qs('new-table-location').value = APPOINTMENT_TYPES[0];
-      qs('new-table-people').value = '';
-      qs('new-table-kids').value = '';
-      qs('new-table-kids-ages').value = '';
       qs('new-table-event-type').value = '';
       qs('new-table-name').value = '';
       qs('new-table-email').value = '';
       qs('new-table-phone').value = '';
+      qs('new-table-birth-date').value = '';
       qs('new-table-special-needs').value = '';
     }
 
@@ -1704,7 +1825,7 @@
       qs('email-modal-name').textContent = r?.name ? `(${r.name})` : '';
       qs('email-res-id').value = r?.id || '';
       qs('email-recipient').value = r?.email || '';
-      const tag = r?.id ? `Rezervacija #${r.id}` : 'Rezervacija';
+      const tag = r?.id ? `Naročilo #${r.id}` : 'Naročilo';
       qs('email-subject').value = `${tag} - Dodatne informacije`;
       qs('email-body').value = '';
       qs('email-template').value = '';
@@ -1718,7 +1839,7 @@
         const body = qs('email-body');
         if (!body) return;
         if (tpl === 'info') body.value = 'Prosimo vas za dodatne informacije (termin, število oseb, posebnosti), da lahko pripravimo ponudbo.';
-        else if (tpl === 'date') body.value = 'Prosimo potrdite datum/uro, da dokončno potrdimo rezervacijo.';
+        else if (tpl === 'date') body.value = 'Prosimo potrdite datum/uro, da dokončno potrdimo naročilo.';
         else if (tpl === 'full') body.value = 'Izbrani termin je zaseden. Lahko ponudimo alternativni termin?';
         else body.value = '';
       });
@@ -1779,7 +1900,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload || {}),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) {
         toast(data.detail || 'Napaka pri potrditvi.', 'error');
         return;
@@ -1788,7 +1909,7 @@
         toast(data.warning, 'warning');
         return;
       }
-      toast('Rezervacija potrjena.', 'success');
+      toast('Naročilo potrjeno.', 'success');
       closeConfirmModal();
       loadAll();
     }
@@ -1819,7 +1940,7 @@
       let calendarData = {};
       try {
         const res = await fetch(`${API_BASE}/calendar/rooms?month=${calendarMonth + 1}&year=${calendarYear}`);
-        const payload = await res.json();
+        const payload = await safeJson(res);
         calendarData = payload.days || payload;
       } catch (e) {
         console.error('Calendar load error', e);
@@ -1921,12 +2042,16 @@
       title.textContent = `${monthNames[calendarMonth]} ${calendarYear}`;
       let data = {};
       try {
-        const res = await fetch(`${API_BASE}/calendar/tables?month=${calendarMonth + 1}&year=${calendarYear}`);
-        data = await res.json();
+        const locationParam = currentAppointmentFilter !== 'ALL'
+          ? `&location=${encodeURIComponent(currentAppointmentFilter)}`
+          : '';
+        const res = await fetch(`${API_BASE}/calendar/tables?month=${calendarMonth + 1}&year=${calendarYear}${locationParam}`);
+        data = await safeJson(res);
       } catch (e) {
         grid.innerHTML = '<div style="grid-column: span 7; text-align:center; color:#9a8f84;">Napaka pri nalaganju koledarja pregledov.</div>';
         return;
       }
+      tableCalendarData = data;
       grid.innerHTML = '';
       const firstDay = new Date(calendarYear, calendarMonth, 1).getDay();
       const startDay = firstDay === 0 ? 6 : firstDay - 1;
@@ -1981,7 +2106,8 @@
           const tooltip = reservations
             .map(r => {
               const contact = [r.email, r.phone].filter(Boolean).join(' | ');
-              return `${r.time || '-'} · ${r.name || 'Gost'} · ${r.people || 0} oseb${r.location ? ' · ' + r.location : ''}${contact ? ' · ' + contact : ''}`;
+              const timeLabel = r.time || r.time_window || '-';
+              return `${timeLabel} · ${r.name || 'Gost'} · ${r.people || 0} oseb${r.location ? ' · ' + r.location : ''}${contact ? ' · ' + contact : ''}`;
             })
             .join('\\n');
           cell.title = tooltip;
@@ -2033,10 +2159,10 @@
       dateTitle.textContent = dateKey;
       try {
         const res = await fetch(`${API_BASE}/reservations?date_from=${dateKey}&date_to=${dateKey}&type=room&limit=50`);
-        const data = await res.json();
+        const data = await safeJson(res);
         const reservations = data.reservations || [];
         if (!reservations.length) {
-          content.innerHTML = '<p style="color: #7a7a7a;">Ni rezervacij za ta dan.</p>';
+          content.innerHTML = '<p style="color: #7a7a7a;">Ni naročil za ta dan.</p>';
           return;
         }
         const sorted = reservations.sort((a,b) => (a.created_at || '').localeCompare(b.created_at || ''));
@@ -2045,7 +2171,7 @@
             <div style="font-weight: 600;">${r.name || 'Gost'}</div>
             <div style="color: #7a7a7a; font-size: 13px;">
               ${r.people || '-'} oseb ${r.kids ? '(' + r.kids + ' otrok)' : ''}<br>
-              ${r.location || 'Soba ni dodeljena'}<br>
+              ${r.location || 'Pregled ni dodeljen'}<br>
               <span class="badge status-${r.status}">${r.status}</span><br>
               ${[r.email, r.phone].filter(Boolean).join(' | ')}
             </div>
@@ -2069,30 +2195,65 @@
       if (!sidebar || !dateTitle || !content) return;
       sidebar.style.display = 'block';
       dateTitle.textContent = dateKey;
-      const reservations = dayData.reservations || [];
+      const reservations = (dayData.reservations || []).filter(r => {
+        if (currentAppointmentFilter === 'ALL') return true;
+        return r.location === currentAppointmentFilter;
+      });
       if (!reservations.length) {
-        content.innerHTML = '<p style="color:#7a7a7a;">Ni rezervacij za ta dan.</p>';
+        content.innerHTML = '<p style="color:#7a7a7a;">Ni naročil za ta dan.</p>';
         return;
       }
-      content.innerHTML = reservations
-        .sort((a,b) => (a.time || '').localeCompare(b.time || ''))
+
+      const byTime = {};
+      reservations.forEach(r => {
+        if (!r.time) return;
+        byTime[r.time] = byTime[r.time] || [];
+        byTime[r.time].push(r);
+      });
+
+      const slots = buildSlots(8, 18);  // Zdravstveni center: 8:00-18:00
+      const slotHtml = slots.map(slot => {
+        const items = byTime[slot] || [];
+        if (!items.length) {
+          return `<div class="slot free">${slot}</div>`;
+        }
+        const names = items.map(i => i.name || 'Gost').join(', ');
+        return `<div class="slot busy" title="${escapeHtml(names)}">${slot}</div>`;
+      }).join('');
+
+      const listHtml = reservations
+        .sort((a,b) => (a.time || a.time_window || '').localeCompare(b.time || b.time_window || ''))
         .map(r => `
           <div style="border: 1px solid #e6e2da; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
             <div style="font-weight: 600;">${r.name || 'Gost'} (${r.people || 0} oseb)</div>
-            <div style="color:#7a7a7a;font-size:13px;">${r.time || '-'} | ${r.location || ''} | ${r.status || ''}</div>
+            <div style="color:#7a7a7a;font-size:13px;">${r.time || r.time_window || '-'} | ${r.location || ''} | ${r.status || ''}</div>
             <div style="color:#7a7a7a;font-size:13px;">${[r.email, r.phone].filter(Boolean).join(' | ')}</div>
+            ${r.id ? `<div style="margin-top:6px;"><button class="btn-inline" onclick="openEdit('${encodeURIComponent(JSON.stringify(r))}')">🕒 Dodeli uro</button></div>` : ''}
           </div>
         `).join('');
+
+      content.innerHTML = `
+        <div class="table-day-layout">
+          <div>
+            ${listHtml}
+          </div>
+          <div>
+            <div style="font-weight:600; margin-bottom:6px;">30-min sloti</div>
+            <div class="slot-grid">${slotHtml}</div>
+            <div class="muted" style="margin-top:6px;">Uro dodeliš pri posameznem naročilu.</div>
+          </div>
+        </div>
+      `;
     }
 
     async function rejectReservation(id) {
-      if (!confirm('Ali res želite zavrniti rezervacijo?')) return;
+      if (!confirm('Ali res želite zavrniti naročilo?')) return;
       const res = await fetch(`${API_BASE}/reservations/${id}/reject`, { method: 'POST' });
       if (!res.ok) {
         toast('Napaka pri zavrnitvi.', 'error');
         return;
       }
-      toast('Rezervacija zavrnjena.', 'success');
+      toast('Naročilo zavrnjeno.', 'success');
       loadAll();
     }
 
@@ -2123,6 +2284,23 @@
       map[resId] = lastInbound;
       setSeenMap(map);
       updateBadge(resId, false);
+    }
+
+    function errorMessage(data) {
+      if (!data) return 'Napaka pri shranjevanju.';
+      if (typeof data.detail === 'string') return data.detail;
+      if (typeof data.detail === 'object') return JSON.stringify(data.detail);
+      return data.detail || 'Napaka pri shranjevanju.';
+    }
+
+    async function safeJson(res) {
+      try {
+        const text = await res.text();
+        if (!text) return {};
+        return JSON.parse(text);
+      } catch (e) {
+        return { detail: 'Internal Server Error' };
+      }
     }
 
     async function loadReservationMessages(resId, targetId, markAsSeen = false, attempt = 1) {
@@ -2245,23 +2423,69 @@
       qs('table-edit-hidden-id').value = r.id;
       qs('table-edit-status').value = r.status || 'pending';
       qs('table-edit-date').value = parseDate(r.date);
-      qs('table-edit-time').value = r.time || '12:00';
+      qs('table-edit-time').value = r.time || '';
+      qs('table-edit-time-window').value = r.time_window || '';
       qs('table-edit-location').value = r.location || APPOINTMENT_TYPES[0];
-      qs('table-edit-people').value = r.people || 1;
-      qs('table-edit-kids').value = r.kids || 0;
-      qs('table-edit-kids-ages').value = r.kids_small || '';
       qs('table-edit-event-type').value = r.event_type || '';
       qs('table-edit-name').value = r.name || '';
       qs('table-edit-email').value = r.email || '';
       qs('table-edit-phone').value = r.phone || '';
       qs('table-edit-special-needs').value = r.special_needs || '';
+      qs('table-edit-birth-date').value = r.birth_date || '';
       qs('table-edit-admin-notes').value = r.admin_notes || '';
+      renderSlotPicker(r);
       qs('table-edit-flags').innerHTML = renderGuestBadges(r) || '';
       renderTimeline(r, [], 'table-edit-timeline');
       loadReservationMessages(r.id, 'table-edit-messages', true);
       qs('edit-table-modal').classList.add('active');
     }
     function closeTableEditModal() { qs('edit-table-modal').classList.remove('active'); }
+
+    function buildSlots(startHour, endHour) {
+      const slots = [];
+      for (let h = startHour; h < endHour; h++) {
+        slots.push(`${String(h).padStart(2,'0')}:00`);
+        slots.push(`${String(h).padStart(2,'0')}:30`);
+      }
+      return slots;
+    }
+
+    function renderSlotPicker(reservation) {
+      const container = qs('table-edit-slots');
+      if (!container || !reservation) return;
+      const dateStr = reservation.date;
+      const location = reservation.location;
+      if (!dateStr || !location) {
+        container.textContent = 'Izberi datum in vrsto pregleda za prikaz slotov.';
+        return;
+      }
+      const dayKey = formatToISO(dateStr);
+      const dayData = tableCalendarData[dayKey] || { reservations: [] };
+      const reserved = (dayData.reservations || [])
+        .filter(r => r.location === location && r.time)
+        .map(r => r.time);
+      const slots = buildSlots(8, 18);  // Zdravstveni center: 8:00-18:00
+      container.innerHTML = slots.map(s => {
+        const occupied = reserved.includes(s);
+        const label = occupied ? `${s} · zasedeno` : s;
+        return `<button type="button" class="btn-inline" style="margin:4px;" ${occupied ? 'disabled' : ''} onclick="selectSlot('${s}')">${label}</button>`;
+      }).join('');
+    }
+
+    function selectSlot(timeVal) {
+      qs('table-edit-time').value = timeVal;
+      qs('table-edit-time-window').value = 'Določena ura';
+      toast(`Izbran termin: ${timeVal}`, 'success');
+    }
+
+    function formatToISO(dateStr) {
+      if (!dateStr) return '';
+      const parts = String(dateStr).split('.');
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      }
+      return dateStr;
+    }
 
     function parseDate(dateStr) {
       if (!dateStr) return '';
@@ -2314,9 +2538,9 @@
         toast('Napaka pri shranjevanju sobe.', 'error');
         return;
       }
-      toast('Rezervacija sobe shranjena.', 'success');
+      toast('Naročilo shranjeno.', 'success');
       closeRoomEditModal();
-      loadAll();
+      await refreshAfterSave(payload.date);
     });
 
     qs('table-edit-form').addEventListener('submit', async (e) => {
@@ -2326,14 +2550,16 @@
         status: qs('table-edit-status').value,
         date: formatToDDMMYYYY(qs('table-edit-date').value),
         time: qs('table-edit-time').value,
+        time_window: qs('table-edit-time-window').value,
         location: qs('table-edit-location').value,
-        people: parseInt(qs('table-edit-people').value || '1'),
-        kids: qs('table-edit-kids').value,
-        kids_small: qs('table-edit-kids-ages').value,
+        people: 1,
+        kids: '',
+        kids_small: '',
         event_type: qs('table-edit-event-type').value,
         name: qs('table-edit-name').value,
         email: qs('table-edit-email').value,
         phone: qs('table-edit-phone').value,
+        birth_date: qs('table-edit-birth-date').value,
         special_needs: qs('table-edit-special-needs').value,
         admin_notes: qs('table-edit-admin-notes').value,
       };
@@ -2346,9 +2572,9 @@
         toast('Napaka pri shranjevanju termina.', 'error');
         return;
       }
-      toast('Rezervacija termina shranjena.', 'success');
+      toast('Naročilo shranjeno.', 'success');
       closeTableEditModal();
-      loadAll();
+      await refreshAfterSave(payload.date);
     });
 
     qs('new-room-form').addEventListener('submit', async (e) => {
@@ -2373,18 +2599,18 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) {
-        toast(data.detail || 'Napaka pri shranjevanju.', 'error');
+        toast(errorMessage(data), 'error');
         return;
       }
       if (data.warning) {
         toast(data.warning, 'warning');
       } else {
-        toast('Rezervacija sobe dodana.', 'success');
+        toast('Naročilo dodano.', 'success');
       }
       closeNewRoom();
-      loadAll();
+      await refreshAfterSave(payload.date);
     });
 
     qs('new-table-form').addEventListener('submit', async (e) => {
@@ -2392,14 +2618,16 @@
       const payload = {
         date: formatToDDMMYYYY(qs('new-table-date').value),
         time: qs('new-table-time').value,
+        time_window: qs('new-table-time-window').value,
         location: qs('new-table-location').value,
-        people: parseInt(qs('new-table-people').value || '1'),
-        kids: qs('new-table-kids').value,
-        kids_small: qs('new-table-kids-ages').value,
+        people: 1,
+        kids: '',
+        kids_small: '',
         event_type: qs('new-table-event-type').value,
         name: qs('new-table-name').value,
         email: qs('new-table-email').value,
         phone: qs('new-table-phone').value,
+        birth_date: qs('new-table-birth-date').value,
         special_needs: qs('new-table-special-needs').value,
         status: 'confirmed',
         reservation_type: 'table',
@@ -2410,19 +2638,19 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) {
-        toast(data.detail || 'Napaka pri shranjevanju.', 'error');
+        toast(errorMessage(data), 'error');
         return;
       }
       if (data.warning) {
         toast(data.warning, 'warning');
       } else {
-        toast('Rezervacija termina dodana.', 'success');
+        toast('Naročilo dodano.', 'success');
       }
       clearNewTableForm();
       closeNewTable();
-      loadAll();
+      await refreshAfterSave(payload.date);
     });
 
     async function exportCsv() {

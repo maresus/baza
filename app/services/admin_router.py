@@ -12,7 +12,23 @@ from app.services.email_service import (
     send_reservation_confirmed,
     send_reservation_rejected,
 )
-from app.services.reservation_service import ROOMS, DINING_ROOMS, TOTAL_TABLE_CAPACITY, ReservationService
+from app.services.reservation_service import SERVICES, ReservationService
+
+# Compatibility aliases za admin panel
+ROOMS = SERVICES  # Storitve namesto sob
+TOTAL_TABLE_CAPACITY = 0  # Ni miz
+
+# Veljavne vrste pregledov/posegov za zdravstveni center (za validacijo)
+VALID_TABLE_LOCATIONS = {
+    "Ortopedski pregled",
+    "Dermatološki pregled",
+    "Laserski poseg",
+    "Estetski poseg",
+    "Fizioterapija",
+    "Okulistični pregled",
+    "Predpis očal/leč",
+    "Kozmetični salon",
+}
 from app.services.imap_poll_service import load_state, preview_last_messages, resync_last_messages
 
 router = APIRouter(tags=["admin"])
@@ -110,9 +126,19 @@ class ReservationUpdate(BaseModel):
     date: Optional[str] = None
     people: Optional[int] = None
     nights: Optional[int] = None
+    time: Optional[str] = None
+    time_window: Optional[str] = None
     location: Optional[str] = None
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
     admin_notes: Optional[str] = None
+    note: Optional[str] = None
+    kids_small: Optional[str] = None
     kids: Optional[str] = None
+    event_type: Optional[str] = None
+    special_needs: Optional[str] = None
+    birth_date: Optional[str] = None
 
 
 class SendMessageRequest(BaseModel):
@@ -146,6 +172,8 @@ class AdminCreateReservation(BaseModel):
     kids_small: Optional[str] = None
     event_type: Optional[str] = None
     special_needs: Optional[str] = None
+    birth_date: Optional[str] = None
+    time_window: Optional[str] = None
 
 
 class KnowledgeFeedbackRequest(BaseModel):
@@ -159,6 +187,16 @@ def admin_page() -> HTMLResponse:
     html_path = Path("static/admin.html")
     if not html_path.exists():
         return HTMLResponse("<h1>Admin UI manjka (static/admin.html)</h1>", status_code=500)
+    html = html_path.read_text(encoding="utf-8")
+    return HTMLResponse(content=html)
+
+
+@router.get("/admin/new", response_class=HTMLResponse)
+def admin_new_page() -> HTMLResponse:
+    """Nov admin UI s koledarskim pogledom (static/admin_new.html)."""
+    html_path = Path("static/admin_new.html")
+    if not html_path.exists():
+        return HTMLResponse("<h1>Nov admin UI manjka (static/admin_new.html)</h1>", status_code=500)
     html = html_path.read_text(encoding="utf-8")
     return HTMLResponse(content=html)
 
@@ -316,10 +354,9 @@ def update_reservation(reservation_id: int, data: ReservationUpdate):
     res_type = existing.get("reservation_type")
     location = data.location
     valid_rooms = {"", None, "ALJAZ", "JULIJA", "ANA"}
-    valid_tables = {room["name"] for room in DINING_ROOMS}
     if res_type == "room" and location is not None and location not in valid_rooms:
         raise HTTPException(status_code=400, detail="Neveljavna soba")
-    if res_type == "table" and location is not None and location not in valid_tables:
+    if res_type == "table" and location is not None and location not in VALID_TABLE_LOCATIONS:
         raise HTTPException(status_code=400, detail="Neveljavna vrsta pregleda/posega")
     ok = service.update_reservation(
         reservation_id,
@@ -330,6 +367,16 @@ def update_reservation(reservation_id: int, data: ReservationUpdate):
         location=data.location,
         admin_notes=data.admin_notes,
         kids=data.kids,
+        kids_small=data.kids_small,
+        time=data.time,
+        time_window=data.time_window,
+        name=data.name,
+        phone=data.phone,
+        email=data.email,
+        note=data.note,
+        event_type=data.event_type,
+        special_needs=data.special_needs,
+        birth_date=data.birth_date,
     )
     if not ok:
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
@@ -343,6 +390,17 @@ def patch_reservation(reservation_id: int, data: ReservationUpdate):
         "status": data.status,
         "admin_notes": data.admin_notes,
         "kids": data.kids,
+        "kids_small": data.kids_small,
+        "time": data.time,
+        "time_window": data.time_window,
+        "location": data.location,
+        "name": data.name,
+        "phone": data.phone,
+        "email": data.email,
+        "note": data.note,
+        "event_type": data.event_type,
+        "special_needs": data.special_needs,
+        "birth_date": data.birth_date,
     }
     if data.status == "confirmed":
         fields["confirmed_at"] = datetime.now().isoformat()
@@ -350,6 +408,19 @@ def patch_reservation(reservation_id: int, data: ReservationUpdate):
     if not ok:
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
     return {"ok": True}
+
+
+@router.delete("/api/admin/reservations/{reservation_id}")
+def delete_reservation(reservation_id: int):
+    """Izbriši rezervacijo."""
+    _log("delete_reservation", reservation_id=reservation_id)
+    res = service.get_reservation(reservation_id)
+    if not res:
+        raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
+    ok = service.delete_reservation(reservation_id)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Napaka pri brisanju")
+    return {"ok": True, "deleted_id": reservation_id}
 
 
 @router.post("/api/admin/reservations/{reservation_id}/confirm")
@@ -369,12 +440,22 @@ def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRe
     else:
         requested_room = None
 
+    if res.get("reservation_type") == "table" and not res.get("time"):
+        auto_time = service.pick_time_slot(
+            res.get("date", ""),
+            requested_location,
+            res.get("time_window"),
+        )
+        if auto_time:
+            res["time"] = auto_time
+
     service.update_reservation(
         reservation_id,
         status="confirmed",
         confirmed_at=datetime.now().isoformat(),
         confirmed_by=os.getenv("ADMIN_EMAIL", "info@kovacnik.com"),
         location=requested_room or requested_location,
+        time=res.get("time"),
     )
     res = service.get_reservation(reservation_id) or res
     send_reservation_confirmed(res)
@@ -594,7 +675,7 @@ def calendar_rooms(month: int, year: int):
 
 
 @router.get("/api/admin/calendar/tables")
-def calendar_tables(month: int, year: int):
+def calendar_tables(month: int, year: int, location: Optional[str] = None):
     """Zasedenost miz po dnevih in urah."""
     if month < 1 or month > 12:
         raise HTTPException(status_code=400, detail="Neveljaven mesec")
@@ -603,6 +684,8 @@ def calendar_tables(month: int, year: int):
     for r in reservations:
         status = r.get("status")
         if status in {"rejected", "cancelled"}:
+            continue
+        if location and r.get("location") and r.get("location") != location:
             continue
         day = _parse_ddmmyyyy(r.get("date", ""))
         if not day or day.month != month or day.year != year:
@@ -620,6 +703,7 @@ def calendar_tables(month: int, year: int):
         entry["reservations"].append(
             {
                 "time": r.get("time"),
+                "time_window": r.get("time_window"),
                 "people": people,
                 "name": r.get("name"),
                 "status": status,
@@ -627,6 +711,9 @@ def calendar_tables(month: int, year: int):
                 "email": r.get("email"),
                 "phone": r.get("phone"),
                 "date": r.get("date"),
+                "id": r.get("id"),
+                "birth_date": r.get("birth_date"),
+                "reservation_type": "table",
             }
         )
     return calendar
@@ -637,14 +724,13 @@ def create_admin_reservation(data: AdminCreateReservation):
     """Ročno dodajanje rezervacije (admin)."""
     warning: Optional[str] = None
     valid_rooms = {"", None, "ALJAZ", "JULIJA", "ANA"}
-    valid_tables = {room["name"] for room in DINING_ROOMS}
     location = _normalize_room_id(data.location) if data.reservation_type == "room" else data.location
 
     if data.reservation_type == "room":
         if location not in valid_rooms:
             raise HTTPException(status_code=400, detail="Neveljavna soba")
     if data.reservation_type == "table":
-        if location and location not in valid_tables:
+        if location and location not in VALID_TABLE_LOCATIONS:
             raise HTTPException(status_code=400, detail="Neveljavna vrsta pregleda/posega")
 
     if data.reservation_type == "room" and location:
@@ -660,24 +746,29 @@ def create_admin_reservation(data: AdminCreateReservation):
         if suggested_location and not data.location:
             location = suggested_location
 
-    new_id = service.create_reservation(
-        date=data.date,
-        nights=data.nights,
-        rooms=data.rooms,
-        people=data.people,
-        reservation_type=data.reservation_type,
-        time=data.time,
-        location=location,
-        name=data.name,
-        phone=data.phone,
-        email=data.email,
-        note=data.note,
-        status="confirmed",
-        admin_notes=data.admin_notes,
-        kids=data.kids,
-        kids_small=data.kids_small,
-        source="admin",
-        event_type=data.event_type,
-        special_needs=data.special_needs,
-    )
+    try:
+        new_id = service.create_reservation(
+            date=data.date,
+            nights=data.nights,
+            rooms=data.rooms,
+            people=data.people,
+            reservation_type=data.reservation_type,
+            time=data.time,
+            location=location,
+            name=data.name,
+            phone=data.phone,
+            email=data.email,
+            note=data.note,
+            status="confirmed",
+            admin_notes=data.admin_notes,
+            kids=data.kids,
+            kids_small=data.kids_small,
+            source="admin",
+            event_type=data.event_type,
+            special_needs=data.special_needs,
+            birth_date=data.birth_date,
+            time_window=data.time_window,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Napaka pri shranjevanju: {exc}")
     return {"success": True, "id": new_id, "warning": warning}
