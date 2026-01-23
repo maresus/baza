@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import Settings
 from app.services.chat_router import router as chat_router
@@ -10,6 +11,7 @@ from app.services.reservation_router import router as reservation_router
 from app.services.admin_router import router as admin_router
 from app.services.webhook_router import router as webhook_router
 from app.services.imap_poll_service import start_imap_poller
+from app.services.reminder_scheduler import start_reminder_scheduler, stop_reminder_scheduler
 
 # Naloži .env v okolje ob zagonu (za SMTP ipd.)
 load_dotenv()
@@ -17,9 +19,20 @@ load_dotenv()
 settings = Settings()
 app = FastAPI(title=settings.project_name)
 
+# Mount static files (za admin_new.html, css, js, slike...)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 @app.on_event("startup")
-def startup_tasks() -> None:
+async def startup_tasks() -> None:
+    """Zaženi background servise ob zagonu aplikacije."""
     start_imap_poller()
+    await start_reminder_scheduler()
+
+
+@app.on_event("shutdown")
+async def shutdown_tasks() -> None:
+    """Ustavi background servise ob zaustavitvi aplikacije."""
+    await stop_reminder_scheduler()
 
 @app.get("/health")
 def health_check() -> dict[str, str]:

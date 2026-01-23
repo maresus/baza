@@ -597,11 +597,23 @@ def send_reservation_rejected(data: Dict[str, Any]) -> bool:
     email = data.get('email')
     if not email:
         return False
-    
+
     html = _guest_rejected_html(data)
     rid = data.get('id')
     tag = f"Rezervacija #{rid}" if rid else "Rezervacija"
     subject = f"{tag} - Rezervacija zavrnjena"
+    return _send_email(email, subject, html)
+
+
+def send_appointment_reminder(data: Dict[str, Any]) -> bool:
+    """Pošlje gostu OPOMNIK za termin, ki je čez 24 ur."""
+    email = data.get('email')
+    if not email:
+        return False
+
+    html = _guest_reminder_html(data)
+    service_type = data.get('location', 'Pregled')
+    subject = f"⏰ Opomnik: {service_type} jutri ob {data.get('time', '')}"
     return _send_email(email, subject, html)
 
 
