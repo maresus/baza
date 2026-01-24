@@ -596,6 +596,14 @@
       if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
       return new Date(str);
     }
+    function convertDDMMYYYYtoISO(dateStr) {
+      // Direktna konverzija "24.01.2026" -> "2026-01-24" brez timezone issues
+      if (!dateStr) return '';
+      const parts = dateStr.split('.');
+      if (parts.length !== 3) return '';
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
     function isToday(d) {
       const today = new Date();
       return d.toDateString() === today.toDateString();
@@ -842,7 +850,7 @@
       document.getElementById('edit-id').value = id;
       document.getElementById('edit-status').value = r.status || 'pending';
       document.getElementById('edit-location').value = r.location || 'Ortopedski pregled';
-      document.getElementById('edit-date').value = r.date ? formatDateISO(parseDate(r.date)) : '';
+      document.getElementById('edit-date').value = r.date ? convertDDMMYYYYtoISO(r.date) : '';
       document.getElementById('edit-time').value = r.time || '';
       document.getElementById('edit-name').value = r.name || '';
       document.getElementById('edit-phone').value = r.phone || '';
