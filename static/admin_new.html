@@ -408,6 +408,117 @@
     .toast.error { border-left-color: var(--danger); }
     @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      padding: 16px 24px 0;
+      background: var(--bg);
+      border-bottom: 2px solid var(--border);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .tab-btn {
+      padding: 12px 24px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Analytics Grid */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .widget {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .widget-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      padding: 12px 16px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .widget-body {
+      padding: 16px;
+    }
+    .widget-stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .widget-stat:last-child { border-bottom: none; }
+    .widget-stat .label { color: var(--text-muted); }
+    .widget-stat .value { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+
+    /* IMAP Status */
+    .imap-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .imap-status.connected { border-left: 4px solid var(--success); }
+    .imap-status.error { border-left: 4px solid var(--danger); }
+    .imap-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    .imap-indicator.error { background: var(--danger); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .question-item {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .question-item:last-child { border-bottom: none; }
+    .question-item .count {
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--bg);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
     @media (max-width: 768px) {
       .form-grid { grid-template-columns: 1fr; }
       .form-group.full { grid-column: span 1; }
@@ -426,7 +537,15 @@
     </div>
   </header>
 
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('rezervacije')">📅 Rezervacije</button>
+    <button class="tab-btn" onclick="switchTab('analitika')">📊 Orodja & Analitika</button>
+  </div>
+
   <div class="container">
+    <!-- Tab: Rezervacije -->
+    <div class="tab-content active" id="tab-rezervacije">
     <!-- Stats row -->
     <div class="stats-row">
       <div class="stat-badge pending">⏳ Čaka: <span class="num" id="stat-pending">0</span></div>
@@ -485,6 +604,101 @@
         <div id="day-schedule-body" style="overflow-y: auto; max-height: 70vh;"></div>
       </div>
     </div>
+    </div>
+    <!-- End Tab: Rezervacije -->
+
+    <!-- Tab: Orodja & Analitika -->
+    <div class="tab-content" id="tab-analitika">
+      <!-- IMAP Polling Section -->
+      <div class="widget" style="margin-bottom: 16px;">
+        <div class="widget-header">
+          📧 IMAP Polling Status
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm btn-secondary" onclick="refreshImapStatus()" style="background: rgba(255,255,255,0.2);">🔄 Osveži</button>
+            <button class="btn btn-sm btn-secondary" onclick="resyncImap()" style="background: rgba(255,255,255,0.2);">🔁 Resync</button>
+          </div>
+        </div>
+        <div class="widget-body">
+          <div class="imap-status" id="imap-status">
+            <div class="imap-indicator"></div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 13px;" id="imap-status-text">Preverjam...</div>
+              <div style="font-size: 11px; color: var(--text-muted);" id="imap-last-check">Zadnja preverba: -</div>
+            </div>
+          </div>
+          <div class="widget-stat">
+            <span class="label">Procesiranih sporočil</span>
+            <span class="value" id="imap-processed-count">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Widgets Grid -->
+      <div class="analytics-grid">
+        <!-- Usage Stats -->
+        <div class="widget">
+          <div class="widget-header">📈 Statistika uporabe</div>
+          <div class="widget-body">
+            <div class="widget-stat">
+              <span class="label">Skupaj sej</span>
+              <span class="value" id="total-sessions">-</span>
+            </div>
+            <div class="widget-stat">
+              <span class="label">Konverzija</span>
+              <span class="value" id="conversion-rate">-</span>
+            </div>
+            <div class="widget-stat">
+              <span class="label">Povprečno trajanje</span>
+              <span class="value" id="avg-duration">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conversion Funnel -->
+        <div class="widget">
+          <div class="widget-header">🔀 Conversion Funnel</div>
+          <div class="widget-body">
+            <div class="widget-stat">
+              <span class="label">Začeto</span>
+              <span class="value" id="funnel-started">-</span>
+            </div>
+            <div class="widget-stat">
+              <span class="label">Dokončano</span>
+              <span class="value" id="funnel-completed">-</span>
+            </div>
+            <div class="widget-stat">
+              <span class="label">Potrjeno</span>
+              <span class="value" id="funnel-confirmed">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Questions -->
+        <div class="widget" style="grid-column: span 2;">
+          <div class="widget-header">❓ Najpogostejša vprašanja</div>
+          <div class="widget-body" style="max-height: 300px; overflow-y: auto;">
+            <div id="top-questions">Nalagam...</div>
+          </div>
+        </div>
+
+        <!-- Lost Intents -->
+        <div class="widget">
+          <div class="widget-header">⚠️ Lost Intents</div>
+          <div class="widget-body" style="max-height: 300px; overflow-y: auto;">
+            <div id="lost-intents" style="font-size: 12px;">Nalagam...</div>
+          </div>
+        </div>
+
+        <!-- Missed Questions -->
+        <div class="widget">
+          <div class="widget-header">🤷 Missed Questions</div>
+          <div class="widget-body" style="max-height: 300px; overflow-y: auto;">
+            <div id="missed-questions" style="font-size: 12px;">Nalagam...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Tab: Orodja & Analitika -->
   </div>
 
   <!-- Modal -->
@@ -967,6 +1181,167 @@
         loadData();
       } catch (err) {
         toast(`Napaka: ${err.message}`, 'error');
+      }
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+
+      // Load analytics when switching to analytics tab
+      if (tabName === 'analitika') {
+        loadAnalytics();
+      }
+    }
+
+    // Analytics functions
+    async function loadAnalytics() {
+      loadUsageStats();
+      loadFunnelStats();
+      loadTopQuestions();
+      loadLostIntents();
+      loadMissedQuestions();
+      loadImapStatus();
+    }
+
+    async function loadUsageStats() {
+      try {
+        const resp = await fetch(`${API}/usage_stats`);
+        const data = await resp.json();
+        document.getElementById('total-sessions').textContent = data.total_sessions || 0;
+        document.getElementById('conversion-rate').textContent = data.conversion_rate || '0%';
+        document.getElementById('avg-duration').textContent = data.avg_duration || '-';
+      } catch (e) {
+        console.error('Usage stats error:', e);
+      }
+    }
+
+    async function loadFunnelStats() {
+      try {
+        const resp = await fetch(`${API}/funnel_stats`);
+        const data = await resp.json();
+        document.getElementById('funnel-started').textContent = data.started || 0;
+        document.getElementById('funnel-completed').textContent = data.completed || 0;
+        document.getElementById('funnel-confirmed').textContent = data.confirmed || 0;
+      } catch (e) {
+        console.error('Funnel stats error:', e);
+      }
+    }
+
+    async function loadTopQuestions() {
+      try {
+        const resp = await fetch(`${API}/question_stats`);
+        const data = await resp.json();
+        const container = document.getElementById('top-questions');
+        if (!data.questions || data.questions.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Ni podatkov</div>';
+          return;
+        }
+        container.innerHTML = data.questions.slice(0, 10).map(q =>
+          `<div class="question-item">
+            <span>${q.question}</span>
+            <span class="count">${q.count}</span>
+          </div>`
+        ).join('');
+      } catch (e) {
+        console.error('Question stats error:', e);
+        document.getElementById('top-questions').innerHTML = '<div style="text-align: center; color: var(--danger);">Napaka pri nalaganju</div>';
+      }
+    }
+
+    async function loadLostIntents() {
+      try {
+        const resp = await fetch(`${API}/lost_intents`);
+        const data = await resp.json();
+        const container = document.getElementById('lost-intents');
+        const items = data.items || data.intents || [];
+        if (items.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Ni podatkov</div>';
+          return;
+        }
+        container.innerHTML = items.slice(0, 10).map(item =>
+          `<div style="padding: 8px; border-bottom: 1px solid var(--border);">${item.query || item.question || item}</div>`
+        ).join('');
+      } catch (e) {
+        console.error('Lost intents error:', e);
+        document.getElementById('lost-intents').innerHTML = '<div style="text-align: center; color: var(--danger);">Napaka pri nalaganju</div>';
+      }
+    }
+
+    async function loadMissedQuestions() {
+      try {
+        const resp = await fetch(`${API}/missed_questions`);
+        const data = await resp.json();
+        const container = document.getElementById('missed-questions');
+        const items = data.items || data.questions || [];
+        if (items.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Ni podatkov</div>';
+          return;
+        }
+        container.innerHTML = items.slice(0, 10).map(item =>
+          `<div style="padding: 8px; border-bottom: 1px solid var(--border);">${item.query || item.question || item}</div>`
+        ).join('');
+      } catch (e) {
+        console.error('Missed questions error:', e);
+        document.getElementById('missed-questions').innerHTML = '<div style="text-align: center; color: var(--danger);">Napaka pri nalaganju</div>';
+      }
+    }
+
+    async function loadImapStatus() {
+      try {
+        const resp = await fetch(`${API}/imap_status`);
+        const data = await resp.json();
+        const statusDiv = document.getElementById('imap-status');
+        const statusText = document.getElementById('imap-status-text');
+        const lastCheck = document.getElementById('imap-last-check');
+        const indicator = statusDiv.querySelector('.imap-indicator');
+
+        if (data.is_running || data.enabled) {
+          statusDiv.className = 'imap-status connected';
+          indicator.className = 'imap-indicator';
+          statusText.textContent = '✅ Povezan';
+        } else {
+          statusDiv.className = 'imap-status error';
+          indicator.className = 'imap-indicator error';
+          statusText.textContent = '❌ Ni aktiven';
+        }
+
+        lastCheck.textContent = `Zadnja preverba: ${data.last_poll || data.last_check || '-'}`;
+        document.getElementById('imap-processed-count').textContent = data.messages_processed || data.processed_count || 0;
+      } catch (e) {
+        console.error('IMAP status error:', e);
+        const statusDiv = document.getElementById('imap-status');
+        statusDiv.className = 'imap-status error';
+        document.getElementById('imap-status-text').textContent = '❌ Napaka pri nalaganju';
+      }
+    }
+
+    async function refreshImapStatus() {
+      toast('Osvežujem IMAP status...', 'info');
+      await loadImapStatus();
+      toast('IMAP status osvežen', 'success');
+    }
+
+    async function resyncImap() {
+      try {
+        toast('Znova sinhroniziram IMAP...', 'info');
+        const resp = await fetch(`${API}/imap_resync`, { method: 'POST' });
+        if (!resp.ok) throw new Error('Resync failed');
+        const data = await resp.json();
+        toast(`IMAP resync začet (${data.processed || 0} sporočil)`, 'success');
+        setTimeout(loadImapStatus, 2000);
+      } catch (e) {
+        toast('Napaka pri IMAP resync', 'error');
       }
     }
 
