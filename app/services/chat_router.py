@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from typing import Any, Optional, Tuple
 import uuid
 import threading
-import numpy as np
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
