@@ -918,9 +918,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
     last_interaction = now
 
     # ===== ANTI-LOOP DETECTION =====
-    conversation_tracker.add_message(session_id, message)
+    # Check for loop BEFORE adding message (to avoid comparing with itself)
     if conversation_tracker.detect_loop(session_id, message):
         loop_count = conversation_tracker.get_loop_count(session_id)
+        conversation_tracker.add_message(session_id, message)  # Track even if loop
+
         if loop_count >= 2:
             # 2nd loop detected -> handoff
             conversation_tracker.reset_loop_count(session_id)
@@ -934,6 +936,9 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 reply="Vidim, da se vrtiva. Prosím, povejte samo:\n- Storitev (npr. ortoped)\n- Datum (npr. 15.2.)\n- Ura (npr. 14:00)",
                 session_id=session_id
             )
+
+    # No loop detected, add message to tracking
+    conversation_tracker.add_message(session_id, message)
 
     # Check if user is in booking flow
     state = get_appointment_state(session_id)
