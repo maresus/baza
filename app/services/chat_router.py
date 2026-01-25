@@ -2,11 +2,13 @@ import re
 import random
 import json
 import os
+import hashlib
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Any, Optional, Tuple
 import uuid
 import threading
+import numpy as np
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -39,6 +41,108 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
 USE_FULL_KB_LLM = True
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+# ========== ANTI-LOOP & CACHE MECHANISMS ==========
+
+class ConversationTracker:
+    """Track recent questions to detect loops"""
+    def __init__(self):
+        self.recent_messages: dict[str, list[str]] = {}  # session_id -> [messages]
+        self.loop_count: dict[str, int] = {}  # session_id -> count
+
+    def add_message(self, session_id: str, message: str):
+        """Add message to tracking"""
+        if session_id not in self.recent_messages:
+            self.recent_messages[session_id] = []
+        self.recent_messages[session_id].append(message.lower().strip())
+        # Keep only last 3
+        if len(self.recent_messages[session_id]) > 3:
+            self.recent_messages[session_id].pop(0)
+
+    def detect_loop(self, session_id: str, message: str) -> bool:
+        """Detect if message is repeating (simple token overlap)"""
+        if session_id not in self.recent_messages:
+            return False
+
+        recent = self.recent_messages.get(session_id, [])
+        if len(recent) < 2:
+            return False
+
+        # Check token overlap with last 2-3 messages
+        msg_tokens = set(message.lower().split())
+        for prev_msg in recent[-3:]:
+            prev_tokens = set(prev_msg.split())
+            if len(msg_tokens & prev_tokens) / len(msg_tokens) > 0.7:  # 70% overlap
+                self.loop_count[session_id] = self.loop_count.get(session_id, 0) + 1
+                return True
+
+        # Reset loop count if no loop detected
+        self.loop_count[session_id] = 0
+        return False
+
+    def get_loop_count(self, session_id: str) -> int:
+        """Get current loop count"""
+        return self.loop_count.get(session_id, 0)
+
+    def reset_loop_count(self, session_id: str):
+        """Reset loop counter"""
+        self.loop_count[session_id] = 0
+
+
+class SimpleCache:
+    """Simple in-memory cache for LLM responses"""
+    def __init__(self, ttl_seconds: int = 86400):  # 24h default
+        self.cache: dict[str, tuple[str, datetime]] = {}
+        self.ttl = timedelta(seconds=ttl_seconds)
+
+    def get(self, query: str, context: str = "") -> Optional[str]:
+        """Get cached response"""
+        key = self._hash_key(query, context)
+        if key in self.cache:
+            response, timestamp = self.cache[key]
+            if datetime.now() - timestamp < self.ttl:
+                return response
+            else:
+                del self.cache[key]  # Expired
+        return None
+
+    def set(self, query: str, response: str, context: str = ""):
+        """Cache response"""
+        key = self._hash_key(query, context)
+        self.cache[key] = (response, datetime.now())
+
+    def _hash_key(self, query: str, context: str) -> str:
+        """Generate cache key"""
+        combined = f"{query}:{context}"
+        return hashlib.md5(combined.encode()).hexdigest()
+
+
+# Initialize trackers
+conversation_tracker = ConversationTracker()
+response_cache = SimpleCache()
+
+# Affirmative keywords
+AFFIRMATIVE_KEYWORDS = {
+    "da", "ja", "yes", "seveda", "lahko", "ok", "okay",
+    "v redu", "sure", "dobro", "prosim", "please", "grem naprej", "nadaljuj"
+}
+
+# Greeting keywords
+GREETING_KEYWORDS = {"pozdrav", "zdravo", "hej", "hello", "hi", "dober dan", "živjo"}
+
+
+def is_affirmative(message: str) -> bool:
+    """Check if message is an affirmative response"""
+    tokens = message.lower().strip().split()
+    if len(tokens) <= 2:  # Short response
+        return any(word in AFFIRMATIVE_KEYWORDS for word in tokens)
+    return False
+
+
+def is_greeting(message: str) -> bool:
+    """Check if message is a greeting"""
+    lowered = message.lower()
+    return any(greet in lowered for greet in GREETING_KEYWORDS)
 
 # ========== ZDRAVSTVENI CENTER INFO ODGOVORI ==========
 INFO_RESPONSES = {
@@ -690,7 +794,8 @@ Ali so podatki pravilni? (DA / NE)"""
 
     # Step 8: Confirmation
     if state["step"] == "confirm":
-        if any(word in lowered for word in ["da", "yes", "potrdi", "ok"]):
+        # STRICT CONFIRMATION: use is_affirmative instead of simple keyword match
+        if is_affirmative(message):
             # Create appointment
             try:
                 rs = ReservationService()
@@ -780,14 +885,41 @@ async def chat(request: ChatRequest) -> ChatResponse:
             reset_appointment_state(appointment_states[session_id])
     last_interaction = now
 
-    # Classify intent with conversation context
-    intent = classify_intent(message, conversation_history)
+    # ===== ANTI-LOOP DETECTION =====
+    conversation_tracker.add_message(session_id, message)
+    if conversation_tracker.detect_loop(session_id, message):
+        loop_count = conversation_tracker.get_loop_count(session_id)
+        if loop_count >= 2:
+            # 2nd loop detected -> handoff
+            conversation_tracker.reset_loop_count(session_id)
+            return ChatResponse(
+                reply="Za dodatno pomoč me prosim kontaktirajte:\n📞 [Telefon]\n📧 info@zdravstveni-center.si",
+                session_id=session_id
+            )
+        else:
+            # 1st loop detected -> clarification
+            return ChatResponse(
+                reply="Vidim, da se vrtiva. Prosím, povejte samo:\n- Storitev (npr. ortoped)\n- Datum (npr. 15.2.)\n- Ura (npr. 14:00)",
+                session_id=session_id
+            )
 
     # Check if user is in booking flow
     state = get_appointment_state(session_id)
+
+    # ===== GREETING/HELP PRESERVATION =====
+    # If booking flow is active, don't reset on greeting
     if state["step"] is not None:
+        if is_greeting(message) or is_affirmative(message):
+            # Ignore greeting, continue flow
+            response_text = handle_appointment_booking(message, session_id)
+            return ChatResponse(reply=response_text, session_id=session_id)
+
+        # Normal booking flow
         response_text = handle_appointment_booking(message, session_id)
         return ChatResponse(reply=response_text, session_id=session_id)
+
+    # Classify intent with conversation context
+    intent = classify_intent(message, conversation_history)
 
     # Handle different intents
     if intent == "greeting":
@@ -857,23 +989,30 @@ async def chat(request: ChatRequest) -> ChatResponse:
     else:
         # General question - use RAG/LLM
         try:
-            # Try Chroma RAG first
-            if is_tourist_query(message):
-                rag_answer = answer_tourist_question(message)
-                response_text = rag_answer
+            # ===== CACHE CHECK =====
+            cached_response = response_cache.get(message)
+            if cached_response:
+                response_text = cached_response
             else:
-                # Use generate_llm_answer which handles context gathering internally
-                response_text = generate_llm_answer(message, history=conversation_history)
+                # Try Chroma RAG first
+                if is_tourist_query(message):
+                    rag_answer = answer_tourist_question(message)
+                    response_text = rag_answer
+                else:
+                    # Use generate_llm_answer which handles context gathering internally
+                    response_text = generate_llm_answer(message, history=conversation_history)
 
-                # If empty response, provide fallback
-                if not response_text or len(response_text.strip()) < 10:
-                    response_text = """Oprostite, na to vprašanje trenutno ne morem odgovoriti.
+                    # ===== CONFIDENCE GATING =====
+                    # If response is too short or generic, ask for clarification
+                    if not response_text or len(response_text.strip()) < 20:
+                        response_text = """Nisem prepričan, da pravilno razumem. Lahko pojasnite:
+- Za katero storitev vas zanima? (dermatolog / ortoped / okulist / ...)
+- Za kateri datum?
 
-Za podrobnejše informacije nas kontaktirajte:
-📞 [Telefonska številka]
-📧 [Email naslov]
-
-Lahko vam pa pomagam z naročilom na pregled ali informacijami o naših storitvah!"""
+Ali lahko zastavite vprašanje drugače?"""
+                    else:
+                        # ===== CACHE RESPONSE =====
+                        response_cache.set(message, response_text)
 
         except Exception as e:
             print(f"[RAG] Error: {e}")
