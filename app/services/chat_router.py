@@ -393,6 +393,7 @@ def _blank_appointment_state() -> dict[str, Optional[str | int]]:
         "patient_age": None,
         "patient_health_card": None,
         "note": None,
+        "waiting_resume_confirmation": False,  # Flag for OFF-TOPIC pause
     }
 
 # Session states
@@ -652,6 +653,49 @@ def extract_service_type(message: str) -> Optional[str]:
                 return service_key
 
     return None
+
+def get_resume_prompt(state: dict) -> str:
+    """Get prompt for current booking step (used when resuming after OFF-TOPIC)"""
+    step = state.get("step")
+
+    if step == "date":
+        return "Kateri datum vas zanima? (npr. 15.3.2026)"
+    elif step == "time":
+        return "Katero uro si želite? (npr. 14:00)"
+    elif step == "name":
+        return "Prosim vnesite vaše ime in priimek."
+    elif step == "phone":
+        return "Odlično! Kakšna je vaša telefonska številka?"
+    elif step == "email":
+        return "Kakšen je vaš email naslov? (za potrditev termina)"
+    elif step == "reason":
+        return "Kakšen je razlog vašega obiska? (npr. pregled kožnega znamenja, bolečine v kolenu, ...)"
+    elif step == "confirm":
+        service_info = get_service_info(state.get("service_type", "dermatolog"))
+        summary = format_appointment_summary(
+            state.get("date", ""),
+            state.get("time", ""),
+            state.get("service_type", ""),
+            state.get("name", "")
+        )
+        return f"""{summary}
+
+Razlog obiska: {state.get('reason', '-')}
+Telefon: {state.get('phone', '-')}
+Email: {state.get('email', '-')}
+
+Ali so podatki pravilni? (DA / NE)"""
+    else:
+        # Default: ask for service
+        return """Na kateri pregled se želite naročiti?
+
+- Dermatološki pregled
+- Ortopedski pregled
+- Okulistični pregled
+- Laserski poseg
+- Estetski poseg
+- Kozmetični salon"""
+
 
 def handle_appointment_booking(message: str, session_id: str) -> str:
     """Handle multi-step appointment booking conversation"""
@@ -943,15 +987,76 @@ async def chat(request: ChatRequest) -> ChatResponse:
     # Check if user is in booking flow
     state = get_appointment_state(session_id)
 
-    # ===== GREETING/HELP PRESERVATION =====
-    # If booking flow is active, don't reset on greeting
+    # ===== OFF-TOPIC DETECTION IN BOOKING FLOW =====
     if state["step"] is not None:
+        # Check if waiting for resume confirmation
+        if state.get("waiting_resume_confirmation"):
+            if is_affirmative(message):
+                # User wants to continue booking
+                state["waiting_resume_confirmation"] = False
+                # Get prompt for current step
+                resume_prompt = get_resume_prompt(state)
+                return ChatResponse(
+                    reply=f"Odlično, nadaljujmo z naročilom! 😊\n\n{resume_prompt}",
+                    session_id=session_id
+                )
+            else:
+                # User doesn't want to continue - reset booking
+                reset_appointment_state(state)
+                return ChatResponse(
+                    reply="V redu, naročilo je preklicano. Če potrebujete pomoč, sem tukaj!",
+                    session_id=session_id
+                )
+
+        # Detect if message is OFF-TOPIC (info question during booking)
+        intent = classify_intent(message, conversation_history)
+
+        # OFF-TOPIC intents: info queries that are not part of booking flow
+        OFF_TOPIC_INTENTS = ["info_services", "info_prices", "info_contact", "info_hours", "info_location"]
+
+        if intent in OFF_TOPIC_INTENTS or intent.startswith("info_"):
+            # Handle OFF-TOPIC question
+            if intent == "info_services":
+                info_response = INFO_RESPONSES["storitve"]
+            elif intent == "info_prices":
+                info_response = INFO_RESPONSES["cene"]
+            elif intent == "info_contact":
+                info_response = INFO_RESPONSES["kontakt"]
+            elif intent == "info_hours":
+                info_response = INFO_RESPONSES["delovni_cas"]
+            else:
+                info_response = INFO_RESPONSES.get(intent.replace("info_", ""), "Prosim, pojasnite vprašanje.")
+
+            # Build resume prompt
+            service_name = get_service_info(state["service_type"])["name"] if state.get("service_type") else "pregled"
+            date_str = state.get("date", "")
+            time_str = state.get("time", "")
+
+            resume_prompt = f"\n\nAli želite nadaljevati z naročilom"
+            if service_name != "pregled":
+                resume_prompt += f" za {service_name}"
+            if date_str:
+                resume_prompt += f" na {date_str}"
+            if time_str:
+                resume_prompt += f" ob {time_str}"
+            resume_prompt += "? (DA / NE)"
+
+            # Set flag to wait for resume confirmation
+            state["waiting_resume_confirmation"] = True
+
+            return ChatResponse(
+                reply=info_response + resume_prompt,
+                session_id=session_id
+            )
+
+        # ===== GREETING/HELP PRESERVATION =====
+        # If greeting or affirmative, continue flow
         if is_greeting(message) or is_affirmative(message):
             # Ignore greeting, continue flow
             response_text = handle_appointment_booking(message, session_id)
             return ChatResponse(reply=response_text, session_id=session_id)
 
-        # Normal booking flow
+        # Normal booking flow (ON-TOPIC)
         response_text = handle_appointment_booking(message, session_id)
         return ChatResponse(reply=response_text, session_id=session_id)
 
