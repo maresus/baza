@@ -1027,13 +1027,21 @@ async def chat(request: ChatRequest) -> ChatResponse:
             else:
                 info_response = INFO_RESPONSES.get(intent.replace("info_", ""), "Prosim, pojasnite vprašanje.")
 
-            # Build resume prompt
-            service_name = get_service_info(state["service_type"])["name"] if state.get("service_type") else "pregled"
+            # Check if booking really started (service selected)
+            if state.get("service_type") is None:
+                # Booking hasn't really started - just answer, no resume prompt
+                return ChatResponse(
+                    reply=info_response,
+                    session_id=session_id
+                )
+
+            # Booking is active - build resume prompt
+            service_name = get_service_info(state["service_type"])["name"]
             date_str = state.get("date", "")
             time_str = state.get("time", "")
 
             resume_prompt = f"\n\nAli želite nadaljevati z naročilom"
-            if service_name != "pregled":
+            if service_name:
                 resume_prompt += f" za {service_name}"
             if date_str:
                 resume_prompt += f" na {date_str}"
