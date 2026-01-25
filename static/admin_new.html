@@ -519,11 +519,97 @@
       border-radius: 12px;
     }
 
+    /* Communication Panel */
+    .modal-content.wide { max-width: 1200px; }
+    .modal-split {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 0;
+      min-height: 600px;
+    }
+    .modal-left {
+      padding: 0;
+      border-right: 2px solid var(--border);
+    }
+    .modal-right {
+      padding: 0;
+      background: #f8fffe;
+      display: flex;
+      flex-direction: column;
+    }
+    .comm-header {
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      border-bottom: 2px solid var(--primary);
+    }
+    .message-timeline {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      max-height: 400px;
+    }
+    .message-item {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      background: white;
+      border-left: 4px solid var(--border);
+    }
+    .message-item.outbound {
+      background: #ecfdf5;
+      border-left-color: var(--success);
+    }
+    .message-item.inbound {
+      background: #fef3c7;
+      border-left-color: #f59e0b;
+    }
+    .message-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .message-direction {
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .message-body {
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .reply-form {
+      padding: 12px;
+      border-top: 2px solid var(--border);
+      background: white;
+    }
+    .reply-form textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      min-height: 80px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .reply-form button {
+      margin-top: 8px;
+      width: 100%;
+    }
+
     @media (max-width: 768px) {
       .form-grid { grid-template-columns: 1fr; }
       .form-group.full { grid-column: span 1; }
       .pending-item { flex-direction: column; align-items: flex-start; }
       .calendar-section { grid-template-columns: 1fr; }
+      .modal-split { grid-template-columns: 1fr; }
+      .modal-right { display: none; }
     }
   </style>
 </head>
@@ -703,76 +789,95 @@
 
   <!-- Modal -->
   <div class="modal" id="edit-modal">
-    <div class="modal-content">
+    <div class="modal-content wide">
       <div class="modal-header">
         <h3 id="modal-title">Uredi naročilo</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <form id="edit-form" onsubmit="saveAppointment(event)">
-        <div class="modal-body">
-          <input type="hidden" id="edit-id" />
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Status</label>
-              <select id="edit-status">
-                <option value="pending">⏳ Čaka</option>
-                <option value="processing">📋 V obdelavi</option>
-                <option value="confirmed">✅ Potrjeno</option>
-                <option value="rejected">❌ Zavrnjeno</option>
-              </select>
+      <div class="modal-split">
+        <!-- Left: Edit Form -->
+        <div class="modal-left">
+          <form id="edit-form" onsubmit="saveAppointment(event)">
+            <div class="modal-body">
+              <input type="hidden" id="edit-id" />
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Status</label>
+                  <select id="edit-status">
+                    <option value="pending">⏳ Čaka</option>
+                    <option value="processing">📋 V obdelavi</option>
+                    <option value="confirmed">✅ Potrjeno</option>
+                    <option value="rejected">❌ Zavrnjeno</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Vrsta pregleda</label>
+                  <select id="edit-location" onchange="refreshSlots()">
+                    <option value="Ortopedski pregled">🦴 Ortopedski</option>
+                    <option value="Dermatološki pregled">🩺 Dermatološki</option>
+                    <option value="Okulistični pregled">👁️ Okulistični</option>
+                    <option value="Laserski poseg">✨ Laserski</option>
+                    <option value="Estetski poseg">💉 Estetski</option>
+                    <option value="Kozmetični salon">💆 Kozmetični</option>
+                    <option value="Fizioterapija">🏃 Fizioterapija</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Datum</label>
+                  <input type="date" id="edit-date" required onchange="refreshSlots()" />
+                </div>
+                <div class="form-group">
+                  <label>Ura</label>
+                  <input type="time" id="edit-time" />
+                </div>
+                <div class="form-group">
+                  <label>Ime in priimek</label>
+                  <input type="text" id="edit-name" required />
+                </div>
+                <div class="form-group">
+                  <label>Telefon</label>
+                  <input type="tel" id="edit-phone" required />
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="edit-email" required />
+                </div>
+                <div class="form-group">
+                  <label>Datum rojstva</label>
+                  <input type="text" id="edit-birth" placeholder="DD.MM.LLLL" />
+                </div>
+                <div class="form-group full">
+                  <label>Prosti termini (klik izbere)</label>
+                  <div class="slot-picker" id="slot-picker">Izberi datum</div>
+                </div>
+                <div class="form-group full">
+                  <label>Opombe</label>
+                  <textarea id="edit-notes" rows="2"></textarea>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Vrsta pregleda</label>
-              <select id="edit-location" onchange="refreshSlots()">
-                <option value="Ortopedski pregled">🦴 Ortopedski</option>
-                <option value="Dermatološki pregled">🩺 Dermatološki</option>
-                <option value="Okulistični pregled">👁️ Okulistični</option>
-                <option value="Laserski poseg">✨ Laserski</option>
-                <option value="Estetski poseg">💉 Estetski</option>
-                <option value="Kozmetični salon">💆 Kozmetični</option>
-                <option value="Fizioterapija">🏃 Fizioterapija</option>
-              </select>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" id="delete-btn" style="margin-right: auto; display: none;" onclick="deleteAppt()">🗑️ Briši</button>
+              <button type="button" class="btn btn-secondary" onclick="closeModal()">Prekliči</button>
+              <button type="submit" class="btn btn-success">💾 Shrani</button>
             </div>
-            <div class="form-group">
-              <label>Datum</label>
-              <input type="date" id="edit-date" required onchange="refreshSlots()" />
-            </div>
-            <div class="form-group">
-              <label>Ura</label>
-              <input type="time" id="edit-time" />
-            </div>
-            <div class="form-group">
-              <label>Ime in priimek</label>
-              <input type="text" id="edit-name" required />
-            </div>
-            <div class="form-group">
-              <label>Telefon</label>
-              <input type="tel" id="edit-phone" required />
-            </div>
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" id="edit-email" required />
-            </div>
-            <div class="form-group">
-              <label>Datum rojstva</label>
-              <input type="text" id="edit-birth" placeholder="DD.MM.LLLL" />
-            </div>
-            <div class="form-group full">
-              <label>Prosti termini (klik izbere)</label>
-              <div class="slot-picker" id="slot-picker">Izberi datum</div>
-            </div>
-            <div class="form-group full">
-              <label>Opombe</label>
-              <textarea id="edit-notes" rows="2"></textarea>
+          </form>
+        </div>
+
+        <!-- Right: Communication Panel -->
+        <div class="modal-right">
+          <div class="comm-header">💬 Komunikacija</div>
+          <div class="message-timeline" id="message-timeline">
+            <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 12px;">
+              Sporočila se naložijo po odprtju termina
             </div>
           </div>
+          <div class="reply-form">
+            <textarea id="reply-body" placeholder="Napiši odgovor pacientu..."></textarea>
+            <button type="button" class="btn btn-primary btn-sm" onclick="sendReply()">📧 Pošlji odgovor</button>
+          </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-danger" id="delete-btn" style="margin-right: auto; display: none;" onclick="deleteAppt()">🗑️ Briši</button>
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Prekliči</button>
-          <button type="submit" class="btn btn-success">💾 Shrani</button>
-        </div>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -1073,11 +1178,86 @@
       document.getElementById('edit-notes').value = r.special_needs || r.admin_notes || '';
       document.getElementById('delete-btn').style.display = 'inline-flex';
       refreshSlots();
+      loadMessages(id); // Load communication
       document.getElementById('edit-modal').classList.add('active');
     }
 
     function closeModal() {
       document.getElementById('edit-modal').classList.remove('active');
+      document.getElementById('reply-body').value = ''; // Clear reply
+    }
+
+    async function loadMessages(reservationId) {
+      try {
+        const resp = await fetch(`${API}/reservations/${reservationId}/messages`);
+        const data = await resp.json();
+        const timeline = document.getElementById('message-timeline');
+
+        if (!data.messages || data.messages.length === 0) {
+          timeline.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 12px;">Še ni komunikacije</div>';
+          return;
+        }
+
+        // Sort newest first
+        const messages = data.messages.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+        timeline.innerHTML = messages.map(m => {
+          const direction = m.direction === 'inbound' ? 'inbound' : 'outbound';
+          const label = direction === 'inbound' ? '📨 Gost' : '📤 Moj odgovor';
+          const timestamp = m.timestamp ? new Date(m.timestamp).toLocaleString('sl-SI') : '-';
+
+          return `<div class="message-item ${direction}">
+            <div class="message-meta">
+              <span class="message-direction">${label}</span>
+              <span>${timestamp}</span>
+            </div>
+            <div class="message-body">${escapeHtml(m.body || m.subject || '')}</div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        console.error('Load messages error:', e);
+        document.getElementById('message-timeline').innerHTML = '<div style="text-align: center; color: var(--danger); padding: 20px; font-size: 12px;">Napaka pri nalaganju sporočil</div>';
+      }
+    }
+
+    async function sendReply() {
+      const reservationId = parseInt(document.getElementById('edit-id').value);
+      const email = document.getElementById('edit-email').value;
+      const body = document.getElementById('reply-body').value.trim();
+
+      if (!body) {
+        toast('Sporočilo ne sme biti prazno', 'error');
+        return;
+      }
+
+      try {
+        toast('Pošiljam...', 'info');
+        const resp = await fetch(`${API}/send-message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservation_id: reservationId,
+            email: email,
+            subject: `Naročilo #${reservationId} - Odgovor`,
+            body: body,
+            set_processing: false
+          })
+        });
+
+        if (!resp.ok) throw new Error('Send failed');
+
+        toast('Odgovor poslan!', 'success');
+        document.getElementById('reply-body').value = '';
+        loadMessages(reservationId); // Reload messages
+      } catch (e) {
+        toast('Napaka pri pošiljanju', 'error');
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     function refreshSlots() {
