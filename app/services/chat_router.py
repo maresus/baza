@@ -43,11 +43,29 @@ SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "y
 
 # ========== ANTI-LOOP & CACHE MECHANISMS ==========
 
+# Slovenian stop words - ignore these in loop detection
+STOP_WORDS = {
+    "je", "in", "za", "na", "se", "so", "ali", "kako", "kdaj", "kje", "kaj", "katere",
+    "kateri", "kakšen", "kakšna", "ima", "imate", "imajo", "bi", "bo", "bom", "boste",
+    "ste", "sem", "smo", "si", "lahko", "tudi", "mi", "te", "me", "ga", "jo", "jim",
+    "iz", "do", "pri", "od", "po", "ta", "te", "to", "ta", "ti", "teh", "tem",
+    "a", "ali", "ampak", "vendar", "ker", "če", "ko", "da", "ki"
+}
+
 class ConversationTracker:
-    """Track recent questions to detect loops"""
+    """Track recent questions to detect loops with stop word filtering"""
     def __init__(self):
         self.recent_messages: dict[str, list[str]] = {}  # session_id -> [messages]
         self.loop_count: dict[str, int] = {}  # session_id -> count
+
+    def _tokenize_meaningful(self, message: str) -> set[str]:
+        """Extract meaningful tokens (remove stop words and punctuation)"""
+        # Remove punctuation and lowercase
+        cleaned = re.sub(r'[^\w\s]', '', message.lower())
+        tokens = cleaned.split()
+        # Filter out stop words and very short tokens
+        meaningful = {t for t in tokens if len(t) > 2 and t not in STOP_WORDS}
+        return meaningful
 
     def add_message(self, session_id: str, message: str):
         """Add message to tracking"""
@@ -59,7 +77,7 @@ class ConversationTracker:
             self.recent_messages[session_id].pop(0)
 
     def detect_loop(self, session_id: str, message: str) -> bool:
-        """Detect if message is repeating (simple token overlap)"""
+        """Detect if message is repeating (improved with stop word filtering)"""
         if session_id not in self.recent_messages:
             return False
 
@@ -67,11 +85,26 @@ class ConversationTracker:
         if len(recent) < 2:
             return False
 
-        # Check token overlap with last 2-3 messages
-        msg_tokens = set(message.lower().split())
+        # Get meaningful tokens from current message
+        msg_tokens = self._tokenize_meaningful(message)
+
+        # Need at least 2 meaningful tokens to check
+        if len(msg_tokens) < 2:
+            return False
+
+        # Check similarity with last 2-3 messages
         for prev_msg in recent[-3:]:
-            prev_tokens = set(prev_msg.split())
-            if len(msg_tokens & prev_tokens) / len(msg_tokens) > 0.7:  # 70% overlap
+            prev_tokens = self._tokenize_meaningful(prev_msg)
+
+            if len(prev_tokens) < 2:
+                continue
+
+            # Calculate overlap
+            overlap = msg_tokens & prev_tokens
+            overlap_ratio = len(overlap) / len(msg_tokens)
+
+            # STRICT: Need 85%+ overlap AND at least 2 shared tokens
+            if overlap_ratio > 0.85 and len(overlap) >= 2:
                 self.loop_count[session_id] = self.loop_count.get(session_id, 0) + 1
                 return True
 
