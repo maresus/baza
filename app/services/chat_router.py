@@ -1081,54 +1081,64 @@ Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
                     session_id=session_id
                 )
 
+        # SKIP OFF-TOPIC detection when expecting specific data inputs
+        # These steps expect formatted input (date, time, name, phone, email, reason)
+        # Running intent classification on these inputs causes false positives
+        SKIP_OFF_TOPIC_STEPS = ["date", "time", "name", "phone", "email", "reason"]
+        current_step = state.get("step")
+
+        should_check_off_topic = current_step not in SKIP_OFF_TOPIC_STEPS
+
         # Detect if message is OFF-TOPIC (info question during booking)
-        intent = classify_intent(message, conversation_history)
+        # Only check if not expecting specific data input
+        if should_check_off_topic:
+            intent = classify_intent(message, conversation_history)
 
-        # OFF-TOPIC intents: info queries that are not part of booking flow
-        OFF_TOPIC_INTENTS = ["info_services", "info_prices", "info_contact", "info_hours", "info_location"]
+            # OFF-TOPIC intents: info queries that are not part of booking flow
+            OFF_TOPIC_INTENTS = ["info_services", "info_prices", "info_contact", "info_hours", "info_location"]
 
-        if intent in OFF_TOPIC_INTENTS or intent.startswith("info_"):
-            # Handle OFF-TOPIC question
-            if intent == "info_services":
-                info_response = INFO_RESPONSES["storitve"]
-            elif intent == "info_prices":
-                info_response = INFO_RESPONSES["cene"]
-            elif intent == "info_contact":
-                info_response = INFO_RESPONSES["kontakt"]
-            elif intent == "info_hours":
-                info_response = INFO_RESPONSES["delovni_cas"]
-            else:
-                info_response = INFO_RESPONSES.get(intent.replace("info_", ""), "Prosim, pojasnite vprašanje.")
+            if intent in OFF_TOPIC_INTENTS or intent.startswith("info_"):
+                # Handle OFF-TOPIC question
+                if intent == "info_services":
+                    info_response = INFO_RESPONSES["storitve"]
+                elif intent == "info_prices":
+                    info_response = INFO_RESPONSES["cene"]
+                elif intent == "info_contact":
+                    info_response = INFO_RESPONSES["kontakt"]
+                elif intent == "info_hours":
+                    info_response = INFO_RESPONSES["delovni_cas"]
+                else:
+                    info_response = INFO_RESPONSES.get(intent.replace("info_", ""), "Prosim, pojasnite vprašanje.")
 
-            # Check if booking really started (service selected)
-            if state.get("service_type") is None:
-                # Booking hasn't really started - just answer, no resume prompt
+                # Check if booking really started (service selected)
+                if state.get("service_type") is None:
+                    # Booking hasn't really started - just answer, no resume prompt
+                    return ChatResponse(
+                        reply=info_response,
+                        session_id=session_id
+                    )
+
+                # Booking is active - build resume prompt
+                service_name = get_service_info(state["service_type"])["name"]
+                date_str = state.get("date", "")
+                time_str = state.get("time", "")
+
+                resume_prompt = f"\n\nAli želite nadaljevati z naročilom"
+                if service_name:
+                    resume_prompt += f" za {service_name}"
+                if date_str:
+                    resume_prompt += f" na {date_str}"
+                if time_str:
+                    resume_prompt += f" ob {time_str}"
+                resume_prompt += "? (DA / NE)"
+
+                # Set flag to wait for resume confirmation
+                state["waiting_resume_confirmation"] = True
+
                 return ChatResponse(
-                    reply=info_response,
+                    reply=info_response + resume_prompt,
                     session_id=session_id
                 )
-
-            # Booking is active - build resume prompt
-            service_name = get_service_info(state["service_type"])["name"]
-            date_str = state.get("date", "")
-            time_str = state.get("time", "")
-
-            resume_prompt = f"\n\nAli želite nadaljevati z naročilom"
-            if service_name:
-                resume_prompt += f" za {service_name}"
-            if date_str:
-                resume_prompt += f" na {date_str}"
-            if time_str:
-                resume_prompt += f" ob {time_str}"
-            resume_prompt += "? (DA / NE)"
-
-            # Set flag to wait for resume confirmation
-            state["waiting_resume_confirmation"] = True
-
-            return ChatResponse(
-                reply=info_response + resume_prompt,
-                session_id=session_id
-            )
 
         # ===== GREETING/HELP PRESERVATION =====
         # If greeting or affirmative, continue flow
