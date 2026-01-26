@@ -809,6 +809,7 @@ def handle_appointment_booking(message: str, session_id: str) -> str:
     # Check for cancellation
     if any(word in lowered for word in ["prekliči", "prekini", "ne želim", "nazaj"]):
         reset_appointment_state(state)
+        conversation_tracker.reset_loop_count(session_id)  # Reset loop detection on cancel
         return "Naročilo preklicano. Če želite ponovno naročilo, mi samo povejte!"
 
     # Če je service_type že nastavljen (iz classify_intent) ampak step je None -> preskoči na datum
@@ -1114,15 +1115,16 @@ Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
             else:
                 # User doesn't want to continue - reset booking
                 reset_appointment_state(state)
+                conversation_tracker.reset_loop_count(session_id)  # Reset loop detection on cancel
                 return ChatResponse(
                     reply="V redu, naročilo je preklicano. Če potrebujete pomoč, sem tukaj!",
                     session_id=session_id
                 )
 
         # SKIP OFF-TOPIC detection when expecting specific data inputs
-        # These steps expect formatted input (date, time, name, phone, email, reason)
-        # Running intent classification on these inputs causes false positives
-        SKIP_OFF_TOPIC_STEPS = ["date", "time", "name", "phone", "email", "reason"]
+        # Only skip for steps expecting structured data (name, phone, email, reason)
+        # Date and time questions CAN be INFO questions (parking, location, etc.)
+        SKIP_OFF_TOPIC_STEPS = ["name", "phone", "email", "reason"]
         current_step = state.get("step")
 
         should_check_off_topic = current_step not in SKIP_OFF_TOPIC_STEPS
