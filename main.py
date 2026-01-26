@@ -82,6 +82,20 @@ def admin_panel() -> HTMLResponse:
     html = html_path.read_text(encoding="utf-8")
     return HTMLResponse(content=html)
 
+@app.get("/admin_new", response_class=HTMLResponse)
+def admin_new_panel() -> HTMLResponse:
+    """
+    Alias za /admin endpoint.
+    """
+    html_path = Path("static/admin_new.html")
+    if not html_path.exists():
+        return HTMLResponse(
+            "<h1>Admin panel ni najden.</h1>",
+            status_code=500,
+        )
+    html = html_path.read_text(encoding="utf-8")
+    return HTMLResponse(content=html)
+
 def configure_routes() -> None:
     app.include_router(chat_router)
     app.include_router(reservation_router)
