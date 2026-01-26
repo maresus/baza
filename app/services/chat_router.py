@@ -725,11 +725,29 @@ def extract_date_from_message(message: str) -> Optional[str]:
     return None
 
 def extract_time_from_message(message: str) -> Optional[str]:
-    """Extract time from message (HH:MM format)"""
+    """Extract time from message (HH:MM, HH-MM, or HHMM format)"""
+    # Try HH:MM format
     match = re.search(r'(\d{1,2}):(\d{2})', message)
     if match:
         hour, minute = match.groups()
         return f"{hour.zfill(2)}:{minute}"
+
+    # Try HH-MM format (e.g., "15-00")
+    match = re.search(r'(\d{1,2})-(\d{2})', message)
+    if match:
+        hour, minute = match.groups()
+        return f"{hour.zfill(2)}:{minute}"
+
+    # Try HHMM format without separator (e.g., "1500")
+    match = re.search(r'\b(\d{3,4})\b', message)
+    if match:
+        time_str = match.group(1)
+        if len(time_str) == 4:
+            hour, minute = time_str[:2], time_str[2:]
+            return f"{hour}:{minute}"
+        elif len(time_str) == 3:
+            hour, minute = time_str[0], time_str[1:]
+            return f"{hour.zfill(2)}:{minute}"
 
     # Try HH format (e.g., "ob 10")
     match = re.search(r'ob\s+(\d{1,2})', message.lower())
@@ -1076,20 +1094,20 @@ async def chat(request: ChatRequest) -> ChatResponse:
             # 2nd loop detected -> reset and offer restart
             conversation_tracker.reset_loop_count(session_id)
             return ChatResponse(
-                reply="""Opazil sem, da imava težave z razumevanjem. Začniva znova! 🔄
+                reply="""Mislim, da je prišlo do nesporazuma. Začniva znova! 🔄
 
-**Kako vam lahko pomagam?**
+**Kako vam lahko pomagam danes?**
 - 🗓️ Naročilo na pregled (povejte kateri pregled + datum)
-- ℹ️ Informacije o storitvah/cenah
+- ℹ️ Informacije o storitvah in cenah
 - 📍 Lokacija in kontakt
 
-Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
+Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                 session_id=session_id
             )
         else:
             # 1st loop detected -> clarification
             return ChatResponse(
-                reply="Vidim, da se vrtiva. Prosím, povejte samo:\n- Storitev (npr. ortoped)\n- Datum (npr. 15.2.)\n- Ura (npr. 14:00)",
+                reply="Opazil sem, da ponavljate vprašanje. Pomagam vam z veseljem! Prosim povejte konkretno:\n- Kateri pregled vas zanima?\n- Želeni datum in ura?",
                 session_id=session_id
             )
 
@@ -1137,16 +1155,9 @@ Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
                     session_id=session_id
                 )
 
-        # SKIP OFF-TOPIC detection when expecting specific data inputs
-        # Only skip for steps expecting structured data (name, phone, email, reason)
-        # Date and time questions CAN be INFO questions (parking, location, etc.)
-        SKIP_OFF_TOPIC_STEPS = ["name", "phone", "email", "reason"]
-        current_step = state.get("step")
-
-        should_check_off_topic = current_step not in SKIP_OFF_TOPIC_STEPS
-
         # ===== FIRST: Try to extract expected input based on current step =====
         # This prevents valid input from being misclassified as OFF-TOPIC
+        current_step = state.get("step")
         input_matches_expected_format = False
 
         if current_step == "date":
@@ -1164,6 +1175,23 @@ Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
             service_type = detect_service_from_message(message)
             if service_type:
                 input_matches_expected_format = True
+        elif current_step == "name":
+            # Check if message looks like a name (2+ words or 3+ chars without digits in first part)
+            if len(message.strip()) > 2 and not any(char.isdigit() for char in message[:5]):
+                input_matches_expected_format = True
+        elif current_step == "phone":
+            # Check if message contains mostly digits
+            digits_only = re.sub(r'[^\d]', '', message)
+            if len(digits_only) >= 8:
+                input_matches_expected_format = True
+        elif current_step == "email":
+            # Check if message looks like email
+            if "@" in message and "." in message.split("@")[-1]:
+                input_matches_expected_format = True
+        elif current_step == "reason":
+            # Check if message is descriptive text (not a question about pricing/services)
+            if len(message.strip()) > 5 and "?" not in message:
+                input_matches_expected_format = True
 
         # If input matches expected format, skip OFF-TOPIC detection
         if input_matches_expected_format:
@@ -1172,7 +1200,7 @@ Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
 
         # ===== SECOND: Check OFF-TOPIC only if input didn't match expected format =====
         # Detect if message is OFF-TOPIC (info question during booking)
-        if should_check_off_topic:
+        # Now enabled for ALL steps (not just date/time)
             intent = classify_intent(message, conversation_history)
 
             # OFF-TOPIC intents: info queries that are not part of booking flow
