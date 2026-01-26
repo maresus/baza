@@ -222,7 +222,7 @@ def admin_inquiries_page() -> HTMLResponse:
     return HTMLResponse(content=html)
 
 
-@router.get("/api/admin/conversations")
+@router.get("/conversations")
 def get_conversations(limit: int = 200, needs_followup_only: bool = False):
     """Vrne zadnje pogovore za admin pregled."""
     _log("conversations", limit=limit, needs_followup_only=needs_followup_only)
@@ -234,7 +234,7 @@ def get_conversations(limit: int = 200, needs_followup_only: bool = False):
     return {"conversations": conversations, "stats": stats}
 
 
-@router.get("/api/admin/conversations/session/{session_id}")
+@router.get("/conversations/session/{session_id}")
 def get_conversations_by_session(session_id: str, limit: int = 200):
     """Vrne pogovor za posamezen session_id."""
     _log("conversations_session", session_id=session_id, limit=limit)
@@ -242,44 +242,44 @@ def get_conversations_by_session(session_id: str, limit: int = 200):
     return {"session_id": session_id, "conversations": conversations, "total": len(conversations)}
 
 
-@router.get("/api/admin/inquiries")
+@router.get("/inquiries")
 def get_inquiries(limit: int = 200, status: Optional[str] = None):
     _log("inquiries", limit=limit, status=status)
     inquiries = service.get_inquiries(limit=limit, status=status)
     return {"inquiries": inquiries}
 
 
-@router.get("/api/admin/usage_stats")
+@router.get("/usage_stats")
 def get_usage_stats():
     _log("usage_stats")
     return service.get_usage_stats()
 
 
-@router.get("/api/admin/question_stats")
+@router.get("/question_stats")
 def get_question_stats(limit: int = 10):
     _log("question_stats", limit=limit)
     return {"questions": service.get_top_questions(limit=limit)}
 
 
-@router.get("/api/admin/lost_intents")
+@router.get("/lost_intents")
 def get_lost_intents(limit: int = 10):
     _log("lost_intents", limit=limit)
     return {"items": service.get_lost_intents(limit=limit)}
 
 
-@router.get("/api/admin/funnel_stats")
+@router.get("/funnel_stats")
 def get_funnel_stats(days: int = 30):
     _log("funnel_stats", days=days)
     return service.get_funnel_stats(days=days)
 
 
-@router.get("/api/admin/missed_questions")
+@router.get("/missed_questions")
 def get_missed_questions(limit: int = 5):
     _log("missed_questions", limit=limit)
     return {"items": service.get_lost_intents(limit=limit)}
 
 
-@router.post("/api/admin/knowledge_feedback")
+@router.post("/knowledge_feedback")
 def create_knowledge_feedback(payload: KnowledgeFeedbackRequest):
     _log("knowledge_feedback", question=payload.question[:60] if payload.question else "")
     feedback_id = service.create_knowledge_feedback(payload.question.strip(), payload.suggestion.strip())
@@ -288,7 +288,7 @@ def create_knowledge_feedback(payload: KnowledgeFeedbackRequest):
     return {"ok": True, "id": feedback_id}
 
 
-@router.get("/api/admin/reservations")
+@router.get("/reservations")
 def get_reservations(
     limit: int = 100,
     status: Optional[str] = None,
@@ -346,7 +346,7 @@ def get_reservations(
     return {"reservations": reservations, "stats": stats}
 
 
-@router.put("/api/admin/reservations/{reservation_id}")
+@router.put("/reservations/{reservation_id}")
 def update_reservation(reservation_id: int, data: ReservationUpdate):
     """Posodobi rezervacijo."""
     existing = service.get_reservation(reservation_id)
@@ -411,7 +411,7 @@ def patch_reservation(reservation_id: int, data: ReservationUpdate):
     return {"ok": True}
 
 
-@router.delete("/api/admin/reservations/{reservation_id}")
+@router.delete("/reservations/{reservation_id}")
 def delete_reservation(reservation_id: int):
     """Izbriši rezervacijo."""
     _log("delete_reservation", reservation_id=reservation_id)
@@ -424,7 +424,7 @@ def delete_reservation(reservation_id: int):
     return {"ok": True, "deleted_id": reservation_id}
 
 
-@router.post("/api/admin/reservations/{reservation_id}/confirm")
+@router.post("/reservations/{reservation_id}/confirm")
 def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRequest] = None):
     """Potrdi rezervacijo, preveri zasedenost sobe in pošlje email gostu."""
     res = service.get_reservation(reservation_id)
@@ -473,7 +473,7 @@ def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRe
     return {"success": True, "email_sent": True, "room": requested_room or requested_location}
 
 
-@router.post("/api/admin/reservations/{reservation_id}/reject")
+@router.post("/reservations/{reservation_id}/reject")
 def reject_reservation(reservation_id: int):
     """Zavrne rezervacijo in pošlje email gostu."""
     res = service.get_reservation(reservation_id)
@@ -495,7 +495,7 @@ def reject_reservation(reservation_id: int):
     return {"success": True, "email_sent": True}
 
 
-@router.post("/api/admin/send-message")
+@router.post("/send-message")
 def send_message(data: SendMessageRequest):
     """Pošlje sporočilo gostu in opcijsko status nastavi na 'processing'."""
     if not data.email:
@@ -521,32 +521,32 @@ def send_message(data: SendMessageRequest):
     return {"ok": True}
 
 
-@router.get("/api/admin/reservations/{reservation_id}/messages")
+@router.get("/reservations/{reservation_id}/messages")
 def get_reservation_messages(reservation_id: int):
     """Vrne sporočila za izbrano rezervacijo."""
     messages = service.list_reservation_messages(reservation_id)
     return {"messages": messages}
 
 
-@router.get("/api/admin/imap_status")
+@router.get("/imap_status")
 def get_imap_status():
     """Vrne stanje IMAP pollinga."""
     return load_state()
 
 
-@router.post("/api/admin/imap_resync")
+@router.post("/imap_resync")
 def imap_resync(limit: int = 50):
     """Ročno prebere zadnjih N sporočil iz IMAP."""
     return resync_last_messages(limit=limit)
 
 
-@router.get("/api/admin/imap_preview")
+@router.get("/imap_preview")
 def imap_preview(limit: int = 10):
     """Vrne osnovne podatke zadnjih N sporočil (subject/from/date)."""
     return preview_last_messages(limit=limit)
 
 
-@router.get("/api/admin/stats")
+@router.get("/stats")
 def get_stats():
     """Agregirani podatki za dashboard."""
     _log("stats")
@@ -586,7 +586,7 @@ def get_stats():
     return counts
 
 
-@router.get("/api/admin/export")
+@router.get("/export")
 def export_reservations(
     status: Optional[str] = None,
     type: Optional[str] = None,
@@ -636,7 +636,7 @@ def export_reservations(
     )
 
 
-@router.get("/api/admin/calendar/rooms")
+@router.get("/calendar/rooms")
 def calendar_rooms(month: int, year: int):
     """Vrne zasedenost sob po dnevih z ločenimi pending/confirmed."""
     if month < 1 or month > 12:
@@ -675,7 +675,7 @@ def calendar_rooms(month: int, year: int):
     return {"days": days}
 
 
-@router.get("/api/admin/calendar/tables")
+@router.get("/calendar/tables")
 def calendar_tables(month: int, year: int, location: Optional[str] = None):
     """Zasedenost miz po dnevih in urah."""
     if month < 1 or month > 12:
@@ -720,7 +720,7 @@ def calendar_tables(month: int, year: int, location: Optional[str] = None):
     return calendar
 
 
-@router.post("/api/admin/reservations")
+@router.post("/reservations")
 def create_admin_reservation(data: AdminCreateReservation):
     """Ročno dodajanje rezervacije (admin)."""
     warning: Optional[str] = None
