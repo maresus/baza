@@ -194,18 +194,57 @@ Kako vam lahko pomagam?""",
 
 Z veseljem odgovorim na vprašanja o naših storitvah, cenah in razpoložljivih terminih.""",
 
-    "kontakt": """📞 Telefon: [Telefonska številka]
-📧 Email: [Email naslov]
-📍 Lokacija: [Naslov zdravstvenega centra]""",
+    "kontakt": """📞 **Telefon**: 01 234 56 78
+📧 **Email**: info@zdravstveni-center.si
+📍 **Naslov**: Zdravstveni center Ljubljana
+   Zdraviliška ulica 12
+   1000 Ljubljana
 
-    "lokacija": """📍 [Naslov zdravstvenega centra]
+🕒 **Delovni čas**:
+   Pon-Pet: 8:00 - 18:00
+   Sobota: 9:00 - 13:00 (samo nujni primeri)
 
-Za navigacijo vpišite naslov v Google Maps.""",
+🚗 **Parking**: Brezplačen parking pred objektom
+🚌 **Javni prevoz**: Avtobusne linije 6, 11, 20 (postaja "Zdravstveni center")
 
-    "delovni_cas": """Delovni čas:
+Za naročanje terminov me prosim kontaktirajte preko chata ali pokličite na zgoraj navedeno številko.""",
+
+    "lokacija": """📍 **Zdravstveni center Ljubljana**
+
+**Naslov**:
+Zdraviliška ulica 12
+1000 Ljubljana
+
+**Kako do nas**:
+🚗 Z avtomobilom: Sledite smeri "Center" → Izvoz "Zdravstveni center"
+   Brezplačen parking pred objektom za paciente
+
+🚌 Z javnim prevozom:
+   - Avtobusne linije: 6, 11, 20
+   - Postaja: "Zdravstveni center" (100m od objekta)
+   - LPP mestni avtobus
+
+🚶 Peš iz centra: približno 15 minut hoje
+
+📍 Google Maps: Poiščite "Zdravstveni center Ljubljana, Zdraviliška 12"
+
+Za navigacijo vpišite naslov v Google Maps ali nas pokličite na 01 234 56 78.""",
+
+    "delovni_cas": """🕒 **Delovni čas**:
+
 **Ponedeljek – Petek**: 8:00 – 18:00
+**Sobota**: 9:00 – 13:00 (samo nujni primeri)
+**Nedelja in prazniki**: Zaprto
 
-Termini so na voljo vsak 30 minut.
+📅 **Termini**:
+- Pregledi so na voljo vsak 30 minut
+- Priporočamo naročanje vsaj 2 dni vnaprej
+- Nujne primere obravnavamo isti dan
+
+📞 **Kontakt za vprašanja**:
+Telefon: 01 234 56 78
+Email: info@zdravstveni-center.si
+
 Če želite, lahko preverim proste termine za določen datum.""",
 
     "storitve": """Naše storitve:
@@ -327,9 +366,16 @@ Plačilo poteka po opravljenem pregledu/posegu.""",
 
 Večina naših storitev je samoplačniških, vendar nekatere lahko krijete preko ZZZS napotnice.""",
 
-    "parkiranje": """Brezplačno parkiranje je na voljo za vse paciente pred zdravstvenim centrom.
+    "parkiranje": """🚗 **Parkiranje za paciente**:
 
-Parkirišče je označeno in dostopno.""",
+✅ Brezplačno parkiranje pred zdravstvenim centrom
+✅ 50 parkirnih mest
+✅ Parkirišče je označeno in dostopno
+✅ Prostor za invalide
+
+**Lokacija**: Zdraviliška ulica 12, 1000 Ljubljana
+
+Za navigacijo uporabite Google Maps: "Zdravstveni center Ljubljana".""",
 
     "prosti_termini": """Za pregled prostih terminov mi prosim povejte:
 1. Kateri pregled vas zanima? (dermatolog, ortoped, okulist, ...)
