@@ -214,32 +214,109 @@ def get_inquiries(limit: int = 200, status: Optional[str] = None):
 
 @router.get("/usage_stats")
 def get_usage_stats():
+    """Usage stats from chat_messages table"""
     _log("usage_stats")
-    return service.get_usage_stats()
+    history_service = get_chat_history_service()
+
+    # Get stats for different time periods
+    today = datetime.now().strftime("%Y-%m-%d")
+    month = datetime.now().strftime("%Y-%m")
+    year = datetime.now().strftime("%Y")
+
+    today_sessions = history_service.get_all_sessions(since=f"{today}T00:00:00", limit=1000)
+    month_sessions = history_service.get_all_sessions(since=f"{month}-01T00:00:00", limit=1000)
+    year_sessions = history_service.get_all_sessions(since=f"{year}-01-01T00:00:00", limit=1000)
+
+    # Get total sessions count
+    stats = history_service.get_conversation_stats(days=7)
+    total_sessions = stats.get("total_sessions", 0)
+    booking_sessions = stats.get("booking_sessions", 0)
+    conversion_rate = f"{stats.get('conversion_rate', 0)}%" if total_sessions > 0 else "0%"
+
+    return {
+        "total_sessions": total_sessions,
+        "today": len(today_sessions),
+        "month": len(month_sessions),
+        "year": len(year_sessions),
+        "conversion_rate": conversion_rate,
+        "average_duration": "-"
+    }
 
 
 @router.get("/question_stats")
 def get_question_stats(limit: int = 10):
+    """Top questions from chat_messages table"""
     _log("question_stats", limit=limit)
-    return {"questions": service.get_top_questions(limit=limit)}
+    history_service = get_chat_history_service()
+
+    # Get conversation stats which includes top_intents
+    stats = history_service.get_conversation_stats(days=30)
+    top_intents = stats.get("top_intents", [])
+
+    # Format as questions (use intent as question text)
+    questions = []
+    for item in top_intents[:limit]:
+        intent = item.get("intent", "unknown")
+        count = item.get("count", 0)
+        questions.append({
+            "question": intent,
+            "count": count
+        })
+
+    return {"questions": questions}
 
 
 @router.get("/lost_intents")
 def get_lost_intents(limit: int = 10):
+    """Lost intents from chat_messages (questions without clear intent)"""
     _log("lost_intents", limit=limit)
-    return {"items": service.get_lost_intents(limit=limit)}
+    history_service = get_chat_history_service()
+
+    # Search for "question" intents (generic questions that didn't match specific intents)
+    messages = history_service.search_messages(
+        query="",  # Empty query to get all
+        role="user",
+        intent="question",
+        limit=limit
+    )
+
+    items = []
+    for msg in messages:
+        items.append({
+            "text": msg.get("content", "")[:100],
+            "count": 1  # Individual messages don't have count
+        })
+
+    return {"items": items}
 
 
 @router.get("/funnel_stats")
 def get_funnel_stats(days: int = 30):
+    """Conversion funnel from chat_messages"""
     _log("funnel_stats", days=days)
-    return service.get_funnel_stats(days=days)
+    history_service = get_chat_history_service()
+
+    stats = history_service.get_conversation_stats(days=days)
+
+    total_sessions = stats.get("total_sessions", 0)
+    booking_sessions = stats.get("booking_sessions", 0)
+
+    # Estimate started (sessions with booking intent)
+    # For now, use booking_sessions as "started"
+    # completed = booking_sessions (since we only track confirmed bookings)
+
+    return {
+        "started": total_sessions,
+        "completed": booking_sessions,
+        "confirmed": booking_sessions
+    }
 
 
 @router.get("/missed_questions")
 def get_missed_questions(limit: int = 5):
+    """Missed questions (same as lost_intents for now)"""
     _log("missed_questions", limit=limit)
-    return {"items": service.get_lost_intents(limit=limit)}
+    return get_lost_intents(limit=limit)
 
 
 @router.post("/knowledge_feedback")
