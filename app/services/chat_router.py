@@ -694,7 +694,7 @@ def classify_intent_rules(message: str, history: list = None) -> str:
         return "info_prices"
 
     # Contact / Location
-    if any(word in lowered for word in ["kontakt", "telefon", "email", "naslov", "lokacija", "nahaja", "kje ste", "kje se", "naslovom", "pridi", "pridem"]):
+    if any(word in lowered for word in ["kontakt", "telefon", "email", "naslov", "lokacija", "nahaja", "kje ste", "kje se", "naslovom", "pridi", "pridem", "parkir", "parking", "parkiri"]):
         return "info_contact"
 
     # Greeting (with and without diacritics)
@@ -728,6 +728,12 @@ def extract_time_from_message(message: str) -> Optional[str]:
     """Extract time from message (HH:MM, HH-MM, or HHMM format)"""
     # Try HH:MM format
     match = re.search(r'(\d{1,2}):(\d{2})', message)
+    if match:
+        hour, minute = match.groups()
+        return f"{hour.zfill(2)}:{minute}"
+
+    # Try HH.MM format (e.g., "15.00")
+    match = re.search(r'(\d{1,2})\.(\d{2})', message)
     if match:
         hour, minute = match.groups()
         return f"{hour.zfill(2)}:{minute}"
@@ -787,6 +793,21 @@ def is_likely_full_name(text: str) -> bool:
         return False
     parts = [p for p in stripped.split() if p]
     return len(parts) >= 2
+
+
+def _short_contact_info() -> str:
+    return (
+        "🚗 Parking: brezplačen pred objektom\n"
+        "📞 Telefon: 01 234 56 78\n"
+        "📧 Email: info@zdravstveni-center.si"
+    )
+
+
+def _service_price_info(service_type: Optional[str]) -> str:
+    info = get_service_info(service_type or "")
+    if not info:
+        return INFO_RESPONSES["cene"]
+    return f"💰 {info['name']}: {info['price_range']} · {info['duration_minutes']} min"
 
 def extract_service_type(message: str) -> Optional[str]:
     """Extract service type from message using word boundary matching"""
@@ -1232,20 +1253,31 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
         # Detect if message is OFF-TOPIC (info question during booking)
         # Now enabled for ALL steps (not just date/time)
         intent = classify_intent_rules(message, conversation_history)
+        lowered_message = message.lower()
+        is_question_like = "?" in message or any(token in lowered_message for token in ["boli", "boleč", "bolec"])
 
         # OFF-TOPIC intents: info queries that are not part of booking flow
         OFF_TOPIC_INTENTS = ["info_services", "info_prices", "info_contact", "info_hours", "info_location"]
 
-        if intent in OFF_TOPIC_INTENTS or intent.startswith("info_"):
+        if intent in OFF_TOPIC_INTENTS or intent.startswith("info_") or (intent == "question" and is_question_like):
             # Handle OFF-TOPIC question
             if intent == "info_services":
-                info_response = INFO_RESPONSES["storitve"]
+                if state.get("service_type"):
+                    info = get_service_info(state["service_type"])
+                    info_response = f"{info['name']}: {info['description']}" if info else INFO_RESPONSES["storitve"]
+                else:
+                    info_response = INFO_RESPONSES["storitve"]
             elif intent == "info_prices":
-                info_response = INFO_RESPONSES["cene"]
+                info_response = _service_price_info(state.get("service_type"))
             elif intent == "info_contact":
-                info_response = INFO_RESPONSES["kontakt"]
+                info_response = _short_contact_info()
             elif intent == "info_hours":
                 info_response = INFO_RESPONSES["delovni_cas"]
+            elif intent == "question" and is_question_like:
+                info_response = (
+                    "Za medicinska vprašanja (npr. bolečina) ne morem dati zanesljivega odgovora. "
+                    "Za podrobnosti pokličite 01 234 56 78."
+                )
             else:
                 info_response = INFO_RESPONSES.get(intent.replace("info_", ""), "Prosim, pojasnite vprašanje.")
 
