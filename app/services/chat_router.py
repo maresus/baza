@@ -1145,8 +1145,33 @@ Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
 
         should_check_off_topic = current_step not in SKIP_OFF_TOPIC_STEPS
 
+        # ===== FIRST: Try to extract expected input based on current step =====
+        # This prevents valid input from being misclassified as OFF-TOPIC
+        input_matches_expected_format = False
+
+        if current_step == "date":
+            # Check if message looks like a date
+            date_str = extract_date_from_message(message)
+            if date_str:
+                input_matches_expected_format = True
+        elif current_step == "time":
+            # Check if message looks like a time
+            time_str = extract_time_from_message(message)
+            if time_str:
+                input_matches_expected_format = True
+        elif current_step == "select_service":
+            # Check if message mentions a service
+            service_type = detect_service_from_message(message)
+            if service_type:
+                input_matches_expected_format = True
+
+        # If input matches expected format, skip OFF-TOPIC detection
+        if input_matches_expected_format:
+            response_text = handle_appointment_booking(message, session_id)
+            return ChatResponse(reply=response_text, session_id=session_id)
+
+        # ===== SECOND: Check OFF-TOPIC only if input didn't match expected format =====
         # Detect if message is OFF-TOPIC (info question during booking)
-        # Only check if not expecting specific data input
         if should_check_off_topic:
             intent = classify_intent(message, conversation_history)
 
