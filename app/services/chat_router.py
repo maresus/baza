@@ -977,8 +977,11 @@ Kako je vaše ime in priimek?"""
             state["name"] = message.strip()
             state["step"] = "phone"
             return "Hvala! Kakšna je vaša telefonska številka?"
-        else:
-            return "Prosim vnesite vaše ime in priimek."
+        info_key = detect_info_intent(message)
+        if info_key:
+            info_reply = INFO_RESPONSES.get(info_key, "Hvala za vprašanje.")
+            return f"{info_reply}\n\n---\n\nProsim vnesite vaše ime in priimek."
+        return "Prosim vnesite vaše ime in priimek."
 
     # Step 5: Phone
     if state["step"] == "phone" or state["phone"] is None:
