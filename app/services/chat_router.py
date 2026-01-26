@@ -757,6 +757,37 @@ def extract_time_from_message(message: str) -> Optional[str]:
 
     return None
 
+
+def is_likely_full_name(text: str) -> bool:
+    stripped = text.strip()
+    if len(stripped) < 3 or "?" in stripped:
+        return False
+    lowered = stripped.lower()
+    blocked_tokens = [
+        "koliko",
+        "stane",
+        "cena",
+        "cenik",
+        "parking",
+        "park",
+        "kako",
+        "kje",
+        "kontakt",
+        "ura",
+        "termin",
+        "pregled",
+        "storitev",
+        "delate",
+        "sobota",
+        "nedelja",
+    ]
+    if any(token in lowered for token in blocked_tokens):
+        return False
+    if any(char.isdigit() for char in stripped):
+        return False
+    parts = [p for p in stripped.split() if p]
+    return len(parts) >= 2
+
 def extract_service_type(message: str) -> Optional[str]:
     """Extract service type from message using word boundary matching"""
     import re
@@ -942,7 +973,7 @@ Kako je vaše ime in priimek?"""
     # Step 4: Name
     if state["step"] == "name" or state["name"] is None:
         # Extract name (assume everything that's not obviously other data is name)
-        if len(message.strip()) > 2 and not any(char.isdigit() for char in message[:5]):
+        if is_likely_full_name(message):
             state["name"] = message.strip()
             state["step"] = "phone"
             return "Hvala! Kakšna je vaša telefonska številka?"
@@ -1177,7 +1208,7 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                 input_matches_expected_format = True
         elif current_step == "name":
             # Check if message looks like a name (2+ words or 3+ chars without digits in first part)
-            if len(message.strip()) > 2 and not any(char.isdigit() for char in message[:5]):
+            if is_likely_full_name(message):
                 input_matches_expected_format = True
         elif current_step == "phone":
             # Check if message contains mostly digits
