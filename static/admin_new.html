@@ -782,6 +782,40 @@
             <div id="missed-questions" style="font-size: 12px;">Nalagam...</div>
           </div>
         </div>
+
+        <!-- Chat Statistics -->
+        <div class="widget">
+          <div class="widget-header">💬 Chat Statistika</div>
+          <div class="widget-body">
+            <div class="widget-stat">
+              <span class="label">Skupaj pogovorov</span>
+              <span class="value" id="chat-total-sessions">-</span>
+            </div>
+            <div class="widget-stat">
+              <span class="label">Sporočil skupaj</span>
+              <span class="value" id="chat-total-messages">-</span>
+            </div>
+            <div class="widget-stat">
+              <span class="label">Povprečno/pogovor</span>
+              <span class="value" id="chat-messages-per-session">-</span>
+            </div>
+            <div class="widget-stat">
+              <span class="label">Konverzija v rezervacijo</span>
+              <span class="value" id="chat-conversion-rate">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Chat Sessions -->
+        <div class="widget" style="grid-column: span 2;">
+          <div class="widget-header">
+            📝 Zgodovina pogovorov
+            <button class="btn btn-sm btn-secondary" onclick="loadChatSessions()" style="background: rgba(255,255,255,0.2);">🔄 Osveži</button>
+          </div>
+          <div class="widget-body" style="max-height: 400px; overflow-y: auto;">
+            <div id="chat-sessions-list">Nalagam...</div>
+          </div>
+        </div>
       </div>
     </div>
     <!-- End Tab: Orodja & Analitika -->
@@ -877,6 +911,22 @@
             <button type="button" class="btn btn-primary btn-sm" onclick="sendReply()">📧 Pošlji odgovor</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Session Viewer Modal -->
+  <div class="modal" id="chat-session-modal">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <h3 id="chat-modal-title">Zgodovina pogovora</h3>
+        <button class="modal-close" onclick="closeChatModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 600px; overflow-y: auto;">
+        <div id="chat-session-messages">Nalagam...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeChatModal()">Zapri</button>
       </div>
     </div>
   </div>
@@ -1392,6 +1442,8 @@
       loadLostIntents();
       loadMissedQuestions();
       loadImapStatus();
+      loadChatStats();
+      loadChatSessions();
     }
 
     async function loadUsageStats() {
@@ -1523,6 +1575,97 @@
       } catch (e) {
         toast('Napaka pri IMAP resync', 'error');
       }
+    }
+
+    // Chat History functions
+    async function loadChatStats() {
+      try {
+        const resp = await fetch(`${API}/chat_stats?days=7`);
+        const data = await resp.json();
+        document.getElementById('chat-total-sessions').textContent = data.total_sessions || 0;
+        document.getElementById('chat-total-messages').textContent = data.total_messages || 0;
+        document.getElementById('chat-messages-per-session').textContent = data.messages_per_session || '0';
+        document.getElementById('chat-conversion-rate').textContent = `${data.conversion_rate || 0}%`;
+      } catch (e) {
+        console.error('Chat stats error:', e);
+        document.getElementById('chat-total-sessions').textContent = '0';
+        document.getElementById('chat-total-messages').textContent = '0';
+      }
+    }
+
+    async function loadChatSessions() {
+      try {
+        const resp = await fetch(`${API}/chat_sessions?days=7&limit=50`);
+        const data = await resp.json();
+        const container = document.getElementById('chat-sessions-list');
+
+        if (!data.sessions || data.sessions.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Ni pogovorov v zadnjih 7 dneh</div>';
+          return;
+        }
+
+        container.innerHTML = data.sessions.map((sessionId, index) => `
+          <div class="question-item" style="cursor: pointer;" onclick="viewChatSession('${sessionId}')">
+            <span>
+              <strong>Pogovor ${index + 1}</strong>
+              <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px;">${sessionId.substring(0, 16)}...</span>
+            </span>
+            <span style="color: var(--primary);">👁️ Poglej</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Chat sessions error:', e);
+        document.getElementById('chat-sessions-list').innerHTML = '<div style="text-align: center; color: var(--danger);">Napaka pri nalaganju</div>';
+      }
+    }
+
+    async function viewChatSession(sessionId) {
+      try {
+        const modal = document.getElementById('chat-session-modal');
+        const title = document.getElementById('chat-modal-title');
+        const container = document.getElementById('chat-session-messages');
+
+        // Show modal with loading state
+        title.textContent = `Pogovor: ${sessionId.substring(0, 20)}...`;
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Nalagam...</div>';
+        modal.classList.add('active');
+
+        // Fetch session messages
+        const resp = await fetch(`${API}/chat_history/${sessionId}`);
+        const data = await resp.json();
+
+        if (!data.messages || data.messages.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">Ni sporočil v tem pogovoru</div>';
+          return;
+        }
+
+        // Display messages
+        container.innerHTML = data.messages.map((msg, index) => {
+          const isUser = msg.role === 'user';
+          const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleString('sl-SI') : '-';
+          const intent = msg.intent ? `<div style="font-size: 10px; color: var(--primary); margin-top: 4px;">Intent: ${msg.intent}</div>` : '';
+          const step = msg.booking_step ? `<div style="font-size: 10px; color: var(--accent); margin-top: 2px;">Korak: ${msg.booking_step}</div>` : '';
+
+          return `
+            <div class="message-item ${isUser ? 'inbound' : 'outbound'}" style="margin-bottom: 12px;">
+              <div class="message-meta">
+                <span class="message-direction">${isUser ? '👤 Uporabnik' : '🤖 Bot'}</span>
+                <span>${timestamp}</span>
+              </div>
+              <div class="message-body">${escapeHtml(msg.content)}</div>
+              ${intent}
+              ${step}
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error('View chat session error:', e);
+        document.getElementById('chat-session-messages').innerHTML = '<div style="text-align: center; color: var(--danger); padding: 40px;">Napaka pri nalaganju pogovora</div>';
+      }
+    }
+
+    function closeChatModal() {
+      document.getElementById('chat-session-modal').classList.remove('active');
     }
 
     // Init
