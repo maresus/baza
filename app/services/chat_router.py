@@ -180,7 +180,9 @@ def is_greeting(message: str) -> bool:
 INFO_RESPONSES = {
     "pozdrav": """Pozdravljeni! 😊
 
-Sem vaš digitalni pomočnik za naročanje pregledov. Lahko vam pomagam z naročilom na:
+Sem vaš digitalni pomočnik in lahko vas **takoj naročim na pregled**!
+
+Na voljo imam termine za:
 - Dermatološki pregled
 - Ortopedski pregled
 - Okulistični pregled
@@ -188,17 +190,29 @@ Sem vaš digitalni pomočnik za naročanje pregledov. Lahko vam pomagam z naroč
 - Estetski poseg
 - Kozmetični salon
 
-Kako vam lahko pomagam?""",
+**Začnimo z naročilom** - kateri pregled vas zanima?""",
 
     "kdo_si": """Sem digitalni pomočnik zdravstvenega centra.
 
 Z veseljem odgovorim na vprašanja o naših storitvah, cenah in razpoložljivih terminih.""",
 
-    "kontakt": """📞 **Telefon**: 01 234 56 78
-📧 **Email**: info@zdravstveni-center.si
-📍 **Naslov**: Zdravstveni center Ljubljana
-   Zdraviliška ulica 12
-   1000 Ljubljana
+    "narocanje": """**Naročanje poteka zelo enostavno - TUKAJ, z menoj!** 🎯
+
+✅ **Kako se naročite:**
+1. Poveste mi, kateri pregled vas zanima (dermatolog, ortoped, okulist...)
+2. Izberete želeni datum
+3. Izberete ustrezen termin
+4. Podate svoje podatke (ime, email, telefon)
+5. Potrдите naročilo ✅
+
+**To je to!** Celoten postopek traja manj kot 2 minuti.
+
+🚀 **Začnimo ZDAJ** - kateri pregled vas zanima?""",
+
+    "kontakt": """📍 **Naslov**:
+Zdravstveni center Ljubljana
+Zdraviliška ulica 12
+1000 Ljubljana
 
 🕒 **Delovni čas**:
    Pon-Pet: 8:00 - 18:00
@@ -207,7 +221,10 @@ Z veseljem odgovorim na vprašanja o naših storitvah, cenah in razpoložljivih 
 🚗 **Parking**: Brezplačen parking pred objektom
 🚌 **Javni prevoz**: Avtobusne linije 6, 11, 20 (postaja "Zdravstveni center")
 
-Za naročanje terminov me prosim kontaktirajte preko chata ali pokličite na zgoraj navedeno številko.""",
+📞 **Telefon**: 01 234 56 78
+📧 **Email**: info@zdravstveni-center.si
+
+💬 **Naročanje terminov**: Lahko se naročite **TUKAJ, z menoj** - samo povejte kateri pregled vas zanima!""",
 
     "lokacija": """📍 **Zdravstveni center Ljubljana**
 
@@ -228,7 +245,7 @@ Zdraviliška ulica 12
 
 📍 Google Maps: Poiščite "Zdravstveni center Ljubljana, Zdraviliška 12"
 
-Za navigacijo vpišite naslov v Google Maps ali nas pokličite na 01 234 56 78.""",
+💬 **Naročite se TUKAJ** - preverim lahko proste termine za vas!""",
 
     "delovni_cas": """🕒 **Delovni čas**:
 
@@ -241,13 +258,11 @@ Za navigacijo vpišite naslov v Google Maps ali nas pokličite na 01 234 56 78."
 - Priporočamo naročanje vsaj 2 dni vnaprej
 - Nujne primere obravnavamo isti dan
 
-📞 **Kontakt za vprašanja**:
-Telefon: 01 234 56 78
-Email: info@zdravstveni-center.si
+💬 **Naročite se ZDAJ** - povejte mi datum in preverim proste termine za vas!
 
-Če želite, lahko preverim proste termine za določen datum.""",
+ℹ️ Za druga vprašanja: 01 234 56 78 ali info@zdravstveni-center.si""",
 
-    "storitve": """Naše storitve:
+    "storitve": """**Naše storitve** - na voljo za takojšnje naročanje:
 
 🔬 **Dermatologija** (30 min, 25-150 €)
 Pregledi kožnih bolezni, laserski in estetski posegi
@@ -267,7 +282,7 @@ Botox, fillerji, biorevitalizacija kože
 💆 **Kozmetični salon** (60 min, 40-100 €)
 Profesionalna nega obraza, tretmaji kože
 
-Če želite naročilo, mi povejte kateri pregled vas zanima.""",
+🎯 **Naročite se TAKOJ** - samo povejte kateri pregled vas zanima in začnimo!""",
 
     "dermatolog": """**Dermatološki pregled**
 Trajanje: 30 minut
@@ -279,7 +294,7 @@ Storitve:
 - Lasersko zdravljenje glivic nohtov
 - Estetski posegi na koži
 
-Željte naročilo na dermatološki pregled?""",
+🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
     "ortoped": """**Ortopedski pregled**
 Trajanje: 30 minut
@@ -291,7 +306,7 @@ Storitve:
 - Bolečine v kolenih, ramenih, vratu
 - Preventivni ortopedski pregledi
 
-Želite naročilo na ortopedski pregled?""",
+🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
     "okulist": """**Okulistični pregled**
 Trajanje: 30 minut
@@ -303,7 +318,7 @@ Storitve:
 - Merjenje očesnega pritiska
 - Kontrolni pregledi
 
-Želite naročilo na okulistični pregled?""",
+🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
     "laserski_poseg": """**Laserski posegi**
 Trajanje: 30 minut
@@ -314,7 +329,7 @@ Posegi:
 - Odstranjevanje bradavic
 - Lasersko zdravljenje glivic nohtov
 
-Želite naročilo za laserski poseg?""",
+🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
     "estetski_poseg": """**Estetski posegi**
 Trajanje: 30 minut
@@ -326,7 +341,7 @@ Posegi:
 - Biorevitalizacija kože
 - Tretmaji s hialuronsko kislino
 
-Želite naročilo za estetski poseg?""",
+🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
     "kozmetika": """**Kozmetični salon**
 Trajanje: 60 minut
@@ -338,7 +353,7 @@ Storitve:
 - Anti-age tretmaji
 - Hidratacija in regeneracija
 
-Želite naročilo v kozmetični salon?""",
+🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
     "cene": """**Cenik storitev:**
 
@@ -350,7 +365,8 @@ Storitve:
 💆 Kozmetični salon: 40-100 €
 
 Cene se razlikujejo glede na vrsto pregleda/posega.
-Za točno ceno nas kontaktirajte ali mi povejte kateri pregled vas zanima.""",
+
+🎯 **Povejte mi kateri pregled vas zanima** in vas takoj naročim!""",
 
     "placilo": """Načini plačila:
 - Gotovina
@@ -474,16 +490,18 @@ VRNI SAMO JSON (brez markdown):
 INTENTI:
 - "health_advice": uporabnik opisuje simptome/bolečine in potrebuje nasvet
 - "booking": uporabnik želi naročiti pregled/termin/naročilo
+- "info_narocanje": sprašuje KAJ JE/KAKO POTEKA proces naročanja ("kako se naročim?", "kako poteka naročanje?", "kako rezerviram?")
 - "info_services": SAMO splošna vprašanja "kaj nudite" ali "katere storitve imate"
 - "info_prices": sprašuje o cenah/ceniku
 - "info_contact": sprašuje o lokaciji/kontaktu/naslovu/telefonu
 - "info_hours": sprašuje o delovnem času/kdaj ste odprti
 - "greeting": pozdrav (zdravo, dober dan, hej)
-- "question": SPECIFIČNA vprašanja o storitvah (kdo dela, kako poteka, kakšne izkušnje, kaj vključuje pregled, itd.)
+- "question": SPECIFIČNA vprašanja o storitvah (kdo dela, kakšne izkušnje, kaj vključuje pregled, kakšna je oprema, itd.)
 
 KRITIČNO - RAZLIKUJ MED:
 - "info_services" → SAMO "kaj nudite?", "katere storitve imate?", "seznam storitev"
-- "question" → VSA specifična vprašanja: "kdo dela kot ortoped?", "kako poteka pregled?", "kaj vključuje?", "kakšna je oprema?", itd.
+- "info_narocanje" → "kako poteka naročanje?", "kako se naročim?", "kako rezerviram termin?"
+- "question" → Specifična vprašanja o storitvah: "kdo dela kot ortoped?", "kaj vključuje pregled?", "kakšna je oprema?", itd.
 
 KRITIČNO - PRAVILA ZA SERVICE:
 1. Service vrni SAMO če je storitev EKSPLICITNO omenjena v TRENUTNEM sporočilu
@@ -581,6 +599,8 @@ def classify_intent(message: str, history: list = None) -> str:
         return "question"
     elif intent == "question":
         return "question"
+    elif intent == "info_narocanje":
+        return "info_narocanje"
     elif intent == "info_services":
         return "info_services"
     elif intent == "info_prices":
@@ -1014,10 +1034,17 @@ async def chat(request: ChatRequest) -> ChatResponse:
         conversation_tracker.add_message(session_id, message)  # Track even if loop
 
         if loop_count >= 2:
-            # 2nd loop detected -> handoff
+            # 2nd loop detected -> reset and offer restart
             conversation_tracker.reset_loop_count(session_id)
             return ChatResponse(
-                reply="Za dodatno pomoč me prosim kontaktirajte:\n📞 [Telefon]\n📧 info@zdravstveni-center.si",
+                reply="""Opazil sem, da imava težave z razumevanjem. Začniva znova! 🔄
+
+**Kako vam lahko pomagam?**
+- 🗓️ Naročilo na pregled (povejte kateri pregled + datum)
+- ℹ️ Informacije o storitvah/cenah
+- 📍 Lokacija in kontakt
+
+Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
                 session_id=session_id
             )
         else:
