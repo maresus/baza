@@ -203,15 +203,19 @@ class ChatHistoryService:
 
         if since:
             cursor.execute(f"""
-                SELECT DISTINCT session_id FROM chat_messages
+                SELECT session_id, MAX(timestamp) as last_message
+                FROM chat_messages
                 WHERE timestamp >= {ph}
-                ORDER BY timestamp DESC
+                GROUP BY session_id
+                ORDER BY last_message DESC
                 LIMIT {limit}
             """, (since,))
         else:
             cursor.execute(f"""
-                SELECT DISTINCT session_id FROM chat_messages
-                ORDER BY timestamp DESC
+                SELECT session_id, MAX(timestamp) as last_message
+                FROM chat_messages
+                GROUP BY session_id
+                ORDER BY last_message DESC
                 LIMIT {limit}
             """)
 
