@@ -810,7 +810,7 @@ def handle_appointment_booking(message: str, session_id: str) -> str:
     if any(word in lowered for word in ["prekliči", "prekini", "ne želim", "nazaj"]):
         reset_appointment_state(state)
         conversation_tracker.reset_loop_count(session_id)  # Reset loop detection on cancel
-        return "Naročilo preklicano. Če želite ponovno naročilo, mi samo povejte!"
+        return "V redu, rezervacije ne bom nadaljeval. Kaj vas še zanima?"
 
     # Če je service_type že nastavljen (iz classify_intent) ampak step je None -> preskoči na datum
     if state["service_type"] is not None and state["step"] is None:
@@ -1106,10 +1106,26 @@ Za dodatno pomoč: 📞 01 234 56 78 ali 📧 info@zdravstveni-center.si""",
             if is_affirmative(message):
                 # User wants to continue booking
                 state["waiting_resume_confirmation"] = False
-                # Get prompt for current step
-                resume_prompt = get_resume_prompt(state)
+
+                # Use variation of prompt to avoid repetition
+                step = state.get("step")
+                if step == "date":
+                    prompt = "Odlično, nadaljujmo! 😊 Prosim vnesite datum (npr. 15.3.2026)."
+                elif step == "time":
+                    prompt = "Odlično, nadaljujmo! 😊 Prosim povejte uro (npr. 14:00)."
+                elif step == "name":
+                    prompt = "Odlično, nadaljujmo! 😊 Prosim vnesite vaše ime in priimek."
+                elif step == "phone":
+                    prompt = "Odlično, nadaljujmo! 😊 Prosim vnesite vašo telefonsko številko."
+                elif step == "email":
+                    prompt = "Odlično, nadaljujmo! 😊 Prosim vnesite vaš email naslov."
+                elif step == "reason":
+                    prompt = "Odlično, nadaljujmo! 😊 Prosim opišite razlog vašega obiska."
+                else:
+                    prompt = "Odlično, nadaljujmo! 😊"
+
                 return ChatResponse(
-                    reply=f"Odlično, nadaljujmo z naročilom! 😊\n\n{resume_prompt}",
+                    reply=prompt,
                     session_id=session_id
                 )
             else:
