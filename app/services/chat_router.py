@@ -35,6 +35,7 @@ from app.core.llm_client import get_llm_client
 from app.rag.chroma_service import answer_tourist_question, is_tourist_query
 from app.services.router_agent import route_message
 from app.services.executor_v2 import execute_decision
+from app.services.chat_history_service import get_chat_history_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -152,6 +153,43 @@ class SimpleCache:
 # Initialize trackers
 conversation_tracker = ConversationTracker()
 response_cache = SimpleCache()
+
+# Chat history service (for persistent storage)
+def save_chat_message(
+    session_id: str,
+    role: str,
+    content: str,
+    intent: Optional[str] = None,
+    service_mentioned: Optional[str] = None,
+    booking_step: Optional[str] = None,
+    response_cached: bool = False
+):
+    """
+    Save chat message to persistent storage (non-blocking)
+
+    Args:
+        session_id: Session ID
+        role: "user" or "assistant"
+        content: Message content
+        intent: Classified intent
+        service_mentioned: Service mentioned
+        booking_step: Current booking step
+        response_cached: Whether response was cached
+    """
+    try:
+        history_service = get_chat_history_service()
+        history_service.save_message(
+            session_id=session_id,
+            role=role,
+            content=content,
+            intent=intent,
+            service_mentioned=service_mentioned,
+            booking_step=booking_step,
+            response_cached=response_cached
+        )
+    except Exception as e:
+        # Non-blocking - don't fail request if storage fails
+        print(f"[CHAT_HISTORY] Failed to save message: {e}")
 
 # Affirmative keywords
 AFFIRMATIVE_KEYWORDS = {
@@ -1264,5 +1302,46 @@ Kaj vas zanima?"""
     # Keep only last 20 messages
     if len(conversation_history) > 20:
         conversation_history = conversation_history[-20:]
+
+    # ===== PERSISTENT STORAGE =====
+    # Save both user message and assistant response to database
+    try:
+        # Determine current booking step
+        current_step = state.get("step") if state["step"] is not None else None
+
+        # Check if response was cached
+        was_cached = (cached_response == response_text) if 'cached_response' in locals() else False
+
+        # Extract service mentioned (if in booking intent)
+        service_mentioned = None
+        if intent.startswith("book_"):
+            service_mentioned = intent.replace("book_", "")
+            if service_mentioned == "general":
+                service_mentioned = None
+
+        # Save user message
+        save_chat_message(
+            session_id=session_id,
+            role="user",
+            content=message,
+            intent=intent,
+            service_mentioned=service_mentioned,
+            booking_step=current_step,
+            response_cached=False
+        )
+
+        # Save assistant response
+        save_chat_message(
+            session_id=session_id,
+            role="assistant",
+            content=response_text,
+            intent=None,  # Only user messages have intent
+            service_mentioned=service_mentioned,
+            booking_step=current_step,
+            response_cached=was_cached
+        )
+    except Exception as e:
+        # Non-critical - don't fail the request
+        print(f"[CHAT_HISTORY] Failed to save conversation: {e}")
 
     return ChatResponse(reply=response_text, session_id=session_id)

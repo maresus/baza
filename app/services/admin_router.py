@@ -13,6 +13,7 @@ from app.services.email_service import (
     send_reservation_rejected,
 )
 from app.services.reservation_service import SERVICES, ReservationService
+from app.services.chat_history_service import get_chat_history_service
 
 # Compatibility aliases za admin panel
 ROOMS = SERVICES  # Storitve namesto sob
@@ -772,3 +773,113 @@ def create_admin_reservation(data: AdminCreateReservation):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Napaka pri shranjevanju: {exc}")
     return {"success": True, "id": new_id, "warning": warning}
+
+
+# ==================== CHAT HISTORY ENDPOINTS ====================
+
+@router.get("/chat_sessions")
+def get_chat_sessions(days: int = 7, limit: int = 100):
+    """
+    Get list of recent chat sessions
+
+    Args:
+        days: Number of days back to look
+        limit: Maximum number of sessions to return
+    """
+    _log("GET /chat_sessions", days=days, limit=limit)
+    try:
+        history_service = get_chat_history_service()
+        since = (datetime.now() - timedelta(days=days)).isoformat()
+        sessions = history_service.get_all_sessions(since=since, limit=limit)
+
+        return {
+            "sessions": sessions,
+            "total": len(sessions),
+            "days": days
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error fetching chat sessions: {e}")
+        return {"sessions": [], "total": 0, "error": str(e)}
+
+
+@router.get("/chat_history/{session_id}")
+def get_session_history(session_id: str, limit: Optional[int] = None):
+    """
+    Get chat history for a specific session
+
+    Args:
+        session_id: Session ID to retrieve
+        limit: Optional limit on number of messages
+    """
+    _log("GET /chat_history", session_id=session_id, limit=limit)
+    try:
+        history_service = get_chat_history_service()
+        messages = history_service.get_session_history(session_id=session_id, limit=limit)
+
+        return {
+            "session_id": session_id,
+            "messages": messages,
+            "total": len(messages)
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error fetching session history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/chat_stats")
+def get_chat_stats(days: int = 7):
+    """
+    Get conversation statistics
+
+    Args:
+        days: Number of days to analyze
+    """
+    _log("GET /chat_stats", days=days)
+    try:
+        history_service = get_chat_history_service()
+        stats = history_service.get_conversation_stats(days=days)
+
+        return stats
+    except Exception as e:
+        print(f"[ADMIN] Error fetching chat stats: {e}")
+        return {
+            "error": str(e),
+            "total_sessions": 0,
+            "total_messages": 0
+        }
+
+
+@router.get("/search_messages")
+def search_chat_messages(
+    query: str,
+    role: Optional[str] = None,
+    intent: Optional[str] = None,
+    limit: int = 50
+):
+    """
+    Search chat messages by content
+
+    Args:
+        query: Text to search for
+        role: Filter by role (user/assistant)
+        intent: Filter by intent
+        limit: Maximum results
+    """
+    _log("GET /search_messages", query=query, role=role, intent=intent)
+    try:
+        history_service = get_chat_history_service()
+        results = history_service.search_messages(
+            query=query,
+            role=role,
+            intent=intent,
+            limit=limit
+        )
+
+        return {
+            "results": results,
+            "total": len(results),
+            "query": query
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error searching messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
