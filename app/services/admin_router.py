@@ -32,7 +32,7 @@ VALID_TABLE_LOCATIONS = {
 }
 from app.services.imap_poll_service import load_state, preview_last_messages, resync_last_messages
 
-router = APIRouter(tags=["admin"])
+router = APIRouter(prefix="/api/admin", tags=["admin"])
 service = ReservationService()
 
 ROOM_IDS = {r["id"] for r in ROOMS}
@@ -182,45 +182,8 @@ class KnowledgeFeedbackRequest(BaseModel):
     suggestion: str
 
 
-@router.get("/admin", response_class=HTMLResponse)
-def admin_page() -> HTMLResponse:
-    """Postreže statično datoteko admin UI (static/admin.html)."""
-    html_path = Path("static/admin.html")
-    if not html_path.exists():
-        return HTMLResponse("<h1>Admin UI manjka (static/admin.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
-
-@router.get("/admin/new", response_class=HTMLResponse)
-def admin_new_page() -> HTMLResponse:
-    """Nov admin UI s koledarskim pogledom (static/admin_new.html)."""
-    html_path = Path("static/admin_new.html")
-    if not html_path.exists():
-        return HTMLResponse("<h1>Nov admin UI manjka (static/admin_new.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
-
-@router.get("/admin/conversations", response_class=HTMLResponse)
-def admin_conversations_page() -> HTMLResponse:
-    """Postreže statično datoteko za pogovore (static/conversations.html)."""
-    html_path = Path("static/conversations.html")
-    if not html_path.exists():
-        return HTMLResponse("<h1>Conversations UI manjka (static/conversations.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
-
-@router.get("/admin/inquiries", response_class=HTMLResponse)
-def admin_inquiries_page() -> HTMLResponse:
-    """Postreže statično datoteko za povpraševanja (static/inquiries.html)."""
-    html_path = Path("static/inquiries.html")
-    if not html_path.exists():
-        return HTMLResponse("<h1>Inquiries UI manjka (static/inquiries.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
+# HTML page endpoints removed - these are now served from main.py
+# The admin router should only contain API endpoints
 
 @router.get("/conversations")
 def get_conversations(limit: int = 200, needs_followup_only: bool = False):
@@ -384,7 +347,7 @@ def update_reservation(reservation_id: int, data: ReservationUpdate):
     return {"ok": True}
 
 
-@router.patch("/api/admin/reservations/{reservation_id}")
+@router.patch("/reservations/{reservation_id}")
 def patch_reservation(reservation_id: int, data: ReservationUpdate):
     """Partial update rezervacije (status, admin_notes, kids)."""
     fields = {
