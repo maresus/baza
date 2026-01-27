@@ -36,6 +36,7 @@ from app.rag.chroma_service import answer_tourist_question, is_tourist_query
 from app.services.router_agent import route_message
 from app.services.executor_v2 import execute_decision
 from app.services.chat_history_service import get_chat_history_service
+from app.services import knowledge_base as kb_module
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -162,7 +163,8 @@ def save_chat_message(
     intent: Optional[str] = None,
     service_mentioned: Optional[str] = None,
     booking_step: Optional[str] = None,
-    response_cached: bool = False
+    response_cached: bool = False,
+    metadata: Optional[dict] = None
 ):
     """
     Save chat message to persistent storage (non-blocking)
@@ -175,6 +177,7 @@ def save_chat_message(
         service_mentioned: Service mentioned
         booking_step: Current booking step
         response_cached: Whether response was cached
+        metadata: Additional metadata (e.g., confidence scores)
     """
     try:
         history_service = get_chat_history_service()
@@ -185,7 +188,8 @@ def save_chat_message(
             intent=intent,
             service_mentioned=service_mentioned,
             booking_step=booking_step,
-            response_cached=response_cached
+            response_cached=response_cached,
+            metadata=metadata
         )
     except Exception as e:
         # Non-blocking - don't fail request if storage fails
@@ -447,6 +451,28 @@ CRITICAL_INFO_KEYS = {
     "delovni_cas", "kontakt", "cene", "storitve", "prosti_termini",
     "dermatolog", "ortoped", "okulist", "laserski_poseg", "estetski_poseg", "kozmetika"
 }
+
+# ===== HYBRID KNOWLEDGE BASE INITIALIZATION =====
+# Initialize knowledge base with INFO_RESPONSES using hybrid retrieval (BM25 + OpenAI embeddings)
+# This runs once at module import time
+_kb_initialized = False
+
+def _ensure_kb_initialized():
+    """Lazy initialization of knowledge base to avoid startup delays"""
+    global _kb_initialized
+    if not _kb_initialized:
+        try:
+            print("[KB] Initializing hybrid knowledge base with INFO_RESPONSES...")
+            kb_module.initialize_knowledge_base(
+                documents=INFO_RESPONSES,
+                alpha=0.5,  # Equal weight to BM25 and vector search
+                use_reranker=True  # Enable cross-encoder re-ranking
+            )
+            _kb_initialized = True
+            print("[KB] Hybrid knowledge base initialized successfully!")
+        except Exception as e:
+            print(f"[KB] Failed to initialize knowledge base: {e}")
+            print("[KB] Will fall back to direct INFO_RESPONSES lookup")
 
 def _send_reservation_emails_async(payload: dict) -> None:
     """Send appointment confirmation emails asynchronously"""
@@ -808,6 +834,235 @@ def _service_price_info(service_type: Optional[str]) -> str:
     if not info:
         return INFO_RESPONSES["cene"]
     return f"💰 {info['name']}: {info['price_range']} · {info['duration_minutes']} min"
+
+
+def _analyze_query_type(query: str) -> dict:
+    """
+    Analyze query to determine type and required confidence level
+
+    Returns dict with:
+        - type: "booking", "price", "contact", "info", "general"
+        - required_confidence: minimum confidence threshold (0-1)
+        - priority: "critical", "high", "medium", "low"
+    """
+    query_lower = query.lower()
+
+    # Booking queries (critical - must be accurate)
+    booking_keywords = ["naroč", "termin", "rezerv", "prostem", "prosta", "prosth"]
+    if any(kw in query_lower for kw in booking_keywords):
+        return {"type": "booking", "required_confidence": 0.7, "priority": "critical"}
+
+    # Price queries (high priority - must be accurate)
+    price_keywords = ["cena", "cene", "ceník", "stane", "stroški", "plačil", "koliko"]
+    if any(kw in query_lower for kw in price_keywords):
+        return {"type": "price", "required_confidence": 0.65, "priority": "high"}
+
+    # Contact/location queries (medium priority)
+    contact_keywords = ["naslov", "lokacij", "kako do", "kje", "parking", "telefon", "email", "kontakt"]
+    if any(kw in query_lower for kw in contact_keywords):
+        return {"type": "contact", "required_confidence": 0.5, "priority": "medium"}
+
+    # Service info queries (medium priority)
+    service_keywords = ["dermatolog", "ortoped", "okulist", "lasersk", "estetsk", "kozmetik", "storitev"]
+    if any(kw in query_lower for kw in service_keywords):
+        return {"type": "info", "required_confidence": 0.55, "priority": "medium"}
+
+    # General queries (lower threshold)
+    return {"type": "general", "required_confidence": 0.45, "priority": "low"}
+
+
+def answer_with_hybrid_kb(query: str, history: list = None, session_id: str = None) -> str:
+    """
+    Answer question using hybrid knowledge base with enhanced confidence gating
+
+    Uses multi-signal confidence scoring:
+    - Search score (hybrid BM25 + vector)
+    - Score gap between top results
+    - BM25/vector agreement
+    - Query type analysis
+    - Response validation
+
+    Args:
+        query: User question
+        history: Conversation history (optional, for future context-aware answers)
+
+    Returns:
+        Answer text with confidence-based response strategy
+    """
+    # Ensure KB is initialized
+    _ensure_kb_initialized()
+
+    if not _kb_initialized:
+        # Fallback to old method if KB initialization failed
+        return generate_llm_answer(query, history=history or [])
+
+    try:
+        # ===== QUERY ANALYSIS =====
+        query_analysis = _analyze_query_type(query)
+        required_confidence = query_analysis["required_confidence"]
+
+        print(f"[CONFIDENCE] Query type: {query_analysis['type']} (priority: {query_analysis['priority']})")
+        print(f"[CONFIDENCE] Required confidence threshold: {required_confidence:.2f}")
+
+        # Search knowledge base with hybrid retrieval
+        results = kb_module.search_knowledge_base(
+            query=query,
+            top_k=3,
+            min_score=0.0  # Get all results, we'll filter by confidence
+        )
+
+        # Store confidence metadata in session state for analytics
+        if session_id and results:
+            state = conversation_state.get(session_id, {})
+            confidence_meta = results[0].get("confidence_metadata", {}) if results else {}
+            state["last_confidence_metadata"] = {
+                "query_type": query_analysis["type"],
+                "query_priority": query_analysis["priority"],
+                "required_confidence": required_confidence,
+                "overall_confidence": confidence_meta.get("confidence", 0),
+                "top_score": confidence_meta.get("top_score", 0),
+                "score_gap_ratio": confidence_meta.get("score_gap_ratio", 0),
+                "bm25_vector_agreement": confidence_meta.get("bm25_vector_agreement", 0),
+                "reranker_used": confidence_meta.get("reranker_used", False),
+                "num_results": len(results)
+            }
+
+        if not results:
+            # No results found - ask for clarification
+            return """Nisem prepričan, da pravilno razumem. Lahko pojasnite:
+- Za katero storitev vas zanima? (dermatolog / ortoped / okulist / ...)
+- Za kateri datum?
+
+Ali lahko zastavite vprašanje drugače?"""
+
+        # Get top result and confidence metadata
+        top_result = results[0]
+        top_score = top_result["score"]
+        confidence_meta = top_result.get("confidence_metadata", {})
+        overall_confidence = confidence_meta.get("confidence", top_score)
+
+        # Debug logging
+        print(f"[KB_SEARCH] Query: {query[:50]}...")
+        print(f"[KB_SEARCH] Top result: {top_result['doc_id']} (score: {top_score:.3f})")
+        print(f"[KB_SEARCH] BM25: {top_result['bm25_score']:.3f}, Vector: {top_result['vector_score']:.3f}")
+
+        if confidence_meta:
+            print(f"[CONFIDENCE] Overall confidence: {overall_confidence:.3f}")
+            print(f"[CONFIDENCE] Score gap ratio: {confidence_meta.get('score_gap_ratio', 0):.3f}")
+            print(f"[CONFIDENCE] BM25/Vector agreement: {confidence_meta.get('bm25_vector_agreement', 0):.3f}")
+            print(f"[CONFIDENCE] Re-ranker used: {confidence_meta.get('reranker_used', False)}")
+
+        # ===== ENHANCED CONFIDENCE GATING =====
+
+        # Strategy 1: Very high confidence + clear winner
+        # Return result directly if confidence is strong and there's clear winner
+        score_gap_ratio = confidence_meta.get("score_gap_ratio", 0)
+        if overall_confidence >= 0.75 and score_gap_ratio > 0.3:
+            print(f"[CONFIDENCE] ✓ Very high confidence + clear winner - returning directly")
+            return top_result["text"]
+
+        # Strategy 2: High confidence for query type
+        # Return result if it meets the query-specific threshold
+        if overall_confidence >= required_confidence:
+            # Additional validation for critical queries
+            if query_analysis["priority"] == "critical":
+                # For critical queries, also check agreement between methods
+                agreement = confidence_meta.get("bm25_vector_agreement", 0)
+                if agreement < 0.5:
+                    print(f"[CONFIDENCE] ⚠ Critical query but low method agreement - using LLM")
+                    # Fall through to LLM strategy
+                else:
+                    print(f"[CONFIDENCE] ✓ High confidence for critical query - returning directly")
+                    return top_result["text"]
+            else:
+                print(f"[CONFIDENCE] ✓ Meets query-type threshold - returning directly")
+                return top_result["text"]
+
+        # Strategy 3: Medium confidence - Use LLM with context
+        # If confidence is moderate, use LLM to synthesize answer from retrieved docs
+        if overall_confidence >= 0.35:
+            print(f"[CONFIDENCE] ~ Medium confidence - using LLM with retrieved context")
+
+            # Gather context from top 2-3 results depending on confidence
+            num_context_docs = 2 if overall_confidence >= 0.45 else 3
+            context_docs = [r["text"] for r in results[:num_context_docs]]
+            context = "\n\n---\n\n".join(context_docs)
+
+            # Generate answer using LLM with context
+            llm_client = get_llm_client()
+
+            system_prompt = """Si digitalni pomočnik zdravstvenega centra.
+Odgovarjaj na podlagi danega konteksta. Če kontekst ne vsebuje informacij za odgovor, reci to prijazno.
+Odgovori naj bodo kratki in jedrnati."""
+
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"""Kontekst:
+{context}
+
+Vprašanje: {query}
+
+Odgovori na slovenščini na podlagi konteksta zgoraj."""}
+            ]
+
+            response = llm_client.chat(messages, temperature=0.3)
+            answer = response.strip()
+
+            # Validate LLM response quality
+            if len(answer) < 20:
+                print(f"[CONFIDENCE] ⚠ LLM response too short - returning top result instead")
+                return top_result["text"]
+
+            # Check if LLM declined to answer (common phrases)
+            decline_phrases = ["ne vem", "nimam informacij", "ne najdem", "ne morem", "žal ne"]
+            if any(phrase in answer.lower() for phrase in decline_phrases):
+                print(f"[CONFIDENCE] ⚠ LLM declined - returning top result instead")
+                return top_result["text"]
+
+            return answer
+
+        # Strategy 4: Low confidence - Ask for clarification
+        # If confidence is too low, ask user to clarify their question
+        print(f"[CONFIDENCE] ✗ Low confidence ({overall_confidence:.3f}) - asking for clarification")
+
+        # Provide contextual clarification based on query type
+        if query_analysis["type"] == "booking":
+            return """Za naročanje potrebujem naslednje podatke:
+- Kateri pregled vas zanima? (dermatolog, ortoped, okulist, laserski poseg, estetski poseg, kozmetika)
+- Kateri datum vas zanima?
+
+Prosim, navedite obe informaciji."""
+
+        elif query_analysis["type"] == "price":
+            return """Za točne cene mi prosim povejte katera storitev vas zanima:
+
+🔬 Dermatologija
+🦴 Ortopedija
+👁️ Oftalmologija
+⚡ Laserski posegi
+💉 Estetski posegi
+💆 Kozmetični salon
+
+Katero storitev želite?"""
+
+        else:
+            # General clarification
+            return """Lahko vam pomagam z:
+- Naročilom na pregled (dermatolog, ortoped, okulist...)
+- Informacijami o storitvah in cenah
+- Delovnim časom in lokacijo
+- Prostimi termini
+
+Kaj vas zanima?"""
+
+    except Exception as e:
+        print(f"[KB_SEARCH] Error: {e}")
+        import traceback
+        traceback.print_exc()
+
+        # Fallback to old method
+        return generate_llm_answer(query, history=history or [])
+
 
 def extract_service_type(message: str) -> Optional[str]:
     """Extract service type from message using word boundary matching"""
@@ -1403,19 +1658,17 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                     rag_answer = answer_tourist_question(message)
                     response_text = rag_answer
                 else:
-                    # Use generate_llm_answer which handles context gathering internally
-                    response_text = generate_llm_answer(message, history=conversation_history)
+                    # ===== HYBRID KNOWLEDGE BASE =====
+                    # Use hybrid retrieval (BM25 + vector embeddings) with confidence gating
+                    response_text = answer_with_hybrid_kb(
+                        message,
+                        history=conversation_history,
+                        session_id=session_id
+                    )
 
-                    # ===== CONFIDENCE GATING =====
-                    # If response is too short or generic, ask for clarification
-                    if not response_text or len(response_text.strip()) < 20:
-                        response_text = """Nisem prepričan, da pravilno razumem. Lahko pojasnite:
-- Za katero storitev vas zanima? (dermatolog / ortoped / okulist / ...)
-- Za kateri datum?
-
-Ali lahko zastavite vprašanje drugače?"""
-                    else:
-                        # ===== CACHE RESPONSE =====
+                    # ===== CACHE RESPONSE =====
+                    # Only cache if not a clarification request
+                    if len(response_text) > 50 and "Nisem prepričan" not in response_text:
                         response_cache.set(message, response_text)
 
         except Exception as e:
@@ -1463,7 +1716,12 @@ Kaj vas zanima?"""
             response_cached=False
         )
 
-        # Save assistant response
+        # Get confidence metadata if available
+        confidence_metadata = None
+        if session_id in conversation_state:
+            confidence_metadata = conversation_state[session_id].get("last_confidence_metadata")
+
+        # Save assistant response with confidence metadata
         save_chat_message(
             session_id=session_id,
             role="assistant",
@@ -1471,8 +1729,13 @@ Kaj vas zanima?"""
             intent=None,  # Only user messages have intent
             service_mentioned=service_mentioned,
             booking_step=current_step,
-            response_cached=was_cached
+            response_cached=was_cached,
+            metadata=confidence_metadata
         )
+
+        # Clear confidence metadata after saving
+        if session_id in conversation_state and "last_confidence_metadata" in conversation_state[session_id]:
+            del conversation_state[session_id]["last_confidence_metadata"]
     except Exception as e:
         # Non-critical - don't fail the request
         print(f"[CHAT_HISTORY] Failed to save conversation: {e}")

@@ -11,3 +11,4 @@ psycopg2-binary
 pydantic-settings
 pytest>=7.0.0
 pytest-cov>=4.0.0
+sentence-transformers>=2.2.0
