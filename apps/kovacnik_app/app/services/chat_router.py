@@ -69,6 +69,12 @@ from app.services.dialog_utils import (
     is_negative,
     is_switch_topic_command,
 )
+from app.services.history_utils import (
+    get_last_assistant_message,
+    get_last_reservation_user_message,
+    last_bot_mentions_product_order,
+    last_bot_mentions_reservation,
+)
 from app.utils.session_store import SessionStore, blank_chat_context
 from app.services.availability_flow import (
     get_availability_state,
@@ -1517,63 +1523,12 @@ def llm_is_affirmative(message: str, last_bot: str, detected_lang: str) -> bool:
         return False
 
 
-def get_last_assistant_message() -> str:
-    history = get_session_ctx().get("conversation_history", [])
-    for msg in reversed(history):
-        if msg.get("role") == "assistant":
-            return msg.get("content", "")
-    return ""
-
-def get_last_user_message() -> str:
-    history = get_session_ctx().get("conversation_history", [])
-    for msg in reversed(history):
-        if msg.get("role") == "user":
-            return msg.get("content", "")
-    return ""
-
-
-def get_last_reservation_user_message() -> str:
-    history = get_session_ctx().get("conversation_history", [])
-    for msg in reversed(history):
-        if msg.get("role") != "user":
-            continue
-        content = (msg.get("content") or "").strip()
-        if not content:
-            continue
-        if (
-            is_reservation_related(content)
-            or extract_date(content)
-            or extract_date_range(content)
-            or parse_people_count(content).get("total")
-        ):
-            return content
-    return ""
-
-
 def set_reservation_type_from_text(state: dict, text: str) -> None:
     lowered = text.lower()
     if any(token in lowered for token in ["mizo", "miza", "table", "kosilo", "kosila", "lunch"]):
         state["type"] = "table"
     elif any(token in lowered for token in ["sobo", "soba", "preno", "room", "zimmer"]):
         state["type"] = "room"
-
-
-def last_bot_mentions_reservation(last_bot: str) -> bool:
-    text = last_bot.lower()
-    return any(token in text for token in ["rezerv", "reserve", "booking", "zimmer", "room", "mizo", "table"])
-
-
-def last_bot_mentions_product_order(last_bot: str) -> bool:
-    text = last_bot.lower()
-    if "naroč" in text or "naroc" in text:
-        return True
-    if "trgovin" in text or "izdelek" in text or "katalog" in text:
-        return True
-    if any(stem in text for stem in PRODUCT_STEMS):
-        return True
-    return False
-
-
 
 
 def translate_reply(reply: str, lang: str) -> str:
@@ -2077,7 +2032,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "availability_declined", followup_flag=False)
 
-    last_bot_for_affirm = get_last_assistant_message()
+    history = get_session_ctx().get("conversation_history", [])
+    last_bot_for_affirm = get_last_assistant_message(history)
     llm_affirm = (
         last_bot_mentions_reservation(last_bot_for_affirm)
         and is_confirmation_question(last_bot_for_affirm)
@@ -2103,7 +2059,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 return finalize(reply, "availability_to_reservation", followup_flag=False)
         last_bot = last_bot_for_affirm.lower()
         if last_bot_mentions_reservation(last_bot):
-            last_user = get_last_reservation_user_message()
+            last_user = get_last_reservation_user_message(history)
             if last_bot:
                 set_reservation_type_from_text(state, last_bot)
             if last_user:
@@ -2113,7 +2069,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "reservation_confirmed", followup_flag=False)
 
     if state.get("step") is None:
-        last_bot = get_last_assistant_message().lower()
+        last_bot = get_last_assistant_message(history).lower()
         has_room_context = any(token in last_bot for token in ["sobo", "soba", "preno", "room", "zimmer"])
         has_table_context = any(token in last_bot for token in ["mizo", "miza", "table"])
         date_hit = extract_date(payload.message) or extract_date_range(payload.message)
@@ -2805,12 +2761,16 @@ def chat_stream(payload: ChatRequestWithSession):
 
     # Če uporabnik potrdi po rezervacijskem odgovoru, preusmeri v chat_endpoint
     if is_affirmative(payload.message) or (
-        last_bot_mentions_reservation(get_last_assistant_message())
-        and is_confirmation_question(get_last_assistant_message())
-        and llm_is_affirmative(payload.message, get_last_assistant_message(), detected_lang)
+        last_bot_mentions_reservation(get_last_assistant_message(get_session_ctx().get("conversation_history", [])))
+        and is_confirmation_question(get_last_assistant_message(get_session_ctx().get("conversation_history", [])))
+        and llm_is_affirmative(
+            payload.message,
+            get_last_assistant_message(get_session_ctx().get("conversation_history", [])),
+            detected_lang,
+        )
     ):
-        last_bot = get_last_assistant_message()
-        if last_bot_mentions_reservation(last_bot) or get_last_reservation_user_message():
+        last_bot = get_last_assistant_message(get_session_ctx().get("conversation_history", []))
+        if last_bot_mentions_reservation(last_bot) or get_last_reservation_user_message(get_session_ctx().get("conversation_history", [])):
             response = chat_endpoint(payload)
             return StreamingResponse(
                 _stream_text_chunks(response.reply),
