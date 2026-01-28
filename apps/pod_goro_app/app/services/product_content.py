@@ -73,3 +73,26 @@ def get_product_response(key: str) -> str:
     if key in PRODUCT_RESPONSES:
         return random.choice(PRODUCT_RESPONSES[key])
     return PRODUCT_RESPONSES["izdelki_splosno"][0]
+
+
+def is_purchase_intent(message: str) -> bool:
+    text = message.lower()
+    return any(
+        phrase in text
+        for phrase in [
+            "kupil bi",
+            "kupila bi",
+            "rad bi kupil",
+            "rada bi kupila",
+            "želim kupiti",
+            "zelim kupiti",
+            "kupiti bi",
+            "kupim",
+            "naročil bi",
+            "naročila bi",
+            "rad bi naročil",
+            "rada bi naročila",
+            "želim naročiti",
+            "zelim narociti",
+        ]
+    )

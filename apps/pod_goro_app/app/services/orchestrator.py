@@ -21,6 +21,7 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         get_product_response,
         SHOP_URL,
     )
+    from app.services.product_content import is_purchase_intent
     from app.services.reservation_flow import handle_reservation_flow
     normalized = message.strip().lower()
     affirmatives = {"ja", "da", "ok", "seveda", "lahko", "yes", "y"}
@@ -72,6 +73,9 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         inquiry_state["details"] = message.strip()
         inquiry_state["step"] = "awaiting_deadline"
         return "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+
+    if is_purchase_intent(message):
+        return f"Tukaj je povezava do trgovine: {SHOP_URL}"
 
     if normalized in affirmatives:
         return "Ja — za kaj točno?"

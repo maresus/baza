@@ -13,6 +13,7 @@ from app.services.product_content import (
     PRODUCT_STEMS,
     detect_product_intent,
     get_product_response,
+    is_purchase_intent,
 )
 
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
