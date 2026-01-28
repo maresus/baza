@@ -22,6 +22,13 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         SHOP_URL,
     )
     from app.services.reservation_flow import handle_reservation_flow
+    normalized = message.strip().lower()
+    affirmatives = {"ja", "da", "ok", "seveda", "lahko", "yes", "y"}
+    last_bot = ""
+    for item in reversed(ctx.get("conversation_history", [])):
+        if item.get("role") == "assistant":
+            last_bot = item.get("content", "")
+            break
     # Pravilo 1: če je aktivna rezervacija, jo nadaljuj
     reservation_state = get_reservation_state(session_id)
     if reservation_state.get("step") is not None:
@@ -33,6 +40,11 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         reply = handle_inquiry_flow(message, inquiry_state, session_id)
         if reply:
             return reply
+
+    # Pravilo 2b: kratki "ja" po ponudbi izdelkov -> daj link, ne reset
+    if normalized in affirmatives and last_bot:
+        if "naročil" in last_bot.lower() or "rezerviram ali pošljem" in last_bot.lower():
+            return f"Tukaj je povezava do izdelkov: {SHOP_URL}"
 
     # Pravilo 3: dogodki (poroka, teambuilding) -> povpraševanje
     if is_event_inquiry(message):
