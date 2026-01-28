@@ -2223,18 +2223,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         last_shown_products = ctx.get("last_shown_products", [])
     last_interaction = now
 
-    if USE_ORCHESTRATOR:
-        reply = orchestrate_message(payload.message, session_id, ctx)
-        reply = maybe_translate(reply, detected_lang)
-        return finalize(reply, "orchestrator", followup_flag=False)
-
-    state = get_reservation_state(session_id)
-    inquiry_state = get_inquiry_state(session_id)
     needs_followup = False
     detected_lang = detect_language(payload.message)
-    # vedno osveži jezik seje, da se lahko sproti preklaplja
-    state["language"] = detected_lang
-    state["session_id"] = session_id
 
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
         nonlocal needs_followup
@@ -2265,6 +2255,17 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         ctx["pending_action"] = ctx.get("pending_action")
         session_store.set(session_id, ctx)
         return ChatResponse(reply=final_reply)
+
+    if USE_ORCHESTRATOR:
+        reply = orchestrate_message(payload.message, session_id, ctx)
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "orchestrator", followup_flag=False)
+
+    state = get_reservation_state(session_id)
+    inquiry_state = get_inquiry_state(session_id)
+    # vedno osveži jezik seje, da se lahko sproti preklaplja
+    state["language"] = detected_lang
+    state["session_id"] = session_id
 
     if is_switch_topic_command(payload.message):
         reset_reservation_state(state)
