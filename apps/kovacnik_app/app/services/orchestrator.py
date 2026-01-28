@@ -47,7 +47,7 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
     product_key = detect_product_intent(message)
     if product_key:
         reply = get_product_response(product_key)
-        return f\"{reply}\\n\\nIzdelke Domačije Kovačnik najdete tukaj: {SHOP_URL}\"
+        return f"{reply}\n\nIzdelke Domačije Kovačnik najdete tukaj: {SHOP_URL}"
 
     # Pravilo 5: info intent
     info_key = detect_info_intent(message)
