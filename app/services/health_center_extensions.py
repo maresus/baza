@@ -10,7 +10,7 @@ Storitve:
 - Kozmetični salon
 """
 from datetime import datetime, timedelta
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Set
 
 # Variacije imen storitev za prepoznavo v besedilu.
 SERVICE_NAME_MAP = {
@@ -75,16 +75,59 @@ WORKING_HOURS = {
 WORKING_DAYS = {0, 1, 2, 3, 4}  # Pon-Pet
 
 
+def _get_booked_slots(date_str: str) -> Set[str]:
+    """
+    Vrne set zasedenih terminov za izbran dan iz baze.
+
+    Args:
+        date_str: Datum v formatu DD.MM.YYYY
+
+    Returns:
+        Set terminov ki so že zasedeni (npr. {"08:00", "10:30"})
+    """
+    try:
+        # Lazy import to avoid circular dependency
+        from app.services.reservation_service import ReservationService
+
+        service = ReservationService()
+        booked_times: Set[str] = set()
+
+        # Check all active reservation statuses
+        for status in ["pending", "confirmed", "processing"]:
+            existing = service.read_reservations(
+                reservation_type="table",
+                status=status,
+                limit=1000
+            )
+            for r in existing:
+                if r.get("date") == date_str:
+                    time_slot = r.get("time")
+                    if time_slot:
+                        # Normalize time format (ensure HH:MM)
+                        if ":" in time_slot:
+                            parts = time_slot.split(":")
+                            normalized = f"{int(parts[0]):02d}:{int(parts[1]):02d}"
+                            booked_times.add(normalized)
+
+        return booked_times
+
+    except Exception as e:
+        print(f"[SLOTS] Error getting booked slots: {e}")
+        return set()  # Return empty set on error (show all slots)
+
+
 def get_available_time_slots(date_str: str, service_type: str) -> List[str]:
     """
     Vrne seznam prostih terminov za izbran dan in storitev.
+
+    SEDAJ PREVERJA DATABASE za že zasedene termine!
 
     Args:
         date_str: Datum v formatu DD.MM.YYYY
         service_type: Tip storitve (ključ iz SERVICES)
 
     Returns:
-        Seznam terminov v formatu ["08:00", "08:30", "09:00", ...]
+        Seznam PROSTIH terminov v formatu ["08:00", "08:30", "09:00", ...]
     """
     try:
         date = datetime.strptime(date_str.strip(), "%d.%m.%Y")
@@ -101,6 +144,12 @@ def get_available_time_slots(date_str: str, service_type: str) -> List[str]:
 
     duration = SERVICES[service_type]["duration_minutes"]
 
+    # Get already booked slots from database
+    booked_slots = _get_booked_slots(date_str)
+
+    if booked_slots:
+        print(f"[SLOTS] Found {len(booked_slots)} booked slots for {date_str}: {booked_slots}")
+
     # Generate time slots
     slots = []
     current_hour = WORKING_HOURS["start"]
@@ -115,7 +164,10 @@ def get_available_time_slots(date_str: str, service_type: str) -> List[str]:
             break
 
         time_str = f"{current_hour:02d}:{current_minute:02d}"
-        slots.append(time_str)
+
+        # Only add slot if NOT already booked
+        if time_str not in booked_slots:
+            slots.append(time_str)
 
         # Next slot (30 min interval)
         current_minute += 30

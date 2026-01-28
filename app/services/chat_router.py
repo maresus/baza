@@ -524,6 +524,7 @@ def _blank_appointment_state() -> dict[str, Optional[str | int]]:
 
 # Session states
 appointment_states: dict[str, dict[str, Optional[str | int]]] = {}
+conversation_state: dict[str, dict[str, Any]] = {}  # Session → metadata (confidence, etc.)
 conversation_history: list[dict[str, str]] = []
 last_interaction: Optional[datetime] = None
 chat_session_id: str = str(uuid.uuid4())[:8]
@@ -1478,7 +1479,7 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                 input_matches_expected_format = True
         elif current_step == "select_service":
             # Check if message mentions a service
-            service_type = detect_service_from_message(message)
+            service_type = extract_service_type(message)
             if service_type:
                 input_matches_expected_format = True
         elif current_step == "name":
@@ -1741,3 +1742,145 @@ Kaj vas zanima?"""
         print(f"[CHAT_HISTORY] Failed to save conversation: {e}")
 
     return ChatResponse(reply=response_text, session_id=session_id)
+
+
+# ============================================================
+# SMS WEBHOOK ENDPOINT - za Twilio incoming SMS
+# ============================================================
+
+from fastapi import Form, Response, UploadFile, File
+
+
+# ============================================================
+# VOICE INPUT ENDPOINT - Whisper transkripcija
+# ============================================================
+
+@router.post("/voice")
+async def voice_input(
+    file: UploadFile = File(...),
+    session_id: str = None
+):
+    """
+    Sprejme glasovno sporočilo, transkribira z Whisper in vrne odgovor.
+
+    Podprti formati: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg
+    Maksimalna velikost: 25 MB
+
+    Returns:
+        {
+            "transcription": str,
+            "reply": str,
+            "session_id": str
+        }
+    """
+    from app.services.voice_service import get_voice_service
+
+    voice_service = get_voice_service()
+
+    # Check availability
+    if not voice_service.is_available():
+        return {
+            "success": False,
+            "error": "Voice service ni na voljo. Prosimo pišite sporočilo.",
+            "transcription": None,
+            "reply": None
+        }
+
+    try:
+        # Read file content
+        content = await file.read()
+
+        # Validate
+        validation = voice_service.validate_audio_file(file.filename or "audio.wav", len(content))
+        if not validation["valid"]:
+            return {
+                "success": False,
+                "error": validation["error"],
+                "transcription": None,
+                "reply": None
+            }
+
+        # Transcribe
+        result = await voice_service.transcribe_from_bytes(
+            content,
+            file.filename or "audio.wav"
+        )
+
+        if not result["success"]:
+            return {
+                "success": False,
+                "error": result.get("error", "Napaka pri transkripciji"),
+                "transcription": None,
+                "reply": None
+            }
+
+        transcribed_text = result["text"]
+
+        # Process transcribed text through chat
+        from app.models.chat import ChatRequest
+        chat_request = ChatRequest(
+            message=transcribed_text,
+            session_id=session_id
+        )
+
+        # Use existing chat logic
+        chat_response = await chat(chat_request)
+
+        return {
+            "success": True,
+            "transcription": transcribed_text,
+            "reply": chat_response.reply,
+            "session_id": chat_response.session_id,
+            "duration_seconds": result.get("duration_seconds")
+        }
+
+    except Exception as e:
+        print(f"[VOICE] Error: {e}")
+        return {
+            "success": False,
+            "error": f"Napaka pri obdelavi: {str(e)}",
+            "transcription": None,
+            "reply": None
+        }
+
+
+@router.post("/sms-webhook")
+async def sms_webhook(
+    From: str = Form(...),
+    Body: str = Form(...),
+    MessageSid: str = Form(default=""),
+):
+    """
+    Webhook za Twilio - procesira odgovore pacientov na SMS opomnike.
+
+    Pacienti lahko odgovorijo:
+    - DA / PRIDEM / OK → Potrditev termina
+    - PRESTAVI → Želim nov termin
+    - ODPOVEJ / NE → Preklic termina
+
+    Uporaba v Twilio Console:
+    - Webhook URL: https://yourdomain.com/chat/sms-webhook
+    - HTTP Method: POST
+    """
+    try:
+        from app.services.reminder_scheduler import handle_sms_response
+        from app.services.sms_service import send_sms
+
+        print(f"[SMS WEBHOOK] Received from {From}: {Body} (SID: {MessageSid})")
+
+        # Procesiraj odgovor
+        result = handle_sms_response(From, Body)
+
+        # Pošlji odgovor pacientu
+        if result.get("response_message"):
+            send_sms(From, result["response_message"])
+
+        # Twilio TwiML response (prazen - ne pošiljamo novega SMS-a preko TwiML)
+        twiml = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
+        return Response(content=twiml, media_type="application/xml")
+
+    except Exception as e:
+        print(f"[SMS WEBHOOK] Error: {e}")
+        # Return empty response on error
+        twiml = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
+        return Response(content=twiml, media_type="application/xml")

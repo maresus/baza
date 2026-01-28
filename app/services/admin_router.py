@@ -923,3 +923,546 @@ def search_chat_messages(
     except Exception as e:
         print(f"[ADMIN] Error searching messages: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# ANALYTICS ENDPOINTS
+# ============================================================
+
+from app.services.analytics_service import get_analytics_service
+
+
+@router.get("/analytics/dashboard")
+async def get_analytics_dashboard(days: int = 7):
+    """
+    Vrne kompletno statistiko za admin dashboard.
+
+    Args:
+        days: Število dni za analizo (default 7)
+    """
+    _log("GET /analytics/dashboard", days=days)
+    try:
+        analytics = get_analytics_service()
+        return analytics.get_dashboard_stats(days)
+    except Exception as e:
+        print(f"[ADMIN] Error getting analytics dashboard: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/trending")
+async def get_trending_topics(days: int = 7):
+    """
+    Vrne trending topics in simptome.
+    """
+    _log("GET /analytics/trending", days=days)
+    try:
+        analytics = get_analytics_service()
+        return analytics.get_trending_topics(days)
+    except Exception as e:
+        print(f"[ADMIN] Error getting trending topics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/funnel")
+async def get_booking_funnel(days: int = 30):
+    """
+    Vrne booking funnel analizo - kje uporabniki odpadejo.
+    """
+    _log("GET /analytics/funnel", days=days)
+    try:
+        analytics = get_analytics_service()
+        return analytics.get_booking_funnel(days)
+    except Exception as e:
+        print(f"[ADMIN] Error getting booking funnel: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/sentiment")
+async def get_sentiment_stats(days: int = 7):
+    """
+    Vrne sentiment analizo pogovorov.
+    """
+    _log("GET /analytics/sentiment", days=days)
+    try:
+        analytics = get_analytics_service()
+        return analytics.get_sentiment_stats(days)
+    except Exception as e:
+        print(f"[ADMIN] Error getting sentiment stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/peak-hours")
+async def get_peak_hours(days: int = 30):
+    """
+    Vrne analizo peak hours - kdaj je največ aktivnosti.
+    """
+    _log("GET /analytics/peak-hours", days=days)
+    try:
+        analytics = get_analytics_service()
+        return analytics.get_peak_hours(days)
+    except Exception as e:
+        print(f"[ADMIN] Error getting peak hours: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/reservations")
+async def get_reservation_analytics(days: int = 30):
+    """
+    Vrne statistiko rezervacij.
+    """
+    _log("GET /analytics/reservations", days=days)
+    try:
+        analytics = get_analytics_service()
+        return analytics.get_reservation_stats(days)
+    except Exception as e:
+        print(f"[ADMIN] Error getting reservation analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/reminder-stats")
+async def get_reminder_statistics():
+    """
+    Vrne statistiko reminder sistema (no-show rate, confirmation rate, etc.)
+    """
+    _log("GET /analytics/reminder-stats")
+    try:
+        from app.services.reminder_scheduler import get_reminder_stats
+        return get_reminder_stats()
+    except Exception as e:
+        print(f"[ADMIN] Error getting reminder stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# SMART SCHEDULER ENDPOINTS
+# ============================================================
+
+from app.services.smart_scheduler import get_smart_scheduler
+
+
+@router.get("/scheduler/suggestions")
+async def get_scheduling_suggestions(
+    service_type: str,
+    preferred_date: Optional[str] = None,
+    phone: Optional[str] = None,
+    max_suggestions: int = 5
+):
+    """
+    Vrne pametne predloge terminov.
+
+    Args:
+        service_type: Tip storitve (dermatolog, ortoped, ...)
+        preferred_date: Želeni datum (DD.MM.YYYY)
+        phone: Telefon za lookup uporabnikovih preferenc
+        max_suggestions: Maksimalno število predlogov
+    """
+    _log("GET /scheduler/suggestions", service_type=service_type, phone=phone)
+    try:
+        scheduler = get_smart_scheduler()
+        return scheduler.get_smart_suggestions(
+            service_type=service_type,
+            preferred_date=preferred_date,
+            phone=phone,
+            max_suggestions=max_suggestions
+        )
+    except Exception as e:
+        print(f"[ADMIN] Error getting scheduling suggestions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/scheduler/user-preferences/{phone}")
+async def get_user_scheduling_preferences(phone: str):
+    """
+    Vrne preference uporabnika na podlagi preteklih rezervacij.
+
+    Args:
+        phone: Telefonska številka
+    """
+    _log("GET /scheduler/user-preferences", phone=phone)
+    try:
+        scheduler = get_smart_scheduler()
+        return scheduler.get_user_preferences(phone)
+    except Exception as e:
+        print(f"[ADMIN] Error getting user preferences: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/scheduler/occupancy/{date}")
+async def get_slot_occupancy(date: str):
+    """
+    Vrne zasedenost terminov za določen dan.
+
+    Args:
+        date: Datum v formatu DD.MM.YYYY
+    """
+    _log("GET /scheduler/occupancy", date=date)
+    try:
+        scheduler = get_smart_scheduler()
+        return scheduler.get_slot_occupancy(date)
+    except Exception as e:
+        print(f"[ADMIN] Error getting slot occupancy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/scheduler/weekly-load")
+async def get_weekly_load(start_date: Optional[str] = None):
+    """
+    Vrne load za cel teden.
+
+    Args:
+        start_date: Začetni datum (DD.MM.YYYY), default danes
+    """
+    _log("GET /scheduler/weekly-load", start_date=start_date)
+    try:
+        scheduler = get_smart_scheduler()
+        return scheduler.get_weekly_load(start_date)
+    except Exception as e:
+        print(f"[ADMIN] Error getting weekly load: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# HANDOFF ENDPOINTS
+# ============================================================
+
+from app.services.handoff_service import get_handoff_service
+
+
+@router.post("/handoff/create/{session_id}")
+async def create_handoff(session_id: str, use_llm: bool = True):
+    """
+    Ustvari handoff paket za prenos pogovora na recepcijo.
+
+    Args:
+        session_id: ID seje
+        use_llm: Uporabi LLM za povzetek (default True)
+    """
+    _log("POST /handoff/create", session_id=session_id)
+    try:
+        handoff = get_handoff_service()
+        return await handoff.create_handoff(session_id, use_llm_summary=use_llm)
+    except Exception as e:
+        print(f"[ADMIN] Error creating handoff: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/handoff/pending")
+async def get_pending_handoffs():
+    """
+    Vrne vse pending handoff-e, sortirane po prioriteti.
+    """
+    _log("GET /handoff/pending")
+    try:
+        handoff = get_handoff_service()
+        return {
+            "handoffs": handoff.get_pending_handoffs(),
+            "stats": handoff.get_handoff_stats()
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error getting pending handoffs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/handoff/{session_id}")
+async def get_handoff_details(session_id: str):
+    """
+    Vrne podrobnosti specifičnega handoff-a.
+
+    Args:
+        session_id: ID seje
+    """
+    _log("GET /handoff", session_id=session_id)
+    try:
+        handoff_service = get_handoff_service()
+
+        # Check if already in pending
+        if session_id in handoff_service.pending_handoffs:
+            return handoff_service.pending_handoffs[session_id]
+
+        # Otherwise create new one
+        return await handoff_service.create_handoff(session_id, use_llm_summary=False)
+    except Exception as e:
+        print(f"[ADMIN] Error getting handoff details: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class HandoffResolution(BaseModel):
+    resolution_note: Optional[str] = None
+
+
+@router.post("/handoff/resolve/{session_id}")
+async def resolve_handoff(session_id: str, resolution: HandoffResolution = None):
+    """
+    Označi handoff kot rešen.
+
+    Args:
+        session_id: ID seje
+        resolution_note: Opomba o rešitvi
+    """
+    _log("POST /handoff/resolve", session_id=session_id)
+    try:
+        handoff = get_handoff_service()
+        note = resolution.resolution_note if resolution else None
+        success = handoff.resolve_handoff(session_id, note)
+        return {"success": success, "session_id": session_id}
+    except Exception as e:
+        print(f"[ADMIN] Error resolving handoff: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/handoff/stats")
+async def get_handoff_stats():
+    """
+    Vrne statistiko handoff sistema.
+    """
+    _log("GET /handoff/stats")
+    try:
+        handoff = get_handoff_service()
+        return handoff.get_handoff_stats()
+    except Exception as e:
+        print(f"[ADMIN] Error getting handoff stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# PROACTIVE ASSISTANT ENDPOINTS
+# ============================================================
+
+from app.services.proactive_assistant import get_proactive_assistant
+
+
+@router.get("/proactive/alerts/{phone}")
+async def get_patient_alerts(phone: str, include_campaigns: bool = True):
+    """
+    Vrne proaktivne alerte za pacienta.
+
+    Args:
+        phone: Telefonska številka
+        include_campaigns: Vključi zdravstvene kampanje
+    """
+    _log("GET /proactive/alerts", phone=phone)
+    try:
+        assistant = get_proactive_assistant()
+        return assistant.get_patient_alerts(phone, include_campaigns)
+    except Exception as e:
+        print(f"[ADMIN] Error getting patient alerts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/proactive/campaigns")
+async def get_active_campaigns():
+    """
+    Vrne trenutno aktivne zdravstvene kampanje.
+    """
+    _log("GET /proactive/campaigns")
+    try:
+        assistant = get_proactive_assistant()
+        return {
+            "campaigns": assistant.get_active_campaigns(),
+            "month": datetime.now().month
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error getting campaigns: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/proactive/patient-patterns/{phone}")
+async def get_patient_patterns(phone: str):
+    """
+    Vrne vzorce obnašanja pacienta.
+
+    Args:
+        phone: Telefonska številka
+    """
+    _log("GET /proactive/patient-patterns", phone=phone)
+    try:
+        assistant = get_proactive_assistant()
+        history = assistant.get_patient_history(phone)
+        patterns = assistant.analyze_patterns(history)
+        return {
+            "phone": phone,
+            "patterns": patterns,
+            "history_count": len(history)
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error getting patient patterns: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# KNOWLEDGE GRAPH ENDPOINTS
+# ============================================================
+
+from app.services.knowledge_graph import get_knowledge_graph
+
+
+@router.post("/knowledge-graph/query-symptoms")
+async def query_symptoms(text: str):
+    """
+    Analizira simptome in vrne priporočila.
+
+    Args:
+        text: Opis simptomov
+    """
+    _log("POST /knowledge-graph/query-symptoms")
+    try:
+        kg = get_knowledge_graph()
+        return kg.query_symptoms(text)
+    except Exception as e:
+        print(f"[ADMIN] Error querying symptoms: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge-graph/preparations/{service_id}")
+async def get_service_preparations(service_id: str):
+    """
+    Vrne potrebne priprave za storitev.
+
+    Args:
+        service_id: ID storitve (dermatoloski_pregled, ortopedski_pregled, ...)
+    """
+    _log("GET /knowledge-graph/preparations", service_id=service_id)
+    try:
+        kg = get_knowledge_graph()
+        return {
+            "service_id": service_id,
+            "preparations": kg.get_preparations_for_service(service_id)
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error getting preparations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge-graph/related/{node_id}")
+async def get_related_info(node_id: str):
+    """
+    Vrne povezane informacije za vozlišče v grafu.
+
+    Args:
+        node_id: ID vozlišča
+    """
+    _log("GET /knowledge-graph/related", node_id=node_id)
+    try:
+        kg = get_knowledge_graph()
+        return kg.get_related_info(node_id)
+    except Exception as e:
+        print(f"[ADMIN] Error getting related info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge-graph/stats")
+async def get_knowledge_graph_stats():
+    """
+    Vrne statistiko knowledge grafa.
+    """
+    _log("GET /knowledge-graph/stats")
+    try:
+        kg = get_knowledge_graph()
+        node_types = {}
+        for node in kg.nodes.values():
+            t = node.node_type.value
+            node_types[t] = node_types.get(t, 0) + 1
+
+        return {
+            "total_nodes": len(kg.nodes),
+            "total_edges": len(kg.edges),
+            "nodes_by_type": node_types
+        }
+    except Exception as e:
+        print(f"[ADMIN] Error getting knowledge graph stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# TRIAGE SERVICE ENDPOINTS
+# ============================================================
+
+from app.services.triage_service import get_triage_service
+
+
+@router.post("/triage/quick")
+async def quick_triage(symptoms: str):
+    """
+    Izvede hitro triažo na podlagi simptomov.
+
+    Args:
+        symptoms: Opis simptomov
+
+    Returns:
+        Priporočilo in analiza (brez multi-step procesa)
+    """
+    _log("POST /triage/quick")
+    try:
+        triage = get_triage_service()
+        return triage.quick_triage(symptoms)
+    except Exception as e:
+        print(f"[ADMIN] Error in quick triage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/triage/start/{session_id}")
+async def start_triage_session(session_id: str):
+    """
+    Začne novo triage sejo.
+
+    Args:
+        session_id: ID seje
+    """
+    _log("POST /triage/start", session_id=session_id)
+    try:
+        triage = get_triage_service()
+        return triage.start_triage_session(session_id)
+    except Exception as e:
+        print(f"[ADMIN] Error starting triage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class TriageResponse(BaseModel):
+    response: str
+
+
+@router.post("/triage/respond/{session_id}")
+async def process_triage_response(session_id: str, data: TriageResponse):
+    """
+    Procesira odgovor v triage seji.
+
+    Args:
+        session_id: ID seje
+        response: Uporabnikov odgovor
+    """
+    _log("POST /triage/respond", session_id=session_id)
+    try:
+        triage = get_triage_service()
+        return triage.process_response(session_id, data.response)
+    except Exception as e:
+        print(f"[ADMIN] Error processing triage response: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/triage/session/{session_id}")
+async def get_triage_session(session_id: str):
+    """
+    Vrne podatke o triage seji.
+
+    Args:
+        session_id: ID seje
+    """
+    _log("GET /triage/session", session_id=session_id)
+    try:
+        triage = get_triage_service()
+        session = triage.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {
+            "session_id": session.session_id,
+            "state": session.state.value,
+            "symptoms": session.symptoms,
+            "duration_days": session.duration_days,
+            "intensity": session.intensity.value if session.intensity else None,
+            "started_at": session.started_at
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ADMIN] Error getting triage session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
