@@ -81,4 +81,7 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         inquiry_state["step"] = "awaiting_deadline"
         return "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
 
+    if normalized in affirmatives:
+        return "Ja — za kaj točno?"
+
     return "Kako vam lahko pomagam? Lahko pomagam z rezervacijo, informacijami ali izdelki."
