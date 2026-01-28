@@ -2206,7 +2206,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     last_menu_query = ctx.get("last_menu_query", False)
     last_shown_products = ctx.get("last_shown_products", [])
     last_interaction = ctx.get("last_interaction")
-    pending_action = ctx.get("pending_action")
     if last_interaction and now - last_interaction > timedelta(hours=SESSION_TIMEOUT_HOURS):
         reset_conversation_context(session_id)
         ctx = session_store.get(session_id)
@@ -2219,24 +2218,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         last_shown_products = ctx.get("last_shown_products", [])
     last_interaction = now
 
-    # Če čakamo na potrditev naročila izdelkov, ne preklapljaj v rezervacijo
-    if pending_action == "product_order":
-        lowered = payload.message.strip().lower()
-        if lowered in {"ne", "no", "ne hvala"}:
-            ctx["pending_action"] = None
-            session_store.set(session_id, ctx)
-            reply = "V redu. Če želiš še kaj, samo povej."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "product_order_cancel", followup_flag=False)
-        if is_affirmative(payload.message) or "potrdi" in lowered:
-            ctx["pending_action"] = None
-            session_store.set(session_id, ctx)
-            reply = f"Super! Naročilo lahko oddate tukaj: {SHOP_URL}"
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "product_order_link", followup_flag=False)
-        reply = "Za naročilo napiši POTRDI NAROČILO ali PREKLIČI."
-        reply = maybe_translate(reply, detected_lang)
-        return finalize(reply, "product_order_pending", followup_flag=False)
     state = get_reservation_state(session_id)
     inquiry_state = get_inquiry_state(session_id)
     needs_followup = False
@@ -2598,8 +2579,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = get_product_response(product_key)
             if is_bulk_order_request(payload.message):
                 reply = f"{reply}\n\nZa večja naročila nam pišite na info@kovacnik.com, da uskladimo količine in prevzem."
-            ctx["pending_action"] = "product_order"
-            reply = f"{reply}\n\nČe želite naročiti, napišite: POTRDI NAROČILO (ali PREKLIČI)."
+            reply = f"{reply}\n\nIzdelke Domačije Kovačnik najdete tukaj: {SHOP_URL}"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_static", followup_flag=False)
 
@@ -2808,8 +2788,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
         last_wine_query = None
         last_info_query = None
         last_menu_query = False
-        ctx["pending_action"] = "product_order"
-        reply = f"{reply}\n\nČe želite naročiti, napišite: POTRDI NAROČILO (ali PREKLIČI)."
+        reply = f"{reply}\n\nIzdelke Domačije Kovačnik najdete tukaj: {SHOP_URL}"
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "product")
 
@@ -2819,8 +2798,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
         last_wine_query = None
         last_info_query = None
         last_menu_query = False
-        ctx["pending_action"] = "product_order"
-        reply = f"{reply}\n\nČe želite naročiti, napišite: POTRDI NAROČILO (ali PREKLIČI)."
+        reply = f"{reply}\n\nIzdelke Domačije Kovačnik najdete tukaj: {SHOP_URL}"
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "product_followup")
 
