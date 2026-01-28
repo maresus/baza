@@ -1243,6 +1243,22 @@ def is_hours_question(message: str) -> bool:
     return any(pat in lowered for pat in patterns)
 
 
+def is_event_inquiry(message: str) -> bool:
+    lowered = message.lower()
+    return any(
+        term in lowered
+        for term in [
+            "poroka",
+            "poroc",
+            "teambuilding",
+            "team building",
+            "dogodek",
+            "pogostitev",
+            "catering",
+        ]
+    )
+
+
 def is_menu_query(message: str) -> bool:
     lowered = message.lower()
     reservation_indicators = ["rezerv", "sobo", "sobe", "mizo", "nočitev", "nočitve", "nocitev"]
@@ -2561,6 +2577,18 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = f"{reply}\n\nIzdelke Kmetije Pod Goro najdete tukaj: {SHOP_URL}"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_static", followup_flag=False)
+
+    # Dogodki (poroka, teambuilding) -> inquiry flow, ne rezervacija
+    if state["step"] is None and is_event_inquiry(payload.message):
+        inquiry_state["details"] = payload.message.strip()
+        inquiry_state["step"] = "awaiting_deadline"
+        reply = (
+            "Za poroke/teambuilding po navadi ne nudimo klasičnega najema prostora, "
+            "lahko pa pripravimo posebno ponudbo hrane ali pogostitve.\n\n"
+            "Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+        )
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "event_inquiry_start", followup_flag=False)
 
     # Guard: info-only vprašanja naj ne sprožijo rezervacije
     if state["step"] is None and is_info_only_question(payload.message):
