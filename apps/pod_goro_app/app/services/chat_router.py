@@ -1902,6 +1902,9 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
     if is_escape_command(message) or is_switch_topic_command(message):
         reset_inquiry_state(state)
         return "V redu, prekinil sem povpraševanje. Kako vam lahko še pomagam?"
+    if any(phrase in lowered for phrase in ["ne bom", "ne bom naro", "ne naroč", "ne naroc", "ne želim", "ne zelim", "prekini", "nehaj", "dovolj"]):
+        reset_inquiry_state(state)
+        return "V redu, prekinil sem povpraševanje. Kako vam lahko še pomagam?"
 
     if step == "awaiting_consent":
         if lowered in {"da", "ja", "seveda", "lahko", "ok"}:
