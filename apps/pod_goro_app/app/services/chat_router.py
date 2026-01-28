@@ -2137,6 +2137,13 @@ def chat_stream(payload: ChatRequestWithSession):
     session_id = payload.session_id or "default"
     ctx = session_store.get(session_id)
     _SESSION_CTX.set(ctx)
+    quick = payload.message.strip().lower()
+    if quick in {"ja", "da", "ok", "okej"}:
+        response = chat_endpoint(payload)
+        return StreamingResponse(
+            _stream_text_chunks(response.reply),
+            media_type="text/plain",
+        )
     conversation_history = ctx.get("conversation_history", [])
     last_interaction = ctx.get("last_interaction")
     if last_interaction and now - last_interaction > timedelta(hours=SESSION_TIMEOUT_HOURS):
