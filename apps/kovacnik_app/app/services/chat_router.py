@@ -938,7 +938,7 @@ def answer_wine_question(message: str) -> str:
         if is_dry:
             wines = [w for w in wines if "suho" in w["type"]]
         if is_followup:
-        remaining = [w for w in wines if w["name"] not in last_shown_products]
+            remaining = [w for w in wines if w["name"] not in last_shown_products]
             if not remaining:
                 return (
                     "To so vsa naša rdeča vina. Imamo pa še:\n"
