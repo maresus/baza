@@ -29,6 +29,7 @@ from app.core.llm_client import get_llm_client
 from app.rag.chroma_service import answer_tourist_question, is_tourist_query
 from app.services.router_agent import route_message
 from app.services.executor_v2 import execute_decision
+from app.services.orchestrator import orchestrate_message
 from app.services.intent_helpers import (
     INFO_FOLLOWUP_PHRASES,
     INFO_KEYWORDS,
@@ -82,6 +83,7 @@ from app.services.parsing import (
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
+USE_ORCHESTRATOR = os.getenv("USE_ORCHESTRATOR", "false").strip().lower() in {"1", "true", "yes", "on"}
 USE_FULL_KB_LLM = True
 INQUIRY_RECIPIENT = os.getenv("INQUIRY_RECIPIENT", "satlermarko@gmail.com")
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
@@ -2220,6 +2222,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         last_menu_query = ctx.get("last_menu_query", False)
         last_shown_products = ctx.get("last_shown_products", [])
     last_interaction = now
+
+    if USE_ORCHESTRATOR:
+        reply = orchestrate_message(payload.message, session_id, ctx)
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "orchestrator", followup_flag=False)
 
     state = get_reservation_state(session_id)
     inquiry_state = get_inquiry_state(session_id)
