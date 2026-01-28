@@ -1562,6 +1562,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = handle_reservation_flow(last_user or payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_confirmed", followup_flag=False)
+        reply = "Ja — za kaj točno?"
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "affirmative_no_context", followup_flag=False)
 
     if state.get("step") is None:
         last_bot = get_last_assistant_message(history).lower()

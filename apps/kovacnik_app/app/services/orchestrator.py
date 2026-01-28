@@ -59,6 +59,10 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
     # Pravilo 4: produkti -> odgovor + link
     product_key = detect_product_intent(message)
     if product_key:
+        ctx["last_product_query"] = message
+        ctx["last_wine_query"] = None
+        ctx["last_info_query"] = None
+        ctx["last_menu_query"] = False
         reply = get_product_response(product_key)
         return f"{reply}\n\nIzdelke Domačije Kovačnik najdete tukaj: {SHOP_URL}"
 

@@ -1529,6 +1529,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         and llm_is_affirmative(payload.message, last_bot_for_affirm, detected_lang)
     )
     if state.get("step") is None and (is_affirmative(payload.message) or llm_affirm):
+        # Če smo govorili o izdelkih, "ja" pomeni naročilo -> daj povezavo do trgovine.
+        if last_product_query or "naroč" in last_bot_for_affirm.lower():
+            reply = f"Super! Naročilo lahko oddate tukaj: {SHOP_URL}"
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_order_link", followup_flag=False)
         availability_state = get_availability_state(state)
         if availability_state.get("active") and availability_state.get("can_reserve"):
             reply = start_reservation_from_availability(
@@ -1551,6 +1556,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = handle_reservation_flow(last_user or payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_confirmed", followup_flag=False)
+        reply = "Ja — za kaj točno?"
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "affirmative_no_context", followup_flag=False)
 
     if state.get("step") is None:
         last_bot = get_last_assistant_message(history).lower()
