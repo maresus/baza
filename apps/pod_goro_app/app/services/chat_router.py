@@ -2,6 +2,7 @@ import re
 import random
 import json
 import os
+from contextvars import ContextVar
 import logging
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -54,6 +55,7 @@ from app.services.intent_helpers import (
     is_reservation_typo,
     is_strong_inquiry_request,
 )
+from app.utils.session_store import SessionStore, blank_chat_context
 from app.services.availability_flow import (
     get_availability_state,
     handle_availability_followup,
@@ -480,6 +482,15 @@ UNKNOWN_RESPONSES = [
 
 reservation_service = ReservationService()
 
+# Session store (Redis + local fallback)
+session_store = SessionStore(os.getenv("REDIS_URL"))
+_SESSION_CTX: ContextVar[dict | None] = ContextVar("session_ctx", default=None)
+
+
+def get_session_ctx() -> dict:
+    ctx = _SESSION_CTX.get()
+    return ctx if ctx is not None else blank_chat_context()
+
 # Osnovni podatki o kmetiji
 FARM_INFO = {
     "name": "Kmetija Pod Goro",
@@ -877,7 +888,8 @@ menu_intro_index = 0
 
 def answer_wine_question(message: str) -> str:
     """Odgovarja na vprašanja o vinih SAMO iz WINE_LIST, z upoštevanjem followupov."""
-    global last_shown_products
+    ctx = get_session_ctx()
+    last_shown_products = ctx.get("last_shown_products", [])
 
     lowered = message.lower()
     is_followup = any(word in lowered for word in ["še", "drug", "kaj pa", "še kaj", "še kater", "še kakšn", "še kakšno"])
@@ -911,6 +923,8 @@ def answer_wine_question(message: str) -> str:
 
         if len(last_shown_products) > 15:
             last_shown_products[:] = last_shown_products[-15:]
+
+        ctx["last_shown_products"] = last_shown_products
 
         return "\n".join(lines) + f"\n\nServiramo ohlajeno na {temp}."
 
@@ -1025,7 +1039,9 @@ def answer_weekly_menu(message: str) -> str:
 
 
 def detect_intent(message: str, state: dict[str, Optional[str | int]]) -> str:
-    global last_product_query, last_wine_query
+    ctx = get_session_ctx()
+    last_product_query = ctx.get("last_product_query")
+    last_wine_query = ctx.get("last_wine_query")
     lower_message = message.lower()
 
     # 1) nadaljevanje rezervacije ima vedno prednost
@@ -1177,6 +1193,8 @@ def should_switch_from_reservation(message: str, state: dict[str, Optional[str |
     return False
 
 def is_product_followup(message: str) -> bool:
+    ctx = get_session_ctx()
+    last_product_query = ctx.get("last_product_query")
     lowered = message.lower()
     if not last_product_query:
         return False
@@ -1611,20 +1629,23 @@ def llm_is_affirmative(message: str, last_bot: str, detected_lang: str) -> bool:
 
 
 def get_last_assistant_message() -> str:
-    for msg in reversed(conversation_history):
+    history = get_session_ctx().get("conversation_history", [])
+    for msg in reversed(history):
         if msg.get("role") == "assistant":
             return msg.get("content", "")
     return ""
 
 def get_last_user_message() -> str:
-    for msg in reversed(conversation_history):
+    history = get_session_ctx().get("conversation_history", [])
+    for msg in reversed(history):
         if msg.get("role") == "user":
             return msg.get("content", "")
     return ""
 
 
 def get_last_reservation_user_message() -> str:
-    for msg in reversed(conversation_history):
+    history = get_session_ctx().get("conversation_history", [])
+    for msg in reversed(history):
         if msg.get("role") != "user":
             continue
         content = (msg.get("content") or "").strip()
@@ -1939,27 +1960,20 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
 
 def reset_conversation_context(session_id: Optional[str] = None) -> None:
     """Počisti začasne pogovorne podatke in ponastavi sejo."""
-    global conversation_history, last_product_query, last_wine_query, last_info_query, last_menu_query
-    global last_shown_products, chat_session_id, unknown_question_state, last_interaction
     if session_id:
         state = reservation_states.get(session_id)
         if state is not None:
             reset_reservation_state(state)
             reservation_states.pop(session_id, None)
         unknown_question_state.pop(session_id, None)
+        ctx = blank_chat_context()
+        session_store.set(session_id, ctx)
     else:
         for state in reservation_states.values():
             reset_reservation_state(state)
         reservation_states.clear()
         unknown_question_state = {}
-    conversation_history = []
-    last_product_query = None
-    last_wine_query = None
-    last_info_query = None
-    last_menu_query = False
-    last_shown_products = []
     chat_session_id = str(uuid.uuid4())[:8]
-    last_interaction = None
 
 
 def generate_confirmation_email(state: dict[str, Optional[str | int]]) -> str:
@@ -2146,7 +2160,9 @@ def ensure_single_greeting(message: str, reply: str) -> str:
 
 
 def build_effective_query(message: str) -> str:
-    global last_info_query
+    ctx = get_session_ctx()
+    last_info_query = ctx.get("last_info_query")
+    last_product_query = ctx.get("last_product_query")
     normalized = message.strip().lower()
     short_follow = (
         len(normalized) < 12
@@ -2163,11 +2179,27 @@ def build_effective_query(message: str) -> str:
 
 @router.post("", response_model=ChatResponse)
 def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
-    global last_product_query, last_wine_query, last_info_query, last_menu_query, conversation_history, last_interaction, chat_session_id
     now = datetime.now()
     session_id = payload.session_id or "default"
+    ctx = session_store.get(session_id)
+    _SESSION_CTX.set(ctx)
+    conversation_history = ctx.get("conversation_history", [])
+    last_product_query = ctx.get("last_product_query")
+    last_wine_query = ctx.get("last_wine_query")
+    last_info_query = ctx.get("last_info_query")
+    last_menu_query = ctx.get("last_menu_query", False)
+    last_shown_products = ctx.get("last_shown_products", [])
+    last_interaction = ctx.get("last_interaction")
     if last_interaction and now - last_interaction > timedelta(hours=SESSION_TIMEOUT_HOURS):
         reset_conversation_context(session_id)
+        ctx = session_store.get(session_id)
+        _SESSION_CTX.set(ctx)
+        conversation_history = ctx.get("conversation_history", [])
+        last_product_query = ctx.get("last_product_query")
+        last_wine_query = ctx.get("last_wine_query")
+        last_info_query = ctx.get("last_info_query")
+        last_menu_query = ctx.get("last_menu_query", False)
+        last_shown_products = ctx.get("last_shown_products", [])
     last_interaction = now
     state = get_reservation_state(session_id)
     inquiry_state = get_inquiry_state(session_id)
@@ -2179,7 +2211,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
         nonlocal needs_followup
-        global conversation_history
         final_reply = reply_text
         flag = followup_flag or needs_followup or is_unknown_response(final_reply)
         if flag:
@@ -2195,7 +2226,16 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             unknown_question_state[session_id] = {"question": payload.message, "conv_id": conv_id}
         conversation_history.append({"role": "assistant", "content": final_reply})
         if len(conversation_history) > 12:
-            conversation_history = conversation_history[-12:]
+            conversation_history[:] = conversation_history[-12:]
+        # persist session context
+        ctx["conversation_history"] = conversation_history
+        ctx["last_product_query"] = last_product_query
+        ctx["last_wine_query"] = last_wine_query
+        ctx["last_info_query"] = last_info_query
+        ctx["last_menu_query"] = last_menu_query
+        ctx["last_shown_products"] = last_shown_products
+        ctx["last_interaction"] = last_interaction
+        session_store.set(session_id, ctx)
         return ChatResponse(reply=final_reply)
 
     if is_switch_topic_command(payload.message):
@@ -2286,7 +2326,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     # zabeležimo user vprašanje v zgodovino (omejimo na zadnjih 6 parov)
     conversation_history.append({"role": "user", "content": payload.message})
     if len(conversation_history) > 12:
-        conversation_history = conversation_history[-12:]
+        conversation_history[:] = conversation_history[-12:]
 
     # inquiry flow
     if state.get("step") is None and inquiry_state.get("step"):
@@ -2889,12 +2929,20 @@ WEEKLY_INFO = {
 
 @router.post("/stream")
 def chat_stream(payload: ChatRequestWithSession):
-    global conversation_history, last_interaction
     now = datetime.now()
     session_id = payload.session_id or "default"
+    ctx = session_store.get(session_id)
+    _SESSION_CTX.set(ctx)
+    conversation_history = ctx.get("conversation_history", [])
+    last_interaction = ctx.get("last_interaction")
     if last_interaction and now - last_interaction > timedelta(hours=SESSION_TIMEOUT_HOURS):
         reset_conversation_context(session_id)
+        ctx = session_store.get(session_id)
+        _SESSION_CTX.set(ctx)
+        conversation_history = ctx.get("conversation_history", [])
     last_interaction = now
+    ctx["last_interaction"] = last_interaction
+    session_store.set(session_id, ctx)
     state = get_reservation_state(session_id)
     inquiry_state = get_inquiry_state(session_id)
     availability_state = get_availability_state(state)
@@ -2936,6 +2984,8 @@ def chat_stream(payload: ChatRequestWithSession):
         conversation_history.append({"role": "assistant", "content": final_reply})
         if len(conversation_history) > 12:
             conversation_history[:] = conversation_history[-12:]
+        ctx["conversation_history"] = conversation_history
+        session_store.set(session_id, ctx)
 
     # Če uporabnik potrdi po rezervacijskem odgovoru, preusmeri v chat_endpoint
     if is_affirmative(payload.message) or (
@@ -2984,7 +3034,9 @@ def chat_stream(payload: ChatRequestWithSession):
         settings = Settings()
         conversation_history.append({"role": "user", "content": payload.message})
         if len(conversation_history) > 12:
-            conversation_history = conversation_history[-12:]
+            conversation_history[:] = conversation_history[-12:]
+        ctx["conversation_history"] = conversation_history
+        session_store.set(session_id, ctx)
         return StreamingResponse(
             stream_and_log(_llm_answer_full_kb_stream(payload.message, settings, detect_language(payload.message))),
             media_type="text/plain",
