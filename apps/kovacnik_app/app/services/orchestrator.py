@@ -8,19 +8,20 @@ from app.services.intent_helpers import (
     is_inquiry_trigger,
     is_reservation_related,
 )
-from app.services.reservation_flow import handle_reservation_flow
-from app.services.chat_router import (
-    get_reservation_state,
-    get_inquiry_state,
-    handle_inquiry_flow,
-    is_event_inquiry,
-    get_info_response,
-    get_product_response,
-    SHOP_URL,
-)
 
 
 def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> str:
+    # Import znotraj funkcije, da se izognemo circular importu
+    from app.services.chat_router import (
+        get_reservation_state,
+        get_inquiry_state,
+        handle_inquiry_flow,
+        is_event_inquiry,
+        get_info_response,
+        get_product_response,
+        SHOP_URL,
+    )
+    from app.services.reservation_flow import handle_reservation_flow
     # Pravilo 1: če je aktivna rezervacija, jo nadaljuj
     reservation_state = get_reservation_state(session_id)
     if reservation_state.get("step") is not None:
