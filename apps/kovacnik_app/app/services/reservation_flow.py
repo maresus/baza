@@ -15,6 +15,28 @@ from app.services.parsing import (
     parse_people_count,
 )
 
+# Action tokens za nedvoumno potrjevanje
+ACTION_TOKENS = {
+    "POTRDI": "confirm",
+    "POTRJUJEM": "confirm",
+    "DA, POTRDI": "confirm",
+    "PREKLIČI": "cancel",
+    "PREKLICI": "cancel",
+    "PREKLIC": "cancel",
+    "NE": "cancel",
+    "SPREMENI": "modify",
+}
+
+
+def parse_action(message: str) -> str | None:
+    normalized = message.strip().upper()
+    if normalized in ACTION_TOKENS:
+        return ACTION_TOKENS[normalized]
+    for token, action in ACTION_TOKENS.items():
+        if token in normalized:
+            return action
+    return None
+
 
 def _blank_reservation_state_fallback() -> dict[str, Optional[str | int]]:
     return {
@@ -67,7 +89,7 @@ def get_booking_continuation(step: str, state: dict) -> str:
         "awaiting_table_people": "Za koliko **oseb**?",
         "awaiting_table_location": "Katero **jedilnico** želite? (Pri peči / Pri vrtu)",
         "awaiting_table_event_type": "Kakšen je **tip dogodka**?",
-        "awaiting_confirmation": "Potrdite rezervacijo? (da/ne)",
+        "awaiting_confirmation": "Potrdite rezervacijo? (POTRDI / PREKLIČI)",
     }
     return continuations.get(step or "", "Lahko nadaljujemo z rezervacijo?")
 
@@ -463,14 +485,15 @@ def _handle_room_reservation_impl(
         ]
         if note_text:
             lines.append(f"📝 Opombe: {note_text}")
-        lines.append("Potrdite rezervacijo? (da/ne)")
+        lines.append("Za potrditev napišite: POTRDI (ali PREKLIČI)")
         return "\n".join(lines)
 
     if step == "awaiting_confirmation":
-        if message.strip().lower() in {"ne", "no"}:
+        action = parse_action(message)
+        if action == "cancel":
             reset_reservation_state(state)
             return "V redu, rezervacijo sem preklical. Kako vam lahko pomagam?"
-        if is_affirmative(message):
+        if action == "confirm":
             summary_state = reservation_state.copy()
             dinner_note = ""
             if reservation_state.get("dinner_people"):
@@ -529,7 +552,9 @@ def _handle_room_reservation_impl(
                 lines.append(f"📝 Opombe: {summary_state.get('note')}")
             lines.append(reservation_pending_message.strip())
             return "\n".join([line for line in lines if line])
-        return "Prosim potrdite z 'da' ali 'ne'."
+        if message.strip().lower() in {"da", "ja", "ok"}:
+            return "Za potrditev napišite POTRDI (ali PREKLIČI)."
+        return "Prosim potrdite z POTRDI ali PREKLIČI."
 
     return "Nadaljujmo z rezervacijo sobe. Za kateri datum jo želite?"
 
@@ -652,14 +677,15 @@ def _handle_table_reservation_impl(
         ]
         if note_text:
             lines.append(f"📝 Opombe: {note_text}")
-        lines.append("Potrdite rezervacijo? (da/ne)")
+        lines.append("Za potrditev napišite: POTRDI (ali PREKLIČI)")
         return "\n".join(lines)
 
     if step == "awaiting_confirmation":
-        if message.strip().lower() in {"ne", "no"}:
+        action = parse_action(message)
+        if action == "cancel":
             reset_reservation_state(state)
             return "V redu, rezervacijo sem preklical. Kako vam lahko pomagam?"
-        if is_affirmative(message):
+        if action == "confirm":
             summary_state = reservation_state.copy()
             res_id = reservation_service.create_reservation(
                 date=reservation_state["date"] or "",
@@ -710,7 +736,9 @@ def _handle_table_reservation_impl(
                 f"{reservation_pending_message.strip()}"
             )
             return final_response
-        return "Prosim potrdite z 'da' ali 'ne'."
+        if message.strip().lower() in {"da", "ja", "ok"}:
+            return "Za potrditev napišite POTRDI (ali PREKLIČI)."
+        return "Prosim potrdite z POTRDI ali PREKLIČI."
 
     if step == "awaiting_table_people":
         parsed = parse_people_count(message)
