@@ -9,3 +9,7 @@
    - DATABASE_URL (ce se uporablja)
 
 Naslednji korak bo: pripravimo Dockerfile/Procfile za oba servisa.
+
+## Root Directory (pomembno)
+- Kovačnik: `apps/kovacnik_app`
+- Pod Goro: `apps/pod_goro_app`
