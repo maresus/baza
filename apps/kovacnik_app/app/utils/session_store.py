@@ -22,6 +22,7 @@ def blank_chat_context() -> Dict[str, Any]:
         "last_shown_products": [],
         "last_interaction": None,
         "chat_session_id": None,
+        "pending_action": None,
     }
 
 
