@@ -6,6 +6,7 @@ python-dotenv
 requests
 resend
 beautifulsoup4
+chromadb
 openai>=1.0.0
 psycopg2-binary
 pydantic-settings
