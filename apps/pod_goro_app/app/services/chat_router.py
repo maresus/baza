@@ -1861,6 +1861,14 @@ def get_unknown_response(language: str = "si") -> str:
     return responses.get(language, "Na to vprašanje žal ne morem odgovoriti. 😊")
 
 
+def normalize_loop_text(text: str) -> str:
+    """Normalizira besedilo za primerjavo ponavljanja."""
+    lowered = text.lower().strip()
+    lowered = re.sub(r"\s+", " ", lowered)
+    lowered = re.sub(r"[^a-z0-9čćšžđáàäéèëíìïóòöúùüščž ]", "", lowered)
+    return lowered
+
+
 def is_email(text: str) -> bool:
     """Preveri, ali je besedilo e-poštni naslov."""
     import re as _re
@@ -2205,6 +2213,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         nonlocal needs_followup
         global conversation_history
         final_reply = reply_text
+        last_bot = get_last_assistant_message()
+        if last_bot and normalize_loop_text(last_bot) == normalize_loop_text(final_reply):
+            final_reply = "Oprostite, da se ponavljam. Napišite prosim bolj konkretno (npr. izdelek, datum ali storitev)."
         flag = followup_flag or needs_followup or is_unknown_response(final_reply)
         if flag:
             final_reply = get_unknown_response(detected_lang)
