@@ -1926,7 +1926,7 @@ def normalize_loop_text(text: str) -> str:
 def append_shop_link_if_needed(reply: str) -> str:
     if "Trgovina:" in reply or SHOP_URL in reply:
         return reply
-    return f"{reply}\n\nTrgovina: {SHOP_URL}\nČe želite ročno naročilo, mi pošljite ime in telefonsko številko."
+    return f"{reply}\n\nTrgovina: {SHOP_URL}"
 
 
 def is_email(text: str) -> bool:
@@ -2371,7 +2371,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         # Če smo govorili o izdelkih, "da/ja" pomeni naročilo -> daj povezavo do trgovine.
         last_user_msg = get_last_user_message()
         if last_bot_mentions_product_order(last_bot_for_affirm) or last_product_query or is_product_query(last_user_msg):
-            reply = f"Super! Naročilo lahko oddate tukaj: {SHOP_URL}\nČe želite ročno naročilo, mi pošljite ime in telefonsko številko."
+            reply = f"Trgovina: {SHOP_URL}"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_order_link", followup_flag=False)
         # Če smo govorili o povpraševanju (teambuilding/poroka/catering), "da/ja" pomeni začetek inquiry.
@@ -2575,7 +2575,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply_local = strip_product_followup(get_product_response(key))
             if is_bulk_order_request(payload.message):
                 reply_local = f"{reply_local}\n\nZa večja naročila nam pišite na info@kmetijapodgoro.si, da uskladimo količine in prevzem."
-            reply_local = f"{reply_local}\n\nTrgovina: {SHOP_URL}\nČe želite ročno naročilo, mi pošljite ime in telefonsko številko."
+            reply_local = f"{reply_local}\n\nTrgovina: {SHOP_URL}"
             return reply_local
 
         def _continuation(step_val: Optional[str], st: dict) -> str:
@@ -2892,7 +2892,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
         last_wine_query = None
         last_info_query = None
         last_menu_query = False
-        reply = f"{reply}\n\nTrgovina: {SHOP_URL}\nČe želite ročno naročilo, mi pošljite ime in telefonsko številko."
+        reply = f"{reply}\n\nTrgovina: {SHOP_URL}"
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "product")
 
@@ -2902,7 +2902,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
         last_wine_query = None
         last_info_query = None
         last_menu_query = False
-        reply = f"{reply}\n\nTrgovina: {SHOP_URL}\nČe želite ročno naročilo, mi pošljite ime in telefonsko številko."
+        reply = f"{reply}\n\nTrgovina: {SHOP_URL}"
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "product_followup")
 
