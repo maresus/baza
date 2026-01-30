@@ -2660,6 +2660,27 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     # Fuzzy router za rezervacije (robustno na tipkarske napake)
     router_intent = detect_router_intent(payload.message, state)
+
+    # Zamenjava tipa rezervacije med aktivnim flowom (npr. "mizo bi" med room bookingom)
+    if state["step"] is not None:
+        current_type = state.get("type")
+        lowered_msg = payload.message.lower()
+        wants_table = any(tok in lowered_msg for tok in ["mizo", "miza", "mize", "table", "kosilo"])
+        wants_room = any(tok in lowered_msg for tok in ["sobo", "soba", "sobe", "room", "nočitev"])
+        # Če uporabnik želi drug tip kot trenutni, zamenjaj flow
+        if wants_table and not wants_room and current_type != "table":
+            reset_reservation_state(state)
+            state["type"] = "table"
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_switch_to_table", followup_flag=False)
+        if wants_room and not wants_table and current_type != "room":
+            reset_reservation_state(state)
+            state["type"] = "room"
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_switch_to_room", followup_flag=False)
+
     if router_intent == "booking_room" and state["step"] is None:
         reset_reservation_state(state)
         state["type"] = "room"
