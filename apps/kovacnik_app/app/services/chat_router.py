@@ -1925,6 +1925,12 @@ def normalize_loop_text(text: str) -> str:
     return lowered
 
 
+def append_shop_link_if_needed(reply: str) -> str:
+    if "Trgovina:" in reply or SHOP_URL in reply:
+        return reply
+    return f"{reply}\n\nTrgovina: {SHOP_URL}\nČe želite ročno naročilo, mi pošljite ime in telefonsko številko."
+
+
 def is_email(text: str) -> bool:
     """Preveri, ali je besedilo e-poštni naslov."""
     import re as _re
@@ -2294,6 +2300,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         last_bot = get_last_assistant_message()
         if last_bot and normalize_loop_text(last_bot) == normalize_loop_text(final_reply):
             final_reply = "Oprostite, da se ponavljam. Napišite prosim bolj konkretno (npr. izdelek, datum ali storitev)."
+        if is_product_query(payload.message) or intent_value in {"product", "product_followup", "product_static", "product_order_link"}:
+            final_reply = append_shop_link_if_needed(final_reply)
         flag = followup_flag or needs_followup or is_unknown_response(final_reply)
         if flag:
             final_reply = get_unknown_response(detected_lang)
@@ -3128,6 +3136,12 @@ def chat_stream(payload: ChatRequestWithSession):
 
     # inquiry flow mora prednostno delovati tudi v stream načinu
     if inquiry_state.get("step") or is_inquiry_trigger(payload.message):
+        response = chat_endpoint(payload)
+        return StreamingResponse(
+            _stream_text_chunks(response.reply),
+            media_type="text/plain",
+        )
+    if is_product_query(payload.message):
         response = chat_endpoint(payload)
         return StreamingResponse(
             _stream_text_chunks(response.reply),
