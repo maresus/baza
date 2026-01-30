@@ -473,9 +473,7 @@ THANKS_RESPONSES = [
     "Hvala vam! Se vidimo pri nas! 😊",
 ]
 UNKNOWN_RESPONSES = [
-    "Tega žal ne vem.",
-    "Za to nimam podatka.",
-    "Nimam informacije o tem.",
+    "Tega žal ne vem. Če želite, mi pustite e‑pošto in preverim.",
 ]
 
 reservation_service = ReservationService()
@@ -1588,7 +1586,23 @@ def is_affirmative(message: str) -> bool:
 
 def is_negative(message: str) -> bool:
     lowered = message.strip().lower()
-    return lowered in {"ne", "no", "ne hvala", "no thanks"}
+    if lowered in {"ne", "no", "ne hvala", "no thanks", "nič", "nima veze"}:
+        return True
+    return any(
+        phrase in lowered
+        for phrase in [
+            "ne bom",
+            "ne želim",
+            "ne zelim",
+            "ne rabim",
+            "ne potrebujem",
+            "ne naroč",
+            "ne naroc",
+            "prekliči",
+            "preklici",
+            "stop",
+        ]
+    )
 
 
 def is_contact_request(message: str) -> bool:
@@ -1907,6 +1921,9 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
     text = message.strip()
     lowered = text.lower()
     step = state.get("step")
+    if is_negative(message):
+        reset_inquiry_state(state)
+        return "V redu, prekinil sem povpraševanje. Kako vam lahko še pomagam?"
     if is_escape_command(message) or is_switch_topic_command(message):
         reset_inquiry_state(state)
         return "V redu, prekinil sem povpraševanje. Kako vam lahko še pomagam?"
