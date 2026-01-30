@@ -2272,6 +2272,21 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     state["language"] = detected_lang
     state["session_id"] = session_id
 
+    # Guard: če uporabnik jasno spremeni namen, prekinemo aktivni flow
+    if USE_ROUTER_V2 and (state.get("step") is not None or inquiry_state.get("step")):
+        decision_guard = route_message(
+            payload.message,
+            has_active_booking=state.get("step") is not None,
+            booking_step=state.get("step"),
+        )
+        routing_guard = decision_guard.get("routing", {})
+        intent_guard = routing_guard.get("intent")
+        conf_guard = routing_guard.get("confidence", 0)
+        if intent_guard in {"INFO", "PRODUCT"} and conf_guard >= 0.8 and state.get("step") is not None:
+            reset_reservation_state(state)
+        if intent_guard in {"BOOKING_ROOM", "BOOKING_TABLE"} and conf_guard >= 0.8 and inquiry_state.get("step"):
+            reset_inquiry_state(inquiry_state)
+
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
         nonlocal needs_followup
         global conversation_history
