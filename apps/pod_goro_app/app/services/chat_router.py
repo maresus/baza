@@ -54,6 +54,7 @@ from app.services.intent_helpers import (
     is_reservation_typo,
     is_strong_inquiry_request,
 )
+from app.utils.session_store import SessionStore, blank_chat_context
 from app.services.availability_flow import (
     get_availability_state,
     handle_availability_followup,
@@ -866,6 +867,41 @@ last_shown_products: list[str] = []
 last_interaction: Optional[datetime] = None
 unknown_question_state: dict[str, dict[str, Any]] = {}
 chat_session_id: str = str(uuid.uuid4())[:8]
+session_store = SessionStore(os.getenv("REDIS_URL"))
+
+
+def _load_session_context(session_id: str) -> dict[str, Any]:
+    """Naloži per-session kontekst in nastavi module globals (legacy code)."""
+    ctx = session_store.get(session_id)
+    global conversation_history, last_product_query, last_wine_query, last_info_query, last_menu_query
+    global last_shown_products, last_interaction, chat_session_id
+    conversation_history = ctx.get("conversation_history", [])
+    last_product_query = ctx.get("last_product_query")
+    last_wine_query = ctx.get("last_wine_query")
+    last_info_query = ctx.get("last_info_query")
+    last_menu_query = ctx.get("last_menu_query", False)
+    last_shown_products = ctx.get("last_shown_products", [])
+    last_interaction = ctx.get("last_interaction")
+    chat_session_id = ctx.get("chat_session_id") or str(uuid.uuid4())[:8]
+    ctx["chat_session_id"] = chat_session_id
+    return ctx
+
+
+def _save_session_context(session_id: str, ctx: dict[str, Any]) -> None:
+    """Shrani trenutne globals v per-session kontekst."""
+    ctx.update(
+        {
+            "conversation_history": conversation_history,
+            "last_product_query": last_product_query,
+            "last_wine_query": last_wine_query,
+            "last_info_query": last_info_query,
+            "last_menu_query": last_menu_query,
+            "last_shown_products": last_shown_products,
+            "last_interaction": last_interaction,
+            "chat_session_id": chat_session_id,
+        }
+    )
+    session_store.set(session_id, ctx)
 MENU_INTROS = [
     "Hej! Poglej, kaj kuhamo ta vikend:",
     "Z veseljem povem, kaj je na meniju:",
@@ -2020,6 +2056,8 @@ def reset_conversation_context(session_id: Optional[str] = None) -> None:
     last_shown_products = []
     chat_session_id = str(uuid.uuid4())[:8]
     last_interaction = None
+    if session_id:
+        session_store.set(session_id, blank_chat_context())
 
 
 def generate_confirmation_email(state: dict[str, Optional[str | int]]) -> str:
@@ -2226,8 +2264,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     global last_product_query, last_wine_query, last_info_query, last_menu_query, conversation_history, last_interaction, chat_session_id
     now = datetime.now()
     session_id = payload.session_id or "default"
+    ctx = _load_session_context(session_id)
     if last_interaction and now - last_interaction > timedelta(hours=SESSION_TIMEOUT_HOURS):
         reset_conversation_context(session_id)
+        ctx = _load_session_context(session_id)
     last_interaction = now
     state = get_reservation_state(session_id)
     inquiry_state = get_inquiry_state(session_id)
@@ -2259,6 +2299,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         conversation_history.append({"role": "assistant", "content": final_reply})
         if len(conversation_history) > 12:
             conversation_history = conversation_history[-12:]
+        _save_session_context(session_id, ctx)
         return ChatResponse(reply=final_reply)
 
     if is_switch_topic_command(payload.message):
@@ -2984,8 +3025,10 @@ def chat_stream(payload: ChatRequestWithSession):
     global conversation_history, last_interaction
     now = datetime.now()
     session_id = payload.session_id or "default"
+    ctx = _load_session_context(session_id)
     if last_interaction and now - last_interaction > timedelta(hours=SESSION_TIMEOUT_HOURS):
         reset_conversation_context(session_id)
+        ctx = _load_session_context(session_id)
     last_interaction = now
     state = get_reservation_state(session_id)
     inquiry_state = get_inquiry_state(session_id)
@@ -3028,6 +3071,7 @@ def chat_stream(payload: ChatRequestWithSession):
         conversation_history.append({"role": "assistant", "content": final_reply})
         if len(conversation_history) > 12:
             conversation_history[:] = conversation_history[-12:]
+        _save_session_context(session_id, ctx)
 
     # Če uporabnik potrdi po rezervacijskem odgovoru, preusmeri v chat_endpoint
     if is_affirmative(payload.message) or (
