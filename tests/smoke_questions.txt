@@ -1,0 +1,36 @@
+# Smoke test – Kovačnik + Pod Goro
+# Namen: hitro preveri 5 ključnih tokov po deployu
+
+[IZDELKI]
+1) imate čemaževo pesto?
+   - pričakovano: opis + Trgovina link + opcija ročnega naročila
+2) da
+   - pričakovano: link do trgovine (brez povpraševanja)
+3) kake namaze imate?
+   - pričakovano: seznam + Trgovina link
+4) ja
+   - pričakovano: link do trgovine
+
+[POVPRAŠEVANJE]
+5) lahko pri vas organiziram teambuilding?
+   - pričakovano: razlaga + ponudba povpraševanja
+6) da
+   - pričakovano: Do kdaj bi to potrebovali?
+7) ne bom naročil
+   - pričakovano: prekini povpraševanje
+
+[REZERVACIJE]
+8) rad bi rezerviral mizo za kosilo
+   - pričakovano: vprašanje za datum/uro/osebe
+9) sobota 12:30, 4 osebe
+   - pričakovano: nadaljevanje rezervacije
+
+[NEJASNO]
+10) lahko uredite nekaj čisto drugega?
+    - pričakovano: “Tega žal ne vem. Če želite, mi pustite e‑pošto…”
+
+[ANTI‑LOOP]
+11) da
+    - pričakovano: “Ja — za kaj točno?” (če ni konteksta)
+12) da
+    - pričakovano: “Oprostite, da se ponavljam…”
