@@ -78,6 +78,12 @@ from app.services.parsing import (
     extract_time,
     parse_people_count,
 )
+from brand_config import (
+    BRAND_NAME,
+    BRAND_SHORT,
+    FAMILY,
+    get_system_prompt_intro,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -156,18 +162,17 @@ except Exception as exc:
     print(f"[KB] Full KB load failed: {exc}")
 
 def _llm_system_prompt_full_kb(language: str = "si") -> str:
-    common = (
-        "Ti si asistent Domačije Kmetija Pod Goro. Upoštevaj te potrjene podatke kot glavne:\n"
-        "- Gospodar kmetije: Jure\n"
-        "- Družina: Babica Ivanka, Jure, Maja, Tine (partnerka Kaja), Lara, Nika\n"
-        "- Konjička: Malajka in Marsij\n\n"
+    # Intro iz brand_config (družina, gospodar, živali)
+    intro = get_system_prompt_intro(language)
+
+    menu_and_rules = (
         "Preverjeni meniji (uporabi dobesedno, brez dodajanja novih jedi):\n"
         "Zimska srajčka (dec–feb):\n"
         "- Pohorska bunka in zorjen Frešerjev sir, hišna salama, paštetka iz domačih jetrc, zaseka, bučni namaz, hišni kruhek\n"
         "- Goveja župca z rezanci in jetrnimi rolicami ali koprivna juhica s čemažem in sirne lizike\n"
         "- Meso na plošči: pujskov hrbet, hrustljavi piščanec Pesek, piščančje kroglice z zelišči, mlado goveje meso z jabolki in rdečim vinom\n"
-        "- Priloge: štukelj s skuto, ričota s pirino kašo in jurčki, pražen krompir iz šporheta na drva, mini pita s porom, ocvrte hruške “Debeluške”, pomladna/zimska solata\n"
-        "- Sladica: Pohorska gibanica babice Ivanke\n\n"
+        "- Priloge: štukelj s skuto, ričota s pirino kašo in jurčki, pražen krompir iz šporheta na drva, mini pita s porom, ocvrte hruške \"Debeluške\", pomladna/zimska solata\n"
+        f"- Sladica: Pohorska gibanica babice {FAMILY['grandmother']}\n\n"
         "Tukaj so VSE informacije o domačiji:\n"
         f"{FULL_KB_TEXT}\n\n"
         "Ne izmišljuj si podatkov.\n"
@@ -183,21 +188,9 @@ def _llm_system_prompt_full_kb(language: str = "si") -> str:
         "Ne navajaj oseb, ki niso v potrjenih podatkih.\n"
         "Če uporabnik želi rezervirati sobo ali mizo, OBVEZNO pokliči funkcijo "
         "`reservation_intent` in nastavi ustrezen action.\n"
+        "Odgovarjaj prijazno, naravno in slovensko.\n"
     )
-    if language == "en":
-        return (
-            "You are the assistant for Kmetija Pod Goro. Respond in English.\n"
-            + common
-        )
-    if language == "de":
-        return (
-            "Du bist der Assistent für Kmetija Pod Goro. Antworte auf Deutsch.\n"
-            + common
-        )
-    return (
-        common
-        + "Odgovarjaj prijazno, naravno in slovensko.\n"
-    )
+    return intro + menu_and_rules
 
 def _llm_route_reservation(message: str) -> dict:
     client = get_llm_client()
