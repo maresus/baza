@@ -1691,6 +1691,17 @@ def last_bot_mentions_reservation(last_bot: str) -> bool:
     return any(token in text for token in ["rezerv", "reserve", "booking", "zimmer", "room", "mizo", "table"])
 
 
+def last_bot_mentions_product_order(last_bot: str) -> bool:
+    text = last_bot.lower()
+    if "naroč" in text or "naroc" in text:
+        return True
+    if "trgovin" in text or "izdelek" in text or "katalog" in text:
+        return True
+    if any(stem in text for stem in PRODUCT_STEMS):
+        return True
+    return False
+
+
 def get_greeting_response() -> str:
     return random.choice(GREETINGS)
 
