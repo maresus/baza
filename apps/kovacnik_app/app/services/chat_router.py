@@ -1956,6 +1956,14 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
     text = message.strip()
     lowered = text.lower()
     step = state.get("step")
+    if is_info_query(message) or detect_info_intent(message):
+        info_reply = answer_farm_info(message)
+        return f"{info_reply}\n\n---\n\nŽelite nadaljevati povpraševanje? (da/ne)"
+    if is_product_query(message):
+        product_reply = answer_product_question(message)
+        product_reply = strip_product_followup(product_reply)
+        product_reply = append_shop_link_if_needed(product_reply)
+        return f"{product_reply}\n\n---\n\nŽelite nadaljevati povpraševanje? (da/ne)"
     if is_negative(message):
         reset_inquiry_state(state)
         return "V redu, prekinil sem povpraševanje. Kako vam lahko še pomagam?"
@@ -2437,7 +2445,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(inquiry_reply, "inquiry", followup_flag=False)
 
     if state.get("step") is None and is_inquiry_trigger(payload.message):
-        if is_strong_inquiry_request(payload.message):
+        if is_reservation_related(payload.message):
+            pass
+        elif is_product_query(payload.message):
+            pass
+        elif is_strong_inquiry_request(payload.message):
             inquiry_state["details"] = payload.message.strip()
             inquiry_state["step"] = "awaiting_deadline"
             reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
