@@ -188,8 +188,6 @@ RESERVATION_START_PHRASES = {
     "rezerviram mizo",
     "rezervirala bi mizo",
     "rezerviral bi mizo",
-    "kosilo",
-    "večerja",
     "book a room",
     "booking",
     "i want to book",
@@ -502,6 +500,10 @@ def is_ambiguous_inquiry_request(message: str) -> bool:
     lowered = message.lower()
     if any(w in lowered for w in ["večerj", "vecerj"]):
         return False
+    menu_words = ["jedil", "meni", "menu", "vikend", "kosilo", "kosila", "ponudba kosil", "vikend ponudb"]
+    event_words = ["teambuilding", "porok", "catering", "pogostitev"]
+    if any(w in lowered for w in menu_words) and not any(w in lowered for w in event_words):
+        return False
     explicit = ["povpraš", "ponudb", "naročil", "naročilo", "naroč", "količin"]
     has_explicit = any(w in lowered for w in explicit)
     has_number = re.search(r"\d", lowered) is not None
@@ -514,6 +516,10 @@ def is_ambiguous_inquiry_request(message: str) -> bool:
 def is_inquiry_trigger(message: str) -> bool:
     lowered = message.lower()
     if any(w in lowered for w in ["večerj", "vecerj"]):
+        return False
+    menu_words = ["jedil", "meni", "menu", "vikend", "kosilo", "kosila", "ponudba kosil", "vikend ponudb"]
+    event_words = ["teambuilding", "porok", "catering", "pogostitev"]
+    if any(w in lowered for w in menu_words) and not any(w in lowered for w in event_words):
         return False
     explicit = [
         "povpraš",
