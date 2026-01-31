@@ -88,7 +88,7 @@ from app.services.interrupt_layer import (
     check_for_interrupt,
     build_interrupt_response,
 )
-from app.services.smart_router import smart_route
+from app.services.smart_router import classify_intent as smart_classify_intent
 from app.services.language import (
     detect_language,
     maybe_translate,
@@ -1611,30 +1611,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         return ChatResponse(reply=final_reply)
 
     # === SMART ROUTER (LLM-based) ===
-    # Če je aktiven booking flow, uporabi smart router za interrupt handling
-    if state.get("step") is not None:
-        try:
-            smart_result = smart_route(payload.message, state, conversation_history)
-
-            # Če je smart router obdelal sporočilo (INFO/PRODUCT interrupt)
-            if smart_result.get("handled") and smart_result.get("response"):
-                reply = smart_result["response"]
-
-                # Če je composite intent, posodobi booking state z izvlečenimi podatki
-                booking_data = smart_result.get("booking_data", {})
-                if booking_data:
-                    if booking_data.get("guests") and not state.get("guests"):
-                        state["guests"] = booking_data["guests"]
-                    if booking_data.get("date") and not state.get("date"):
-                        state["date"] = booking_data["date"]
-                    if booking_data.get("time") and not state.get("time"):
-                        state["time"] = booking_data["time"]
-
-                reply = maybe_translate(reply, detected_lang)
-                return finalize(reply, f"smart_{smart_result.get('intent', 'unknown').lower()}", followup_flag=False)
-        except Exception as e:
-            # Če smart router faila, nadaljuj z obstoječo logiko
-            _router_logger.warning(f"Smart router error: {e}")
+    # Uporabi samo za nejasne ali mešane primere (hibridni routing)
 
     if is_switch_topic_command(payload.message):
         reset_reservation_state(state)
@@ -2123,6 +2100,64 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         return finalize(reply, "reservation")
 
     intent = detect_intent(payload.message, state)
+
+    # === HYBRID ROUTING (Rule-based + LLM fallback) ===
+    composite = is_reservation_related(payload.message) and is_product_query(payload.message)
+    if intent == "default" or composite:
+        try:
+            smart = smart_classify_intent(payload.message, state, conversation_history)
+            smart_intent = smart.get("intent")
+            conf = smart.get("confidence", 0.0)
+            booking_data = smart.get("booking_data", {}) or {}
+            if conf >= 0.75 and smart_intent in {"INFO", "PRODUCT", "BOOKING", "GREETING", "GOODBYE", "COMPOSITE"}:
+                if smart_intent == "GREETING":
+                    reply = get_greeting_response()
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "greeting", followup_flag=False)
+                if smart_intent == "GOODBYE":
+                    reply = get_goodbye_response()
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "goodbye", followup_flag=False)
+                if smart_intent == "INFO":
+                    reply = answer_farm_info(payload.message)
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "info", followup_flag=False)
+                if smart_intent == "PRODUCT":
+                    reply = strip_product_followup(answer_product_question(payload.message))
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "product", followup_flag=False)
+                if smart_intent == "BOOKING":
+                    booking_type = booking_data.get("type")
+                    if not booking_type:
+                        if "mizo" in payload.message.lower() or "table" in payload.message.lower():
+                            booking_type = "table"
+                        elif "sobo" in payload.message.lower() or "room" in payload.message.lower():
+                            booking_type = "room"
+                    if booking_type:
+                        reset_reservation_state(state)
+                        state["type"] = booking_type
+                    reply = handle_reservation_flow(payload.message, state)
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "reservation", followup_flag=False)
+                if smart_intent == "COMPOSITE":
+                    product_reply = strip_product_followup(answer_product_question(payload.message))
+                    booking_type = booking_data.get("type")
+                    if not booking_type:
+                        if "mizo" in payload.message.lower() or "table" in payload.message.lower():
+                            booking_type = "table"
+                        elif "sobo" in payload.message.lower() or "room" in payload.message.lower():
+                            booking_type = "room"
+                    if booking_type:
+                        reset_reservation_state(state)
+                        state["type"] = booking_type
+                        booking_reply = handle_reservation_flow(payload.message, state)
+                        reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+                    else:
+                        reply = product_reply
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "composite", followup_flag=False)
+        except Exception as e:
+            _router_logger.warning(f"Smart routing fallback error: {e}")
 
     if is_contact_request(payload.message) and last_info_query and has_wine_context(last_info_query):
         reply = (
