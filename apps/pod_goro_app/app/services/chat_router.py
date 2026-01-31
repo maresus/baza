@@ -88,11 +88,17 @@ from app.services.interrupt_layer import (
     check_for_interrupt,
     build_interrupt_response,
 )
+from app.services.routing import (
+    decide as unified_route_decide,
+    build_resume_prompt as unified_build_resume_prompt,
+    build_interrupt_response as unified_build_interrupt_response,
+)
 from app.services.smart_router import classify_intent as smart_classify_intent
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
 USE_FULL_KB_LLM = False  # False = RAG (hitro), True = full KB (počasno)
+USE_UNIFIED_ROUTER = os.getenv("USE_UNIFIED_ROUTER", "false").lower() == "true"
 INQUIRY_RECIPIENT = os.getenv("INQUIRY_RECIPIENT", "satlermarko@gmail.com")
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
 _router_logger = logging.getLogger("router_v2")
@@ -2290,7 +2296,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     state["session_id"] = session_id
 
     # Guard: če uporabnik jasno spremeni namen, prekinemo aktivni flow
-    if USE_ROUTER_V2 and (state.get("step") is not None or inquiry_state.get("step")):
+    if not USE_UNIFIED_ROUTER and USE_ROUTER_V2 and (state.get("step") is not None or inquiry_state.get("step")):
         decision_guard = route_message(
             payload.message,
             has_active_booking=state.get("step") is not None,
@@ -2305,6 +2311,46 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reset_reservation_state(state)
         if intent_guard in {"BOOKING_ROOM", "BOOKING_TABLE"} and conf_guard >= 0.8 and inquiry_state.get("step"):
             reset_inquiry_state(inquiry_state)
+
+    # Unified router: soft interrupt / hard switch
+    if USE_UNIFIED_ROUTER and (state.get("step") is not None or inquiry_state.get("step")):
+        decision = unified_route_decide(payload.message, state, inquiry_state)
+        action = decision.get("action")
+        primary_intent = decision.get("primary_intent")
+        secondary_intent = decision.get("secondary_intent")
+
+        if action == "hard_switch":
+            if primary_intent in {"BOOKING_TABLE", "BOOKING_ROOM"}:
+                reset_reservation_state(state)
+                state["type"] = "table" if primary_intent == "BOOKING_TABLE" else "room"
+            if primary_intent == "INQUIRY":
+                reset_reservation_state(state)
+            if primary_intent in {"INFO", "PRODUCT"}:
+                reset_reservation_state(state)
+
+        if action == "soft_interrupt":
+            # INFO/PRODUCT odgovor + nadaljevanje rezervacije
+            if primary_intent == "PRODUCT" or secondary_intent == "PRODUCT":
+                product_key = detect_product_intent(payload.message)
+                if product_key:
+                    interrupt_answer = strip_product_followup(get_product_response(product_key))
+                else:
+                    interrupt_answer = answer_product_question(payload.message)
+                if is_bulk_order_request(payload.message):
+                    interrupt_answer = f"{interrupt_answer}\n\nZa večja naročila nam pišite na info@kmetijapodgoro.si."
+                interrupt_answer = f"{interrupt_answer}\n\nTrgovina: {SHOP_URL}"
+            else:
+                info_key = detect_info_intent(payload.message)
+                if info_key:
+                    interrupt_answer = get_info_response(info_key)
+                else:
+                    tourist = answer_tourist_question(payload.message)
+                    interrupt_answer = tourist if tourist else random.choice(UNKNOWN_RESPONSES)
+
+            resume_prompt = unified_build_resume_prompt(get_booking_continuation, state)
+            reply = unified_build_interrupt_response(interrupt_answer, resume_prompt)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "interrupt_unified", followup_flag=False)
 
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
         nonlocal needs_followup
