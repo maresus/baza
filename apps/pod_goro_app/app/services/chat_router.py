@@ -2301,6 +2301,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         conf_guard = routing_guard.get("confidence", 0)
         if intent_guard in {"INFO", "PRODUCT"} and conf_guard >= 0.8 and state.get("step") is not None:
             reset_reservation_state(state)
+        if intent_guard in {"INQUIRY"} and conf_guard >= 0.8 and state.get("step") is not None:
+            reset_reservation_state(state)
         if intent_guard in {"BOOKING_ROOM", "BOOKING_TABLE"} and conf_guard >= 0.8 and inquiry_state.get("step"):
             reset_inquiry_state(inquiry_state)
 
@@ -2309,7 +2311,19 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         global conversation_history
         final_reply = reply_text
         last_bot = get_last_assistant_message()
-        if last_bot and normalize_loop_text(last_bot) == normalize_loop_text(final_reply):
+        safe_repeat_intents = {
+            "info_static",
+            "info_during_reservation",
+            "product_static",
+            "product_followup",
+            "product_order_link",
+            "hours_info",
+        }
+        if (
+            last_bot
+            and normalize_loop_text(last_bot) == normalize_loop_text(final_reply)
+            and intent_value not in safe_repeat_intents
+        ):
             final_reply = "Oprostite, da se ponavljam. Napišite prosim bolj konkretno (npr. izdelek, datum ali storitev)."
         if is_product_query(payload.message) or intent_value in {"product", "product_followup", "product_static", "product_order_link"}:
             final_reply = append_shop_link_if_needed(final_reply)
@@ -2678,6 +2692,18 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     # Produktni intent brez LLM (samo če ni aktivne rezervacije)
     if state["step"] is None:
         product_key = detect_product_intent(payload.message)
+        booking_type = parse_reservation_type(payload.message)
+        if product_key and booking_type in {"room", "table"}:
+            reset_reservation_state(state)
+            state["type"] = booking_type
+            booking_reply = handle_reservation_flow(payload.message, state)
+            product_reply = strip_product_followup(get_product_response(product_key))
+            if is_bulk_order_request(payload.message):
+                product_reply = f"{product_reply}\n\nZa večja naročila nam pišite na info@kmetijapodgoro.si, da uskladimo količine in prevzem."
+            product_reply = f"{product_reply}\n\nTrgovina: {SHOP_URL}"
+            reply = f"{product_reply}\n\n---\n\n📝 **Nadaljujemo z rezervacijo:**\n{booking_reply}"
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_and_booking", followup_flag=False)
         if product_key:
             reply = strip_product_followup(get_product_response(product_key))
             if is_bulk_order_request(payload.message):

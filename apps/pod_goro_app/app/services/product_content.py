@@ -3,6 +3,10 @@ from typing import Optional
 
 
 PRODUCT_RESPONSES = {
+    "pesto": [
+        "Imamo **čemažev pesto** v 212 ml kozarčku (5,50 €). Najdete ga v spletni trgovini: https://kovacnik.com/katalog.",
+        "Čemažev pesto je na voljo (212 ml, 5,50 €). Naročilo: https://kovacnik.com/katalog.",
+    ],
     "marmelada": [
         "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kmetijapodgoro.si/katalog (sekcija Marmelade).",
         "Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: https://kmetijapodgoro.si/katalog.",
@@ -56,6 +60,8 @@ PRODUCT_FOLLOWUP_PHRASES = {
 
 def detect_product_intent(message: str) -> Optional[str]:
     text = message.lower()
+    if any(w in text for w in ["pesto", "čemaž", "cemaz", "čemažev", "cemazev"]):
+        return "pesto"
     if any(w in text for w in ["liker", "žgan", "zgan", "borovnič", "orehov", "alkohol"]):
         return "liker"
     if any(w in text for w in ["marmelad", "džem", "dzem", "jagod", "marelič"]):
