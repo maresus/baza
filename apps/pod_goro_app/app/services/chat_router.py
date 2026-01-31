@@ -84,6 +84,10 @@ from brand_config import (
     FAMILY,
     get_system_prompt_intro,
 )
+from app.services.interrupt_layer import (
+    check_for_interrupt,
+    build_interrupt_response,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -2686,6 +2690,23 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     # Fuzzy router za rezervacije (robustno na tipkarske napake)
     router_intent = detect_router_intent(payload.message, state)
+
+    # === INTERRUPT LAYER ===
+    # Če je aktiven booking flow in uporabnik vpraša INFO/PRODUCT vprašanje,
+    # odgovori na vprašanje IN nadaljuj z bookingom (brez "Želiš nadaljevati? da/ne")
+    if state["step"] is not None:
+        interrupt_type = check_for_interrupt(payload.message, state)
+        if interrupt_type:
+            # Odgovori na vprašanje
+            if interrupt_type == "PRODUCT":
+                interrupt_answer = answer_product_question(payload.message)
+            else:  # INFO
+                interrupt_answer = answer_farm_info(payload.message)
+
+            # Kombiniraj odgovor z resume promptom
+            reply = build_interrupt_response(interrupt_answer, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, f"interrupt_{interrupt_type.lower()}", followup_flag=False)
 
     # Zamenjava tipa rezervacije med aktivnim flowom (npr. "mizo bi" med room bookingom)
     if state["step"] is not None:
