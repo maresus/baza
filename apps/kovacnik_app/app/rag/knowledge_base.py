@@ -108,6 +108,16 @@ BM25_IDF: Dict[str, float] = {}
 BM25_AVGDL = 0.0
 EMBEDDING_CACHE: Dict[str, list[float]] = {}
 
+# Load pre-computed embeddings if available
+EMBEDDINGS_PATH = BASE_DIR / "data" / "embeddings.json"
+if EMBEDDINGS_PATH.exists():
+    try:
+        _precomputed = json.loads(EMBEDDINGS_PATH.read_text(encoding="utf-8"))
+        EMBEDDING_CACHE.update(_precomputed)
+        print(f"[knowledge_base] Naloženih {len(_precomputed)} pre-computed embeddings")
+    except Exception as e:
+        print(f"[knowledge_base] Napaka pri nalaganju embeddings: {e}")
+
 
 def _build_bm25_index(chunks: list[KnowledgeChunk]) -> None:
     global BM25_DOC_TF, BM25_DOC_LEN, BM25_IDF, BM25_AVGDL
