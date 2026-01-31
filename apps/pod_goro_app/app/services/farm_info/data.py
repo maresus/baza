@@ -4,19 +4,19 @@ Farm data - basic farm information and keywords.
 
 # Osnovni podatki o kmetiji
 FARM_INFO = {
-    "name": "Turistična kmetija Kovačnik",
-    "address": "Planica 9, 2313 Fram",
-    "phone": "02 601 54 00",
-    "mobile": "031 330 113",
-    "email": "info@kovacnik.com",
-    "website": "www.kovacnik.com",
-    "location_description": "Na pohorski strani, nad Framom, približno 15 min iz doline",
+    "name": "Kmetija Pod Goro",
+    "address": "Gorska cesta 7, 2315 Zeleno Polje",
+    "phone": "02 700 12 34",
+    "mobile": "031 777 888",
+    "email": "info@kmetijapodgoro.si",
+    "website": "www.kmetijapodgoro.si",
+    "location_description": "Na pohorski strani, nad Zelenim Poljem, približno 15 min iz doline",
     "parking": "Brezplačen parking ob hiši za 10+ avtomobilov",
     "directions": {
         "from_maribor": (
-            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Ane, "
-            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Kovačnik) "
-            "in nadaljujete še približno 10 minut. Od cerkve v Framu do kmetije je slabih 15 minut."
+            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Zeleno Polje. Pri semaforju v Zeleno Poljeu proti cerkvi sv. Nike, "
+            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Pod Goro) "
+            "in nadaljujete še približno 10 minut. Od cerkve v Zeleno Poljeu do kmetije je slabih 15 minut."
         ),
         "coordinates": "46.5234, 15.6123",
     },

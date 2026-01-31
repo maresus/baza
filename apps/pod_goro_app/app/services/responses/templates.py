@@ -9,7 +9,7 @@ GREETINGS = [
     "Pozdravljeni! Kako vam lahko pomagam?",
     "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
     "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    "Pozdravljeni pri Kovačniku! Kaj vas zanima?",
+    "Pozdravljeni pri Kmetiji Pod Goro! Kaj vas zanima?",
 ]
 
 # Thank you / goodbye responses
