@@ -1674,7 +1674,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 reset_flow(unified_state)
                 state["type"] = "table"
                 start_flow(unified_state, FlowType.RESERVATION_TABLE)
-                reply = handle_reservation_flow(payload.message, state)
+                booking_reply = handle_reservation_flow(payload.message, state)
+                # Handle secondary intent (mixed: miza + marmelada)
+                if decision.secondary_intent == IntentType.PRODUCT:
+                    product_reply = answer_product_question(payload.message)
+                    product_reply = append_shop_link_if_needed(product_reply)
+                    reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+                else:
+                    reply = booking_reply
                 return unified_finalize(reply, "unified_booking_table")
 
             if decision.primary_intent == IntentType.BOOKING_ROOM:
@@ -1682,8 +1689,39 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 reset_flow(unified_state)
                 state["type"] = "room"
                 start_flow(unified_state, FlowType.RESERVATION_ROOM)
-                reply = handle_reservation_flow(payload.message, state)
+                booking_reply = handle_reservation_flow(payload.message, state)
+                # Handle secondary intent (mixed: soba + marmelada)
+                if decision.secondary_intent == IntentType.PRODUCT:
+                    product_reply = answer_product_question(payload.message)
+                    product_reply = append_shop_link_if_needed(product_reply)
+                    reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+                else:
+                    reply = booking_reply
                 return unified_finalize(reply, "unified_booking_room")
+
+        # Handle SWITCH from one booking type to another during active flow
+        if is_in_flow(unified_state) and state.get("step") is not None:
+            lowered_msg = payload.message.lower()
+            current_type = state.get("type")
+            # Check if user wants to switch to room
+            wants_room = any(kw in lowered_msg for kw in ["sobo", "soba", "sobe", "room", "nočitev", "nocitev", "prenočitev"])
+            wants_table = any(kw in lowered_msg for kw in ["mizo", "miza", "mize", "table", "kosilo"])
+
+            if wants_room and current_type == "table":
+                reset_reservation_state(state)
+                reset_flow(unified_state)
+                state["type"] = "room"
+                start_flow(unified_state, FlowType.RESERVATION_ROOM)
+                reply = handle_reservation_flow(payload.message, state)
+                return unified_finalize(reply, "unified_switch_to_room")
+
+            if wants_table and current_type == "room":
+                reset_reservation_state(state)
+                reset_flow(unified_state)
+                state["type"] = "table"
+                start_flow(unified_state, FlowType.RESERVATION_TABLE)
+                reply = handle_reservation_flow(payload.message, state)
+                return unified_finalize(reply, "unified_switch_to_table")
 
         # Handle INFO
         if decision.primary_intent == IntentType.INFO:
