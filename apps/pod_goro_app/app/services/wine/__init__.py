@@ -1,10 +1,1 @@
-"""
-Wine module - wine list and related keywords.
-"""
-
-from .data import WINE_LIST, WINE_KEYWORDS
-
-__all__ = [
-    "WINE_LIST",
-    "WINE_KEYWORDS",
-]
+from shared_core.app.services.wine.__init__ import *  # noqa: F401,F403

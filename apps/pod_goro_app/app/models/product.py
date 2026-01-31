@@ -1,8 +1,1 @@
-from pydantic import BaseModel
-
-
-class Product(BaseModel):
-    id: int
-    name: str
-    price: float
-    weight: float
+from shared_core.app.models.product import *  # noqa: F401,F403

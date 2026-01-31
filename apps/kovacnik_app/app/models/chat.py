@@ -1,9 +1,1 @@
-from pydantic import BaseModel
-
-
-class ChatRequest(BaseModel):
-    message: str
-
-
-class ChatResponse(BaseModel):
-    reply: str
+from shared_core.app.models.chat import *  # noqa: F401,F403

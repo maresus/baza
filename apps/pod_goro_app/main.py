@@ -1,4 +1,8 @@
 from pathlib import Path
+import sys
+
+# Ensure shared_core is importable
+sys.path.append(str(Path(__file__).resolve().parents[1] / "shared_core"))
 
 from dotenv import load_dotenv
 
