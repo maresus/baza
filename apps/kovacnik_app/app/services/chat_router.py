@@ -2125,6 +2125,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 if smart_intent == "PRODUCT":
                     reply = strip_product_followup(answer_product_question(payload.message))
                     reply = maybe_translate(reply, detected_lang)
+                    reply = strip_product_followup(reply)
                     return finalize(reply, "product", followup_flag=False)
                 if smart_intent == "BOOKING":
                     booking_type = booking_data.get("type")
