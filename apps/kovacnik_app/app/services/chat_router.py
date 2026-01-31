@@ -88,6 +88,7 @@ from app.services.interrupt_layer import (
     check_for_interrupt,
     build_interrupt_response,
 )
+from app.services.smart_router import smart_route
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -2331,6 +2332,32 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             conversation_history = conversation_history[-12:]
         _save_session_context(session_id, ctx)
         return ChatResponse(reply=final_reply)
+
+    # === SMART ROUTER (LLM-based) ===
+    # Če je aktiven booking flow, uporabi smart router za interrupt handling
+    if state.get("step") is not None:
+        try:
+            smart_result = smart_route(payload.message, state, conversation_history)
+
+            # Če je smart router obdelal sporočilo (INFO/PRODUCT interrupt)
+            if smart_result.get("handled") and smart_result.get("response"):
+                reply = smart_result["response"]
+
+                # Če je composite intent, posodobi booking state z izvlečenimi podatki
+                booking_data = smart_result.get("booking_data", {})
+                if booking_data:
+                    if booking_data.get("guests") and not state.get("guests"):
+                        state["guests"] = booking_data["guests"]
+                    if booking_data.get("date") and not state.get("date"):
+                        state["date"] = booking_data["date"]
+                    if booking_data.get("time") and not state.get("time"):
+                        state["time"] = booking_data["time"]
+
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, f"smart_{smart_result.get('intent', 'unknown').lower()}", followup_flag=False)
+        except Exception as e:
+            # Če smart router faila, nadaljuj z obstoječo logiko
+            _router_logger.warning(f"Smart router error: {e}")
 
     if is_switch_topic_command(payload.message):
         reset_reservation_state(state)
