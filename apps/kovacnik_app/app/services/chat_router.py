@@ -139,6 +139,13 @@ from app.services.menu import (
     format_current_menu,
     next_menu_intro,
 )
+from app.services.farm_info import (
+    FARM_INFO,
+    LOCATION_KEYWORDS,
+    FARM_INFO_KEYWORDS,
+    answer_farm_info,
+)
+from app.services.wine import WINE_LIST, WINE_KEYWORDS
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -516,96 +523,7 @@ reservation_service = ReservationService()
 # Spletna trgovina (fallback za "ja" pri izdelkih)
 SHOP_URL = os.getenv("SHOP_URL", "https://kovacnik.com/katalog")
 
-# Osnovni podatki o kmetiji
-FARM_INFO = {
-    "name": "Turistična kmetija Kovačnik",
-    "address": "Planica 9, 2313 Fram",
-    "phone": "02 601 54 00",
-    "mobile": "031 330 113",
-    "email": "info@kovacnik.com",
-    "website": "www.kovacnik.com",
-    "location_description": "Na pohorski strani, nad Framom, približno 15 min iz doline",
-    "parking": "Brezplačen parking ob hiši za 10+ avtomobilov",
-    "directions": {
-        "from_maribor": (
-            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Ane, "
-            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Kovačnik) "
-            "in nadaljujete še približno 10 minut. Od cerkve v Framu do kmetije je slabih 15 minut."
-        ),
-        "coordinates": "46.5234, 15.6123",
-    },
-    "opening_hours": {
-        "restaurant": "Sobota in nedelja 12:00-20:00 (zadnji prihod na kosilo 15:00)",
-        "rooms": "Sobe: prijava 14:00, odjava 10:00 (pon/torki kuhinja zaprta)",
-        "shop": "Po dogovoru ali spletna trgovina 24/7",
-        "closed": "Ponedeljek in torek (kuhinja zaprta, večerje za nočitvene goste po dogovoru)",
-    },
-    "facilities": [
-        "Brezplačen WiFi",
-        "Klimatizirane sobe",
-        "Brezplačen parking",
-        "Vrt s pogledom na Pohorje",
-        "Otroško igrišče",
-    ],
-    "activities": [
-        "Sprehodi po Pohorju",
-        "Kolesarjenje (izposoja koles možna)",
-        "Ogled kmetije in živali",
-        "Degustacija domačih izdelkov",
-    ],
-}
-
-LOCATION_KEYWORDS = {
-    "kje",
-    "naslov",
-    "lokacija",
-    "kako pridem",
-    "priti",
-    "parking",
-    "telefon",
-    "številka",
-    "stevilka",
-    "email",
-    "kontakt",
-    "odprti",
-    "odprto",
-    "delovni čas",
-    "ura",
-    "kdaj",
-    "wifi",
-    "internet",
-    "klima",
-    "parkirišče",
-    "parkirisce",
-}
-
-FARM_INFO_KEYWORDS = {
-    "kje",
-    "naslov",
-    "lokacija",
-    "kako pridem",
-    "priti",
-    "parking",
-    "telefon",
-    "številka",
-    "stevilka",
-    "email",
-    "kontakt",
-    "odprti",
-    "odprto",
-    "delovni čas",
-    "ura",
-    "kdaj",
-    "wifi",
-    "internet",
-    "klima",
-    "nahajate",
-    "navodila",
-    "pot",
-    "avtom",
-    "parkirišče",
-    "parkirisce",
-}
+# FARM_INFO, LOCATION_KEYWORDS, FARM_INFO_KEYWORDS moved to app.services.farm_info
 
 FOOD_GENERAL_KEYWORDS = {"hrana", "jest", "jesti", "ponujate", "kuhate", "jedilnik?"}
 
@@ -694,49 +612,7 @@ ROOM_PRICING = {
     "closed_days": ["ponedeljek", "torek"],  # ni večerij
 }
 
-# Vinski seznam za fallback
-WINE_LIST = {
-    "penece": [
-        {"name": "Doppler DIONA brut 2013", "type": "zelo suho", "grape": "100% Chardonnay", "price": 30.00, "desc": "Penina po klasični metodi, eleganca, lupinasto sadje, kruhova skorja"},
-        {"name": "Opok27 NYMPHA rose brut 2022", "type": "izredno suho", "grape": "100% Modri pinot", "price": 26.00, "desc": "Rose frizzante, jagodni konfit, češnja, sveže"},
-        {"name": "Leber MUŠKATNA PENINA demi sec", "type": "polsladko", "grape": "100% Rumeni muškat", "price": 26.00, "desc": "Klasična metoda, 18 mesecev zorenja, svež vonj limone in muškata"},
-    ],
-    "bela": [
-        {"name": "Greif BELO zvrst 2024", "type": "suho", "grape": "Laški rizling + Sauvignon", "price": 14.00, "desc": "Mladostno, zeliščne in sadne note, visoke kisline"},
-        {"name": "Frešer SAUVIGNON 2023", "type": "suho", "grape": "100% Sauvignon", "price": 19.00, "desc": "Aromatičen, zeliščen, črni ribez, koprive, mineralno"},
-        {"name": "Frešer LAŠKI RIZLING 2023", "type": "suho", "grape": "100% Laški rizling", "price": 18.00, "desc": "Mladostno, mineralno, note jabolka in suhih zelišč"},
-        {"name": "Greif LAŠKI RIZLING terase 2020", "type": "suho", "grape": "100% Laški rizling", "price": 23.00, "desc": "Zoreno 14 mesecev v hrastu, zrelo rumeno sadje, oljnata tekstura"},
-        {"name": "Frešer RENSKI RIZLING Markus 2019", "type": "suho", "grape": "100% Renski rizling", "price": 22.00, "desc": "Breskev, petrolej, mineralno, zoreno v hrastu"},
-        {"name": "Skuber MUŠKAT OTTONEL 2023", "type": "polsladko", "grape": "100% Muškat ottonel", "price": 17.00, "desc": "Elegantna muškatna cvetica, harmonično, ljubko"},
-        {"name": "Greif RUMENI MUŠKAT 2023", "type": "polsladko", "grape": "100% Rumeni muškat", "price": 17.00, "desc": "Mladostno, sortno, note sena in limete"},
-    ],
-    "rdeca": [
-        {"name": "Skuber MODRA FRANKINJA 2023", "type": "suho", "grape": "100% Modra frankinja", "price": 16.00, "desc": "Rubinasta, ribez, murva, malina, polni okus"},
-        {"name": "Frešer MODRI PINOT Markus 2020", "type": "suho", "grape": "100% Modri pinot", "price": 23.00, "desc": "Višnje, češnje, maline, žametno, 12 mesecev v hrastu"},
-        {"name": "Greif MODRA FRANKINJA črešnjev vrh 2019", "type": "suho", "grape": "100% Modra frankinja", "price": 26.00, "desc": "Zrela, temno sadje, divja češnja, zreli tanini"},
-    ],
-}
-
-WINE_KEYWORDS = {
-    "vino",
-    "vina",
-    "vin",
-    "rdec",
-    "rdeca",
-    "rdeče",
-    "rdece",
-    "belo",
-    "bela",
-    "penin",
-    "penina",
-    "peneč",
-    "muskat",
-    "muškat",
-    "rizling",
-    "sauvignon",
-    "frankinja",
-    "pinot",
-}
+# WINE_LIST, WINE_KEYWORDS moved to app.services.wine
 
 # SEASONAL_MENUS, WEEKLY_EXPERIENCES moved to app.services.menu
 
@@ -1135,61 +1011,7 @@ def strip_product_followup(text: str) -> str:
 # moved to app.services.menu
 
 
-def answer_farm_info(message: str) -> str:
-    lowered = message.lower()
-
-    if any(word in lowered for word in ["zajc", "zajček", "zajcka", "zajčki", "kunec", "zajce"]):
-        return "Imamo prijazne zajčke, ki jih lahko obiskovalci božajo. Ob obisku povejte, pa vas usmerimo do njih."
-
-    if any(word in lowered for word in ["ogled", "tour", "voden", "vodenje", "guid", "sprehod po kmetiji"]):
-        return "Organiziranih vodenih ogledov pri nas ni. Ob obisku se lahko samostojno sprehodite in vprašate osebje, če želite videti živali."
-
-    if any(word in lowered for word in ["navodila", "pot", "pot do", "pridem", "priti", "pot do vas", "avtom"]):
-        return FARM_INFO["directions"]["from_maribor"]
-
-    if any(word in lowered for word in ["kje", "naslov", "lokacija", "nahajate"]):
-        return (
-            f"Nahajamo se na: {FARM_INFO['address']} ({FARM_INFO['location_description']}). "
-            f"Parking: {FARM_INFO['parking']}. Če želite navodila za pot, povejte, od kod prihajate."
-        )
-
-    if any(word in lowered for word in ["telefon", "številka", "stevilka", "poklicat", "klicat"]):
-        return f"Telefon: {FARM_INFO['phone']}, mobitel: {FARM_INFO['mobile']}. Pišete lahko na {FARM_INFO['email']}."
-
-    if "email" in lowered or "mail" in lowered:
-        return f"E-mail: {FARM_INFO['email']}. Splet: {FARM_INFO['website']}."
-
-    if any(word in lowered for word in ["odprt", "kdaj", "delovni", "ura"]):
-        return (
-            f"Kosila: {FARM_INFO['opening_hours']['restaurant']} | "
-            f"Sobe: {FARM_INFO['opening_hours']['rooms']} | "
-            f"Trgovina: {FARM_INFO['opening_hours']['shop']} | "
-            f"Zaprto: {FARM_INFO['opening_hours']['closed']}"
-        )
-
-    if "parking" in lowered or "parkirišče" in lowered or "parkirisce" in lowered or "avto" in lowered:
-        return f"{FARM_INFO['parking']}. Naslov za navigacijo: {FARM_INFO['address']}."
-
-    if "wifi" in lowered or "internet" in lowered or "klima" in lowered:
-        facilities = ", ".join(FARM_INFO["facilities"])
-        return f"Na voljo imamo: {facilities}."
-
-    if any(word in lowered for word in ["počet", "delat", "aktivnost", "izlet"]):
-        activities = "; ".join(FARM_INFO["activities"])
-        return f"Pri nas in v okolici lahko: {activities}."
-
-    if is_hours_question(message):
-        return (
-            "Kosila: sobota/nedelja 12:00-20:00 (zadnji prihod 15:00). "
-            "Zajtrk: 8:00–9:00 (za goste sob). "
-            "Prijava 15:00–20:00, odjava do 11:00. "
-            "Večerje za goste po dogovoru (pon/torki kuhinja zaprta)."
-        )
-
-    return (
-        f"{FARM_INFO['name']} | Naslov: {FARM_INFO['address']} | Tel: {FARM_INFO['phone']} | "
-        f"Email: {FARM_INFO['email']} | Splet: {FARM_INFO['website']}"
-    )
+# answer_farm_info moved to app.services.farm_info
 
 
 def answer_food_question(message: str) -> str:
