@@ -1,29 +1,8 @@
-"""
-Response templates - greetings, goodbyes, unknown responses.
-"""
+"""Response templates - greetings, goodbyes, unknown responses."""
 
 import random
 
-# Greeting responses
-GREETINGS = [
-    "Pozdravljeni! Kako vam lahko pomagam?",
-    "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
-    "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    "Pozdravljeni pri Kmetiji Pod Goro! Kaj vas zanima?",
-]
-
-# Thank you / goodbye responses
-THANKS_RESPONSES = [
-    "Ni za kaj! Če boste imeli še kakšno vprašanje, sem tu.",
-    "Z veseljem! Lep pozdrav s Pohorja!",
-    "Ni problema! Vesela sem, če sem vam lahko pomagala.",
-    "Hvala vam! Se vidimo pri nas!",
-]
-
-# Unknown / fallback responses
-UNKNOWN_RESPONSES = [
-    "Tega žal ne vem. Če želite, mi pustite e-pošto in preverim.",
-]
+from app.brand.config import GREETINGS, THANKS_RESPONSES, UNKNOWN_RESPONSES
 
 
 def get_greeting_response() -> str:
