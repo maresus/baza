@@ -89,6 +89,37 @@ from app.services.interrupt_layer import (
     build_interrupt_response,
 )
 from app.services.smart_router import smart_route
+from app.services.language import (
+    detect_language,
+    maybe_translate,
+    translate_reply,
+    translate_response,
+)
+from app.services.validators import (
+    is_affirmative,
+    is_negative,
+    is_escape_command,
+    is_switch_topic_command,
+    is_confirmation_question,
+    is_email,
+    extract_email,
+    extract_phone,
+    is_contact_request,
+    is_greeting,
+    is_goodbye,
+    is_hours_question,
+    is_menu_query,
+    is_full_menu_request,
+    is_unknown_response,
+)
+from app.services.responses import (
+    GREETINGS,
+    THANKS_RESPONSES,
+    UNKNOWN_RESPONSES,
+    get_greeting_response,
+    get_goodbye_response,
+    get_unknown_response,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -459,21 +490,7 @@ GOODBYE_KEYWORDS = {
     "vse dobro",
     "lahko noč",
 }
-GREETINGS = [
-    "Pozdravljeni! 😊 Kako vam lahko pomagam?",
-    "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
-    "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    "Pozdravljeni pri Kovačniku! 🏔️ Kaj vas zanima?",
-]
-THANKS_RESPONSES = [
-    "Ni za kaj! Če boste imeli še kakšno vprašanje, sem tu. 😊",
-    "Z veseljem! Lep pozdrav s Pohorja! 🏔️",
-    "Ni problema! Vesela sem, če sem vam lahko pomagala.",
-    "Hvala vam! Se vidimo pri nas! 😊",
-]
-UNKNOWN_RESPONSES = [
-    "Tega žal ne vem. Če želite, mi pustite e‑pošto in preverim.",
-]
+# GREETINGS, THANKS_RESPONSES, UNKNOWN_RESPONSES moved to app.services.responses
 
 reservation_service = ReservationService()
 
@@ -1243,76 +1260,8 @@ def strip_product_followup(text: str) -> str:
     return "\n".join(lines) if lines else text
 
 
-def extract_email(text: str) -> str:
-    match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", text)
-    return match.group(0) if match else ""
-
-
-def extract_phone(text: str) -> str:
-    digits = re.sub(r"\D", "", text)
-    return digits if len(digits) >= 7 else ""
-
-
-def is_hours_question(message: str) -> bool:
-    lowered = message.lower()
-    patterns = [
-        "odprti",
-        "odprt",
-        "odpiralni",
-        "obratovalni",
-        "obratujete",
-        "do kdaj",
-        "kdaj lahko pridem",
-        "kdaj ste",
-        "kateri uri",
-        "kosilo ob",
-        "kosilo do",
-        "kosila",
-        "zajtrk",
-        "breakfast",
-        "večerj",
-        "vecerj",
-        "prijava",
-        "odjava",
-        "check-in",
-        "check out",
-        "kosilo",
-        "večerja",
-        "vecerja",
-    ]
-    return any(pat in lowered for pat in patterns)
-
-
-def is_menu_query(message: str) -> bool:
-    lowered = message.lower()
-    reservation_indicators = ["rezerv", "sobo", "sobe", "mizo", "nočitev", "nočitve", "nocitev"]
-    if any(indicator in lowered for indicator in reservation_indicators):
-        return False
-    weekly_indicators = [
-        "teden",
-        "tedensk",
-        "čez teden",
-        "med tednom",
-        "sreda",
-        "četrtek",
-        "petek",
-        "hodni",
-        "hodn",
-        "hodov",
-        "degustacij",
-        "kulinarično",
-        "doživetje",
-    ]
-    if any(indicator in lowered for indicator in weekly_indicators):
-        return False
-    menu_keywords = ["jedilnik", "meni", "meniju", "jedo", "kuhate"]
-    if any(word in lowered for word in menu_keywords):
-        return True
-    if "vikend kosilo" in lowered or "vikend kosila" in lowered:
-        return True
-    if "kosilo" in lowered and "rezerv" not in lowered and "mizo" not in lowered:
-        return True
-    return False
+# extract_email, extract_phone, is_hours_question, is_menu_query
+# moved to app.services.validators
 
 
 def parse_month_from_text(message: str) -> Optional[int]:
@@ -1483,19 +1432,7 @@ def get_help_response() -> str:
     )
 
 
-def is_full_menu_request(message: str) -> bool:
-    lowered = message.lower()
-    return any(
-        phrase in lowered
-        for phrase in [
-            "celoten meni",
-            "celotni meni",
-            "poln meni",
-            "celoten jedilnik",
-            "celotni jedilnik",
-            "poln jedilnik",
-        ]
-    )
+# is_full_menu_request moved to app.services.validators
 
 
 def format_current_menu(month_override: Optional[int] = None, force_full: bool = False) -> str:
@@ -1572,76 +1509,8 @@ def detect_reset_request(message: str) -> bool:
     return any(word in lowered for word in reset_words + exit_words)
 
 
-def is_escape_command(message: str) -> bool:
-    lowered = message.lower()
-    escape_words = {"prekliči", "preklici", "reset", "stop", "prekini"}
-    return any(word in lowered for word in escape_words)
-
-
-def is_switch_topic_command(message: str) -> bool:
-    lowered = message.lower()
-    switch_words = {
-        "zamenjaj temo",
-        "menjaj temo",
-        "nova tema",
-        "spremeni temo",
-        "gremo drugam",
-        "druga tema",
-    }
-    return any(phrase in lowered for phrase in switch_words)
-
-
-def is_affirmative(message: str) -> bool:
-    lowered = message.strip().lower()
-    return lowered in {
-        "da",
-        "ja",
-        "seveda",
-        "potrjujem",
-        "potrdim",
-        "potrdi",
-        "zelim",
-        "želim",
-        "zelimo",
-        "želimo",
-        "rad bi",
-        "rada bi",
-        "bi",
-        "yes",
-        "oui",
-        "ok",
-        "okej",
-        "okey",
-        "sure",
-        "yep",
-        "yeah",
-    }
-
-
-def is_negative(message: str) -> bool:
-    lowered = message.strip().lower()
-    if lowered in {"ne", "no", "ne hvala", "no thanks", "nič", "nima veze"}:
-        return True
-    return any(
-        phrase in lowered
-        for phrase in [
-            "ne bom",
-            "ne želim",
-            "ne zelim",
-            "ne rabim",
-            "ne potrebujem",
-            "ne naroč",
-            "ne naroc",
-            "prekliči",
-            "preklici",
-            "stop",
-        ]
-    )
-
-
-def is_contact_request(message: str) -> bool:
-    lowered = message.lower()
-    return any(token in lowered for token in ["kontakt", "telefon", "email", "e-po", "klic", "pokli", "številk"])
+# is_escape_command, is_switch_topic_command, is_affirmative, is_negative, is_contact_request
+# moved to app.services.validators
 
 
 def has_wine_context(text: str) -> bool:
@@ -1649,22 +1518,7 @@ def has_wine_context(text: str) -> bool:
     return any(token in lowered for token in ["vinska klet", "vinograd", "klet", "degustacij", "vino", "vinar"])
 
 
-def is_confirmation_question(text: str) -> bool:
-    lowered = text.lower()
-    return any(
-        token in lowered
-        for token in [
-            "želite",
-            "zelite",
-            "potrdite",
-            "potrdim",
-            "potrdi",
-            "potrditi",
-            "confirm",
-            "would you like",
-            "can i",
-        ]
-    )
+# is_confirmation_question moved to app.services.validators
 
 
 def llm_is_affirmative(message: str, last_bot: str, detected_lang: str) -> bool:
@@ -1738,188 +1592,8 @@ def last_bot_mentions_product_order(last_bot: str) -> bool:
     return False
 
 
-def get_greeting_response() -> str:
-    return random.choice(GREETINGS)
-
-
-def get_goodbye_response() -> str:
-    return random.choice(THANKS_RESPONSES)
-
-
-def is_goodbye(message: str) -> bool:
-    lowered = message.lower().strip()
-    if lowered in GOODBYE_KEYWORDS:
-        return True
-    if any(keyword in lowered for keyword in ["hvala", "adijo", "nasvidenje", "čao", "ciao", "bye"]):
-        return True
-    return False
-
-
-def detect_language(message: str) -> str:
-    """Zazna jezik sporočila. Vrne 'si', 'en' ali 'de'."""
-    lowered = message.lower()
-    
-    # Slovenske besede, ki vsebujejo angleške nize (izjeme), odstranimo pred detekcijo
-    slovak_exceptions = ["liker", "likerj", " like ", "slike"]
-    for exc in slovak_exceptions:
-        lowered = lowered.replace(exc, "")
-
-    german_words = [
-        "ich",
-        "sie",
-        "wir",
-        "haben",
-        "möchte",
-        "möchten",
-        "können",
-        "bitte",
-        "zimmer",
-        "tisch",
-        "reservierung",
-        "reservieren",
-        "buchen",
-        "wann",
-        "wie",
-        "was",
-        "wo",
-        "gibt",
-        "guten tag",
-        "hallo",
-        "danke",
-        "preis",
-        "kosten",
-        "essen",
-        "trinken",
-        "wein",
-        "frühstück",
-        "abendessen",
-        "mittag",
-        "nacht",
-        "übernachtung",
-    ]
-    german_count = sum(1 for word in german_words if word in lowered)
-
-    # posebna obravnava angleškega zaimka "I" kot samostojne besede
-    english_pronoun = 1 if re.search(r"\bi\b", lowered) else 0
-
-    english_words = [
-        " we ",
-        "you",
-        "have",
-        "would",
-        " like ",
-        "want",
-        "can",
-        "room",
-        "table",
-        "reservation",
-        "reserve",
-        "book",
-        "booking",
-        "when",
-        "how",
-        "what",
-        "where",
-        "there",
-        "hello",
-        "hi ",
-        "thank",
-        "price",
-        "cost",
-        "food",
-        "drink",
-        "wine",
-        "menu",
-        "breakfast",
-        "dinner",
-        "lunch",
-        "night",
-        "stay",
-        "please",
-    ]
-    english_count = english_pronoun + sum(1 for word in english_words if word in lowered)
-
-    if german_count >= 2:
-        return "de"
-    if english_count >= 2:
-        return "en"
-    if german_count == 1 and english_count == 0:
-        return "de"
-    if english_count == 1 and german_count == 0:
-        return "en"
-
-    return "si"
-
-
-def translate_reply(reply: str, lang: str) -> str:
-    """Prevede odgovor v angleščino ali nemščino, če je potrebno."""
-    if not reply or lang not in {"en", "de"}:
-        return reply
-    try:
-        prompt = (
-            f"Translate this to English, keep it natural and friendly:\n{reply}"
-            if lang == "en"
-            else f"Translate this to German/Deutsch, keep it natural and friendly:\n{reply}"
-        )
-        return generate_llm_answer(prompt, history=[])
-    except Exception:
-        return reply
-
-
-def maybe_translate(text: str, target_lang: str) -> str:
-    """Po potrebi prevede besedilo v angleščino ali nemščino."""
-    if target_lang not in {"en", "de"} or not text:
-        return text
-    try:
-        prompt = (
-            f"Translate this to English, keep it natural and friendly:\n{text}"
-            if target_lang == "en"
-            else f"Translate this to German/Deutsch, keep it natural and friendly:\n{text}"
-        )
-        return generate_llm_answer(prompt, history=[])
-    except Exception:
-        return text
-
-
-def translate_response(text: str, target_lang: str) -> str:
-    """Prevede besedilo glede na zaznan jezik rezervacije."""
-    if target_lang == "si" or target_lang is None:
-        return text
-    try:
-        if target_lang == "en":
-            prompt = f"Translate to English, natural and friendly, only translation:\\n{text}"
-        elif target_lang == "de":
-            prompt = f"Translate to German, natural and friendly, only translation:\\n{text}"
-        else:
-            return text
-        return generate_llm_answer(prompt, history=[])
-    except Exception:
-        return text
-
-
-def is_unknown_response(response: str) -> bool:
-    """Preveri, ali odgovor nakazuje neznano informacijo."""
-    unknown_indicators = [
-        "žal ne morem",
-        "nimam informacij",
-        "ne vem",
-        "nisem prepričan",
-        "ni na voljo",
-        "podatka nimam",
-    ]
-    response_lower = response.lower()
-    return any(ind in response_lower for ind in unknown_indicators)
-
-
-def get_unknown_response(language: str = "si") -> str:
-    """Vrne prijazen odgovor, ko podatkov ni."""
-    if language == "si":
-        return random.choice(UNKNOWN_RESPONSES)
-    responses = {
-        "en": "Unfortunately, I cannot answer this question. 😊\n\nIf you share your email address, I will inquire and get back to you.",
-        "de": "Leider kann ich diese Frage nicht beantworten. 😊\n\nWenn Sie mir Ihre E-Mail-Adresse mitteilen, werde ich mich erkundigen und Ihnen antworten.",
-    }
-    return responses.get(language, "Na to vprašanje žal ne morem odgovoriti. 😊")
+# get_greeting_response, get_goodbye_response, get_unknown_response
+# moved to app.services.responses
 
 
 def normalize_loop_text(text: str) -> str:
@@ -1936,11 +1610,7 @@ def append_shop_link_if_needed(reply: str) -> str:
     return f"{reply}\n\nTrgovina: {SHOP_URL}"
 
 
-def is_email(text: str) -> bool:
-    """Preveri, ali je besedilo e-poštni naslov."""
-    import re as _re
-
-    return bool(_re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", text.strip()))
+# is_email moved to app.services.validators
 
 
 def reset_reservation_state(state: dict[str, Optional[str | int]]) -> None:
@@ -2237,9 +1907,7 @@ def handle_reservation_flow(message: str, state: dict[str, Optional[str | int]])
     )
 
 
-def is_greeting(message: str) -> bool:
-    lowered = message.lower()
-    return any(greeting in lowered for greeting in GREETING_KEYWORDS)
+# is_greeting moved to app.services.validators
 
 
 def append_today_hint(message: str, reply: str) -> str:
