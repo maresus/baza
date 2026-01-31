@@ -89,6 +89,24 @@ from app.services.interrupt_layer import (
     build_interrupt_response,
 )
 from app.services.smart_router import classify_intent as smart_classify_intent
+# Unified Routing System (new)
+from shared_core.app.services.routing import (
+    IntentType,
+    SwitchAction,
+    Decision,
+    route as unified_route,
+    InterruptManager,
+    format_interrupt_response,
+)
+from shared_core.app.services.session import (
+    get_unified_state,
+    reset_unified_state,
+    reset_flow,
+    is_in_flow,
+    start_flow,
+    FlowType,
+    FlowStep,
+)
 from app.services.language import (
     detect_language,
     maybe_translate,
@@ -150,6 +168,7 @@ from app.services.wine import WINE_LIST, WINE_KEYWORDS
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
 USE_FULL_KB_LLM = False  # False = RAG (hitro), True = full KB (počasno)
+USE_UNIFIED_ROUTER = os.getenv("USE_UNIFIED_ROUTER", "false").strip().lower() in {"1", "true", "yes", "on"}
 INQUIRY_RECIPIENT = os.getenv("INQUIRY_RECIPIENT", "satlermarko@gmail.com")
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
 _router_logger = logging.getLogger("router_v2")
@@ -1567,6 +1586,140 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     # vedno osveži jezik seje, da se lahko sproti preklaplja
     state["language"] = detected_lang
     state["session_id"] = session_id
+
+    # ========== UNIFIED ROUTER (new system) ==========
+    if USE_UNIFIED_ROUTER:
+        unified_state = get_unified_state(session_id)
+        unified_state["language"] = detected_lang
+
+        # Sync old state to unified state for backwards compatibility
+        if state.get("step") is not None:
+            if state.get("type") == "table":
+                unified_state["flow"] = FlowType.RESERVATION_TABLE.value
+            elif state.get("type") == "room":
+                unified_state["flow"] = FlowType.RESERVATION_ROOM.value
+            unified_state["step"] = state.get("step", "none")
+        elif inquiry_state.get("step") is not None:
+            unified_state["flow"] = FlowType.INQUIRY.value
+            unified_state["step"] = inquiry_state.get("step", "none")
+
+        # Route the message
+        decision = unified_route(payload.message, unified_state)
+        _router_logger.info(
+            f"[UNIFIED] intent={decision.primary_intent.value} "
+            f"confidence={decision.confidence:.2f} action={decision.action.value} "
+            f"secondary={decision.secondary_intent.value if decision.secondary_intent else None}"
+        )
+
+        def unified_finalize(reply_text: str, intent_value: str) -> ChatResponse:
+            global conversation_history
+            final_reply = maybe_translate(reply_text, detected_lang)
+            conversation_history.append({"role": "user", "content": payload.message})
+            conversation_history.append({"role": "assistant", "content": final_reply})
+            if len(conversation_history) > 12:
+                conversation_history = conversation_history[-12:]
+            _save_session_context(session_id, ctx)
+            reservation_service.log_conversation(
+                session_id=session_id,
+                user_message=payload.message,
+                bot_response=final_reply,
+                intent=intent_value,
+                needs_followup=False,
+            )
+            return ChatResponse(reply=final_reply)
+
+        # Handle AFFIRMATIVE during flow
+        if decision.primary_intent == IntentType.AFFIRMATIVE and is_in_flow(unified_state):
+            # Continue the current flow
+            reply = handle_reservation_flow(payload.message, state)
+            return unified_finalize(reply, "unified_affirmative")
+
+        # Handle NEGATIVE during flow
+        if decision.primary_intent == IntentType.NEGATIVE and is_in_flow(unified_state):
+            reset_reservation_state(state)
+            reset_flow(unified_state)
+            return unified_finalize("V redu, prekinil sem rezervacijo. Kako vam lahko pomagam?", "unified_cancel")
+
+        # Handle GREETING
+        if decision.primary_intent == IntentType.GREETING:
+            reply = get_greeting_response()
+            return unified_finalize(reply, "unified_greeting")
+
+        # Handle GOODBYE
+        if decision.primary_intent == IntentType.GOODBYE:
+            reply = get_goodbye_response()
+            return unified_finalize(reply, "unified_goodbye")
+
+        # Handle SOFT_INTERRUPT (answer question + continue flow)
+        if decision.action == SwitchAction.SOFT_INTERRUPT and is_in_flow(unified_state):
+            interrupt_answer = None
+            if decision.primary_intent == IntentType.PRODUCT:
+                interrupt_answer = answer_product_question(payload.message)
+            elif decision.primary_intent == IntentType.INFO:
+                interrupt_answer = answer_farm_info(payload.message)
+            elif decision.primary_intent == IntentType.MENU:
+                interrupt_answer = format_current_menu()
+            elif decision.primary_intent == IntentType.WINE:
+                interrupt_answer = answer_wine_question(payload.message)
+
+            if interrupt_answer:
+                resume_prompt = decision.resume_prompt or get_booking_continuation(state.get("step"), state)
+                reply = f"{interrupt_answer}\n\n---\n\n{resume_prompt}"
+                return unified_finalize(reply, f"unified_interrupt_{decision.primary_intent.value}")
+
+        # Handle HARD_SWITCH for booking intents
+        if decision.action == SwitchAction.HARD_SWITCH:
+            if decision.primary_intent == IntentType.BOOKING_TABLE:
+                reset_reservation_state(state)
+                reset_flow(unified_state)
+                state["type"] = "table"
+                start_flow(unified_state, FlowType.RESERVATION_TABLE)
+                reply = handle_reservation_flow(payload.message, state)
+                return unified_finalize(reply, "unified_booking_table")
+
+            if decision.primary_intent == IntentType.BOOKING_ROOM:
+                reset_reservation_state(state)
+                reset_flow(unified_state)
+                state["type"] = "room"
+                start_flow(unified_state, FlowType.RESERVATION_ROOM)
+                reply = handle_reservation_flow(payload.message, state)
+                return unified_finalize(reply, "unified_booking_room")
+
+        # Handle INFO
+        if decision.primary_intent == IntentType.INFO:
+            reply = answer_farm_info(payload.message)
+            return unified_finalize(reply, "unified_info")
+
+        # Handle PRODUCT
+        if decision.primary_intent == IntentType.PRODUCT:
+            reply = answer_product_question(payload.message)
+            reply = append_shop_link_if_needed(reply)
+            return unified_finalize(reply, "unified_product")
+
+        # Handle MENU
+        if decision.primary_intent == IntentType.MENU:
+            reply = format_current_menu()
+            return unified_finalize(reply, "unified_menu")
+
+        # Handle WINE
+        if decision.primary_intent == IntentType.WINE:
+            reply = answer_wine_question(payload.message)
+            return unified_finalize(reply, "unified_wine")
+
+        # If in reservation flow, continue it
+        if state.get("step") is not None:
+            reply = handle_reservation_flow(payload.message, state)
+            return unified_finalize(reply, "unified_reservation_continue")
+
+        # Fallback to LLM/RAG
+        llm_reply = _llm_answer(payload.message, conversation_history)
+        if llm_reply:
+            return unified_finalize(llm_reply, "unified_llm")
+
+        # Final fallback
+        return unified_finalize(get_unknown_response(detected_lang), "unified_unknown")
+
+    # ========== END UNIFIED ROUTER ==========
 
     # Guard: če uporabnik jasno spremeni namen, prekinemo aktivni flow
     if USE_ROUTER_V2 and (state.get("step") is not None or inquiry_state.get("step")):
