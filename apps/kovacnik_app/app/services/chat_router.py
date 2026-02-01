@@ -1252,6 +1252,19 @@ def append_shop_link_if_needed(reply: str) -> str:
 # reset_reservation_state moved to app.services.session
 
 
+def _tourism_barrier_reply(message: str) -> str | None:
+    lowered = message.lower()
+    if "smuči" in lowered or "smuc" in lowered or "smučišče" in lowered or "smucisce" in lowered:
+        return (
+            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje in Areh), "
+            "približno 30–45 minut vožnje."
+        )
+    if "terme" in lowered or "toplice" in lowered:
+        return "V bližini sta Terme Zreče (~35–40 min) in Terme Ptuj (~40–45 min vožnje)."
+    if is_tourist_query(message):
+        return "V okolici je več možnosti za izlete; za natančne informacije priporočamo uradne strani ponudnikov."
+    return None
+
 def start_inquiry_consent(state: dict[str, Optional[str]]) -> str:
     state["step"] = "awaiting_consent"
     return (
@@ -1266,13 +1279,8 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
     lowered = text.lower()
     step = state.get("step")
     if is_info_query(message) or detect_info_intent(message):
-        tourist_reply = answer_tourist_question(message)
-        if not tourist_reply and is_tourist_query(message):
-            tourist_reply = (
-                "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
-                "Če želite, povejte katero smučišče vas zanima za točne razdalje."
-            )
-        info_reply = tourist_reply if tourist_reply else answer_farm_info(message)
+        tourism_reply = _tourism_barrier_reply(message)
+        info_reply = tourism_reply if tourism_reply else answer_farm_info(message)
         return f"{info_reply}\n\n---\n\nŽelite nadaljevati povpraševanje? (da/ne)"
     if is_product_query(message):
         product_reply = answer_product_question(message)
@@ -1725,13 +1733,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             if decision.primary_intent == IntentType.PRODUCT:
                 interrupt_answer = answer_product_question(payload.message)
             elif decision.primary_intent == IntentType.INFO:
-                tourist_reply = answer_tourist_question(payload.message)
-                if not tourist_reply and is_tourist_query(payload.message):
-                    tourist_reply = (
-                        "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
-                        "Če želite, povejte katero smučišče vas zanima za točne razdalje."
-                    )
-                interrupt_answer = tourist_reply if tourist_reply else answer_farm_info(payload.message)
+                tourism_reply = _tourism_barrier_reply(payload.message)
+                interrupt_answer = tourism_reply if tourism_reply else answer_farm_info(payload.message)
             elif decision.primary_intent == IntentType.MENU:
                 interrupt_answer = format_current_menu()
             elif decision.primary_intent == IntentType.WINE:
@@ -1758,17 +1761,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     product_reply = append_shop_link_if_needed(product_reply)
                     reply = f"{product_reply}\n\n---\n\n{booking_reply}"
                 elif decision.secondary_intent == IntentType.INFO:
-                    tourist_reply = answer_tourist_question(payload.message)
-                    if tourist_reply:
-                        info_reply = tourist_reply
-                    elif is_tourist_query(payload.message):
-                        info_reply = (
-                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
-                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
-                        )
-                        ctx["pending_tourism"] = True
-                    else:
-                        info_reply = answer_farm_info(payload.message)
+                    info_reply = _tourism_barrier_reply(payload.message) or answer_farm_info(payload.message)
                     reply = f"{info_reply}\n\n---\n\n{booking_reply}"
                 else:
                     reply = booking_reply
@@ -1788,17 +1781,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     product_reply = append_shop_link_if_needed(product_reply)
                     reply = f"{product_reply}\n\n---\n\n{booking_reply}"
                 elif decision.secondary_intent == IntentType.INFO:
-                    tourist_reply = answer_tourist_question(payload.message)
-                    if tourist_reply:
-                        info_reply = tourist_reply
-                    elif is_tourist_query(payload.message):
-                        info_reply = (
-                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
-                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
-                        )
-                        ctx["pending_tourism"] = True
-                    else:
-                        info_reply = answer_farm_info(payload.message)
+                    info_reply = _tourism_barrier_reply(payload.message) or answer_farm_info(payload.message)
                     reply = f"{info_reply}\n\n---\n\n{booking_reply}"
                 else:
                     reply = booking_reply
@@ -1819,17 +1802,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     product_reply = append_shop_link_if_needed(product_reply)
                     reply = f"{product_reply}\n\n---\n\n{booking_reply}"
                 elif decision.secondary_intent == IntentType.INFO:
-                    tourist_reply = answer_tourist_question(payload.message)
-                    if tourist_reply:
-                        info_reply = tourist_reply
-                    elif is_tourist_query(payload.message):
-                        info_reply = (
-                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
-                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
-                        )
-                        ctx["pending_tourism"] = True
-                    else:
-                        info_reply = answer_farm_info(payload.message)
+                    info_reply = _tourism_barrier_reply(payload.message) or answer_farm_info(payload.message)
                     reply = f"{info_reply}\n\n---\n\n{booking_reply}"
                 else:
                     reply = booking_reply
@@ -1847,17 +1820,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     product_reply = append_shop_link_if_needed(product_reply)
                     reply = f"{product_reply}\n\n---\n\n{booking_reply}"
                 elif decision.secondary_intent == IntentType.INFO:
-                    tourist_reply = answer_tourist_question(payload.message)
-                    if tourist_reply:
-                        info_reply = tourist_reply
-                    elif is_tourist_query(payload.message):
-                        info_reply = (
-                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
-                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
-                        )
-                        ctx["pending_tourism"] = True
-                    else:
-                        info_reply = answer_farm_info(payload.message)
+                    info_reply = _tourism_barrier_reply(payload.message) or answer_farm_info(payload.message)
                     reply = f"{info_reply}\n\n---\n\n{booking_reply}"
                 else:
                     reply = booking_reply
@@ -1893,13 +1856,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
         # Handle INFO
         if decision.primary_intent == IntentType.INFO:
-            tourist_reply = answer_tourist_question(payload.message)
-            if not tourist_reply and is_tourist_query(payload.message):
-                tourist_reply = (
-                    "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
-                    "Če želite, povejte katero smučišče vas zanima za točne razdalje."
-                )
-            reply = tourist_reply if tourist_reply else answer_farm_info(payload.message)
+            reply = _tourism_barrier_reply(payload.message) or answer_farm_info(payload.message)
             return unified_finalize(reply, "unified_info")
 
         # Handle PRODUCT
@@ -1984,8 +1941,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 if info_key:
                     interrupt_answer = get_info_response(info_key)
                 else:
-                    tourist = answer_tourist_question(payload.message)
-                    interrupt_answer = tourist if tourist else random.choice(UNKNOWN_RESPONSES)
+                    tourism_reply = _tourism_barrier_reply(payload.message)
+                    interrupt_answer = tourism_reply if tourism_reply else random.choice(UNKNOWN_RESPONSES)
 
             resume_prompt = unified_build_resume_prompt(get_booking_continuation, state)
             reply = unified_build_interrupt_response(interrupt_answer, resume_prompt)
