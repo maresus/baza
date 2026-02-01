@@ -1,0 +1,425 @@
+"""
+Confidence scoring for health center intent detection.
+3-level system: HARD_SWITCH (>0.8), SOFT_INTERRUPT (0.5-0.8), IGNORE (<0.5)
+"""
+from __future__ import annotations
+
+from enum import Enum
+from typing import Dict, Tuple
+import re
+
+
+class SwitchAction(str, Enum):
+    HARD_SWITCH = "hard_switch"
+    SOFT_INTERRUPT = "soft_interrupt"
+    IGNORE = "ignore"
+
+
+def decide_action(confidence: float) -> SwitchAction:
+    if confidence >= 0.8:
+        return SwitchAction.HARD_SWITCH
+    if confidence >= 0.5:
+        return SwitchAction.SOFT_INTERRUPT
+    return SwitchAction.IGNORE
+
+
+# ============ APPOINTMENT BOOKING KEYWORDS ============
+
+APPOINTMENT_KEYWORDS = {
+    "termin",
+    "naročiti",
+    "narociti",
+    "naročim",
+    "narocim",
+    "naročilo",
+    "narocilo",
+    "rezerv",
+    "pregled",
+    "kontrola",
+    "kontrolo",
+    "obisk",
+    "priti",
+    "pridem",
+}
+
+BOOKING_HINTS = {
+    "rad bi",
+    "rada bi",
+    "bi rad",
+    "bi rada",
+    "želim",
+    "zelim",
+    "rabim",
+    "potrebujem",
+    "lahko naročim",
+    "lahko narocim",
+    "se naročim",
+    "se narocim",
+}
+
+# ============ SERVICE TYPE KEYWORDS ============
+
+DERMATOLOGY_KEYWORDS = {
+    "dermatolog",
+    "dermato",
+    "koža",
+    "koza",
+    "kožn",
+    "kozn",
+    "akne",
+    "luskavica",
+    "psoriaza",
+    "izpuščaj",
+    "izpuscaj",
+    "madež",
+    "madez",
+    "melanom",
+    "znamenje",
+    "bradavic",
+    "glivic",
+}
+
+ORTHOPEDICS_KEYWORDS = {
+    "ortoped",
+    "hrbet",
+    "hrbten",
+    "koleno",
+    "kolk",
+    "rama",
+    "ramo",
+    "sklep",
+    "mišic",
+    "misic",
+    "bolečin",
+    "bolecin",
+    "poškodb",
+    "poskodb",
+    "športn",
+    "sportn",
+    "zlom",
+}
+
+OPHTHALMOLOGY_KEYWORDS = {
+    "okulist",
+    "oftalmolog",
+    "očal",
+    "ocal",
+    "leče",
+    "lece",
+    "očesn",
+    "ocesn",
+}
+
+# Keywords that need word boundary matching (to avoid "oci" in "naročilo")
+OPHTHALMOLOGY_WORDS = {
+    "oči",
+    "oci",
+    "vid",
+}
+
+AESTHETIC_KEYWORDS = {
+    "botox",
+    "filler",
+    "fillerj",
+    "estetsk",
+    "biorevital",
+    "pomlajev",
+    "gube",
+    "gubic",
+}
+
+LASER_KEYWORDS = {
+    "laser",
+    "lasersk",
+    "žilic",
+    "zilic",
+    "kapilare",
+}
+
+PHYSIOTHERAPY_KEYWORDS = {
+    "fizioterapevt",
+    "fizioterapij",
+    "fizikalna",
+    "rehabilit",
+    "masaž",
+    "masaz",
+    "razgib",
+    "vaje",
+}
+
+COSMETICS_KEYWORDS = {
+    "kozmetik",
+    "kozmetičn",
+    "kozmeticn",
+    "nega",
+    "obraz",
+    "tretma",
+}
+
+# All service keywords combined
+SERVICE_KEYWORDS = (
+    DERMATOLOGY_KEYWORDS
+    | ORTHOPEDICS_KEYWORDS
+    | OPHTHALMOLOGY_KEYWORDS
+    | AESTHETIC_KEYWORDS
+    | LASER_KEYWORDS
+    | PHYSIOTHERAPY_KEYWORDS
+    | COSMETICS_KEYWORDS
+)
+
+# General service inquiry keywords (for SERVICE_INFO intent)
+SERVICE_INQUIRY_KEYWORDS = {
+    "bolezni",
+    "zdravite",
+    "zdravijo",
+    "delate",
+    "ponujate",
+    "storitve",
+    "kakšne",
+    "katere",
+    "a delate",
+    "a zdravite",
+    "kaj pomaga",
+}
+
+# ============ INFO KEYWORDS ============
+
+INFO_KEYWORDS = {
+    "kdaj",
+    "kje",
+    "kam",
+    "odprto",
+    "odprti",
+    "delovni čas",
+    "delovni cas",
+    "ura",
+    "urnik",
+    "naslov",
+    "lokacija",
+    "parking",
+    "parkirišče",
+    "parkirisce",
+    "kontakt",
+    "telefon",
+    "email",
+    "e-mail",
+    "kako pridem",
+    "kje ste",
+}
+
+PRICE_KEYWORDS = {
+    "cena",
+    "cenik",
+    "koliko stane",
+    "koliko stan",
+    "cene",
+    "stroški",
+    "stroski",
+    "plačilo",
+    "placilo",
+    "račun",
+    "racun",
+    "zavarovanje",
+    "zzzs",
+    "dopolnilno",
+}
+
+# ============ GREETING/GOODBYE ============
+
+GREETING_KEYWORDS = {
+    "zdravo",
+    "živjo",
+    "zivjo",
+    "dobro jutro",
+    "dober dan",
+    "hello",
+    "hi",
+    "pozdravljeni",
+}
+
+GOODBYE_KEYWORDS = {
+    "hvala",
+    "adijo",
+    "nasvidenje",
+    "lep pozdrav",
+    "pozdrav",
+    "bye",
+    "čao",
+    "cao",
+    "ciao",
+    "se vidimo",
+    "na svidenje",
+}
+
+# ============ URGENCY KEYWORDS ============
+
+URGENCY_KEYWORDS = {
+    "nujno",
+    "takoj",
+    "danes",
+    "čimprej",
+    "cimprej",
+    "urgentno",
+    "hudo",
+    "zelo boli",
+    "močno boli",
+    "mocno boli",
+}
+
+QUESTION_MARKERS = {"?", "ali", "a ", "a imate", "imate", "kaj", "koliko", "kdaj", "kje"}
+
+
+def _score_from_keywords(message: str, keywords: set[str]) -> float:
+    return 0.4 if any(k in message for k in keywords) else 0.0
+
+
+def _score_question_marker(message: str) -> float:
+    return 0.3 if any(m in message for m in QUESTION_MARKERS) else 0.0
+
+
+def _contains_word(message: str, words: set[str]) -> bool:
+    """Word-boundary match to avoid false positives."""
+    return any(re.search(rf"\b{re.escape(w)}\b", message, re.IGNORECASE) for w in words)
+
+
+def _detect_service_type(text: str) -> str | None:
+    """Detect specific service type from message."""
+    # Order matters - more specific first, then check word-boundary matches
+    if any(k in text for k in DERMATOLOGY_KEYWORDS):
+        return "DERMATOLOG"
+    if any(k in text for k in ORTHOPEDICS_KEYWORDS):
+        return "ORTOPED"
+    # Check LASER and PHYSIOTHERAPY before OPHTHALMOLOGY (more specific)
+    if any(k in text for k in LASER_KEYWORDS):
+        return "LASERSKI_POSEG"
+    if any(k in text for k in PHYSIOTHERAPY_KEYWORDS):
+        return "FIZIOTERAPIJA"
+    if any(k in text for k in AESTHETIC_KEYWORDS):
+        return "ESTETSKI_POSEG"
+    if any(k in text for k in COSMETICS_KEYWORDS):
+        return "KOZMETIKA"
+    # OPHTHALMOLOGY last - check both substring and word-boundary
+    if any(k in text for k in OPHTHALMOLOGY_KEYWORDS):
+        return "OKULIST"
+    if _contains_word(text, OPHTHALMOLOGY_WORDS):
+        return "OKULIST"
+    if any(k in text for k in COSMETICS_KEYWORDS):
+        return "KOZMETIKA"
+    return None
+
+
+def compute_confidence(message: str, intent: str) -> float:
+    """Compute confidence score for given intent."""
+    text = message.lower()
+
+    if intent == "GREETING":
+        return 1.0 if any(k in text for k in GREETING_KEYWORDS) else 0.0
+
+    if intent == "GOODBYE":
+        return 1.0 if any(k in text for k in GOODBYE_KEYWORDS) else 0.0
+
+    if intent == "BOOKING_APPOINTMENT":
+        # Need both appointment keyword AND service/booking hint
+        has_appointment_kw = any(k in text for k in APPOINTMENT_KEYWORDS)
+        has_service_kw = any(k in text for k in SERVICE_KEYWORDS)
+        has_booking_hint = any(k in text for k in BOOKING_HINTS)
+        has_inquiry_kw = any(k in text for k in SERVICE_INQUIRY_KEYWORDS)
+
+        # If inquiry keywords present, this is likely SERVICE_INFO not booking
+        if has_inquiry_kw:
+            return 0.3  # Lower than SERVICE_INFO's 0.9
+
+        # Strong signal: explicit appointment + service type
+        if has_appointment_kw and has_service_kw:
+            return 0.95
+
+        # Strong signal: booking hint + service type
+        if has_booking_hint and has_service_kw:
+            return 0.9
+
+        # Medium signal: just appointment keyword
+        if has_appointment_kw:
+            base = 0.6
+            if has_booking_hint:
+                base += 0.2
+            base += _score_question_marker(text)
+            return min(base, 1.0)
+
+        # Weak signal: service + question (might be info request)
+        if has_service_kw and has_booking_hint:
+            return 0.7
+
+        return 0.0
+
+    if intent == "SERVICE_INFO":
+        # Questions about services (not booking)
+        has_service_kw = any(k in text for k in SERVICE_KEYWORDS)
+        has_inquiry_kw = any(k in text for k in SERVICE_INQUIRY_KEYWORDS)
+        has_booking_hint = any(k in text for k in BOOKING_HINTS) or any(k in text for k in APPOINTMENT_KEYWORDS)
+
+        # Strong signal: service + inquiry keyword (e.g., "kaj zdravi dermatolog?")
+        if has_service_kw and has_inquiry_kw:
+            return 0.9
+
+        # Medium signal: just inquiry keywords (e.g., "katere bolezni zdravite?")
+        if has_inquiry_kw:
+            return 0.85
+
+        # Service keyword without booking hint
+        if has_service_kw and not has_booking_hint:
+            return 0.8
+
+        # Service keyword with booking hint = likely BOOKING_APPOINTMENT
+        if has_service_kw:
+            return 0.3
+
+        return 0.0
+
+    if intent == "PRICE":
+        if any(k in text for k in PRICE_KEYWORDS):
+            return 0.9
+        return 0.0
+
+    if intent == "INFO":
+        if any(k in text for k in INFO_KEYWORDS):
+            return 0.8
+        base = _score_question_marker(text)
+        return min(base, 1.0)
+
+    if intent == "URGENCY":
+        if any(k in text for k in URGENCY_KEYWORDS):
+            return 0.95
+        return 0.0
+
+    return 0.0
+
+
+def detect_intents(message: str) -> Dict[str, float]:
+    """Score all intents for given message."""
+    intents = [
+        "BOOKING_APPOINTMENT",
+        "SERVICE_INFO",
+        "PRICE",
+        "INFO",
+        "URGENCY",
+        "GREETING",
+        "GOODBYE",
+    ]
+    return {intent: compute_confidence(message, intent) for intent in intents}
+
+
+def pick_primary_secondary(scores: Dict[str, float]) -> Tuple[str, str | None, float]:
+    """Pick primary and secondary intent from scores."""
+    sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    primary, primary_conf = sorted_scores[0]
+    if primary_conf < 0.5:
+        return "GENERAL", None, 0.0
+    secondary = None
+    if len(sorted_scores) > 1 and sorted_scores[1][1] >= 0.5:
+        secondary = sorted_scores[1][0]
+    return primary, secondary, primary_conf
+
+
+def detect_service_type(message: str) -> str | None:
+    """Public function to detect service type."""
+    return _detect_service_type(message.lower())
