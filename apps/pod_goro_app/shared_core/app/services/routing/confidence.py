@@ -27,7 +27,7 @@ RESERVATION_KEYWORDS = {
 }
 
 TABLE_KEYWORDS = {"miza", "mizo", "mize", "table"}
-ROOM_KEYWORDS = {"soba", "sobo", "sobe", "nočitev", "nocitev", "room", "overnight"}
+ROOM_KEYWORDS = {"soba", "sobo", "sobe", "nočitev", "nocitev", "prenočitev", "prenocitev", "room", "overnight"}
 
 INFO_KEYWORDS = {
     "kdaj",
@@ -95,8 +95,8 @@ INQUIRY_KEYWORDS = {
     "catering",
 }
 
-GREETING_KEYWORDS = {"zdravo", "živjo", "pozdrav", "dobro jutro", "dober dan", "hello", "hi"}
-GOODBYE_KEYWORDS = {"hvala", "adijo", "nasvidenje", "lep pozdrav", "bye"}
+GREETING_KEYWORDS = {"zdravo", "živjo", "dobro jutro", "dober dan", "hello", "hi"}
+GOODBYE_KEYWORDS = {"hvala", "adijo", "nasvidenje", "lep pozdrav", "pozdrav", "bye", "čao", "ciao"}
 
 WINE_KEYWORDS = {
     "vino", "vina", "vin",
@@ -153,6 +153,9 @@ def compute_confidence(message: str, intent: str) -> float:
 
     if intent == "PRODUCT":
         if any(k in text for k in PRODUCT_KEYWORDS):
+            # Boost if purchase intent present
+            if any(p in text for p in ["kupi", "naroč", "naroci", "cena", "cenik"]):
+                return 0.95
             return 0.8
         base = _score_question_marker(text)
         return min(base, 1.0)

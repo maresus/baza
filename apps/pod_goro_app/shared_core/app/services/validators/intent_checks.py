@@ -101,6 +101,8 @@ def is_hours_question(message: str) -> bool:
 def is_menu_query(message: str) -> bool:
     """Check if message is asking about menu."""
     lowered = message.lower()
+    if is_hours_question(message) or "zadnji prihod" in lowered:
+        return False
     reservation_indicators = ["rezerv", "sobo", "sobe", "mizo", "nočitev", "nočitve", "nocitev"]
     if any(indicator in lowered for indicator in reservation_indicators):
         return False

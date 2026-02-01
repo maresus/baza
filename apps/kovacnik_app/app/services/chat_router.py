@@ -1634,17 +1634,47 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             )
             return ChatResponse(reply=final_reply)
 
+        # Tourism follow-up: če smo prej prosili za smučišče, odgovorimo in nadaljujemo
+        if ctx.get("pending_tourism"):
+            ctx["pending_tourism"] = False
+            resort = payload.message.strip()
+            tourism_reply = (
+                f"Hvala! Za točne razdalje do {resort} jih trenutno nimam pri roki. "
+                "Lahko preverim in vam sporočim."
+            )
+            if state.get("step") is not None:
+                continuation = get_booking_continuation(state.get("step"), state)
+                if continuation.startswith("Lahko nadaljujemo"):
+                    if state.get("type") == "room":
+                        continuation = "Za kateri datum prihoda bi želeli rezervirati sobo?"
+                    elif state.get("type") == "table":
+                        continuation = "Za kateri datum bi rezervirali mizo?"
+                tourism_reply = f"{tourism_reply}\n\n---\n\n{continuation}"
+            return unified_finalize(tourism_reply, "unified_tourism_followup")
+
+        # Inquiry flow should continue even if message doesn't look like INQUIRY
+        if inquiry_state.get("step") is not None:
+            inquiry_reply = handle_inquiry_flow(payload.message, inquiry_state, session_id)
+            if inquiry_reply:
+                inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
+                return unified_finalize(inquiry_reply, "unified_inquiry_flow")
+
         # Handle AFFIRMATIVE during flow
         if decision.primary_intent == IntentType.AFFIRMATIVE and is_in_flow(unified_state):
             # Continue the current flow
             reply = handle_reservation_flow(payload.message, state)
             return unified_finalize(reply, "unified_affirmative")
 
-        # Handle NEGATIVE during flow
+        # Handle NEGATIVE during flow (do not cancel implicitly; let the flow interpret "ne")
         if decision.primary_intent == IntentType.NEGATIVE and is_in_flow(unified_state):
-            reset_reservation_state(state)
-            reset_flow(unified_state)
-            return unified_finalize("V redu, prekinil sem rezervacijo. Kako vam lahko pomagam?", "unified_cancel")
+            if state.get("step") is not None:
+                reply = handle_reservation_flow(payload.message, state)
+                return unified_finalize(reply, "unified_negative_flow")
+            if inquiry_state.get("step") is not None:
+                inquiry_reply = handle_inquiry_flow(payload.message, inquiry_state, session_id)
+                if inquiry_reply:
+                    inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
+                    return unified_finalize(inquiry_reply, "unified_inquiry_negative")
 
         # Handle GREETING
         if decision.primary_intent == IntentType.GREETING:
@@ -1655,6 +1685,21 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if decision.primary_intent == IntentType.GOODBYE:
             reply = get_goodbye_response()
             return unified_finalize(reply, "unified_goodbye")
+
+        # Handle INQUIRY (teambuilding/poroka/catering)
+        if decision.primary_intent == IntentType.INQUIRY:
+            if inquiry_state.get("step") is None:
+                if is_strong_inquiry_request(payload.message):
+                    inquiry_state["details"] = payload.message.strip()
+                    inquiry_state["step"] = "awaiting_deadline"
+                    reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+                else:
+                    reply = start_inquiry_consent(inquiry_state)
+                return unified_finalize(reply, "unified_inquiry_start")
+            inquiry_reply = handle_inquiry_flow(payload.message, inquiry_state, session_id)
+            if inquiry_reply:
+                inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
+                return unified_finalize(inquiry_reply, "unified_inquiry_continue")
 
         # Handle SOFT_INTERRUPT (answer question + continue flow)
         if decision.action == SwitchAction.SOFT_INTERRUPT and is_in_flow(unified_state):
@@ -1681,11 +1726,24 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "table"
                 start_flow(unified_state, FlowType.RESERVATION_TABLE)
                 booking_reply = handle_reservation_flow(payload.message, state)
-                # Handle secondary intent (mixed: miza + marmelada)
+                # Handle secondary intent (mixed: miza + info/produkt)
                 if decision.secondary_intent == IntentType.PRODUCT:
                     product_reply = answer_product_question(payload.message)
                     product_reply = append_shop_link_if_needed(product_reply)
                     reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+                elif decision.secondary_intent == IntentType.INFO:
+                    tourist_reply = answer_tourist_question(payload.message)
+                    if tourist_reply:
+                        info_reply = tourist_reply
+                    elif is_tourist_query(payload.message):
+                        info_reply = (
+                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
+                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
+                        )
+                        ctx["pending_tourism"] = True
+                    else:
+                        info_reply = answer_farm_info(payload.message)
+                    reply = f"{info_reply}\n\n---\n\n{booking_reply}"
                 else:
                     reply = booking_reply
                 return unified_finalize(reply, "unified_booking_table")
@@ -1696,22 +1754,90 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "room"
                 start_flow(unified_state, FlowType.RESERVATION_ROOM)
                 booking_reply = handle_reservation_flow(payload.message, state)
-                # Handle secondary intent (mixed: soba + marmelada)
+                # Handle secondary intent (mixed: soba + info/produkt)
                 if decision.secondary_intent == IntentType.PRODUCT:
                     product_reply = answer_product_question(payload.message)
                     product_reply = append_shop_link_if_needed(product_reply)
                     reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+                elif decision.secondary_intent == IntentType.INFO:
+                    tourist_reply = answer_tourist_question(payload.message)
+                    if tourist_reply:
+                        info_reply = tourist_reply
+                    elif is_tourist_query(payload.message):
+                        info_reply = (
+                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
+                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
+                        )
+                        ctx["pending_tourism"] = True
+                    else:
+                        info_reply = answer_farm_info(payload.message)
+                    reply = f"{info_reply}\n\n---\n\n{booking_reply}"
                 else:
                     reply = booking_reply
                 return unified_finalize(reply, "unified_booking_room")
 
+        # Handle booking intent when idle (start fresh flow)
+        if not is_in_flow(unified_state) and state.get("step") is None:
+            if decision.primary_intent == IntentType.BOOKING_TABLE:
+                reset_reservation_state(state)
+                reset_flow(unified_state)
+                state["type"] = "table"
+                start_flow(unified_state, FlowType.RESERVATION_TABLE)
+                booking_reply = handle_reservation_flow(payload.message, state)
+                if decision.secondary_intent == IntentType.PRODUCT:
+                    product_reply = answer_product_question(payload.message)
+                    product_reply = append_shop_link_if_needed(product_reply)
+                    reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+                elif decision.secondary_intent == IntentType.INFO:
+                    tourist_reply = answer_tourist_question(payload.message)
+                    if tourist_reply:
+                        info_reply = tourist_reply
+                    elif is_tourist_query(payload.message):
+                        info_reply = (
+                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
+                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
+                        )
+                        ctx["pending_tourism"] = True
+                    else:
+                        info_reply = answer_farm_info(payload.message)
+                    reply = f"{info_reply}\n\n---\n\n{booking_reply}"
+                else:
+                    reply = booking_reply
+                return unified_finalize(reply, "unified_booking_table_start")
+            if decision.primary_intent == IntentType.BOOKING_ROOM:
+                reset_reservation_state(state)
+                reset_flow(unified_state)
+                state["type"] = "room"
+                start_flow(unified_state, FlowType.RESERVATION_ROOM)
+                booking_reply = handle_reservation_flow(payload.message, state)
+                if decision.secondary_intent == IntentType.PRODUCT:
+                    product_reply = answer_product_question(payload.message)
+                    product_reply = append_shop_link_if_needed(product_reply)
+                    reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+                elif decision.secondary_intent == IntentType.INFO:
+                    tourist_reply = answer_tourist_question(payload.message)
+                    if tourist_reply:
+                        info_reply = tourist_reply
+                    elif is_tourist_query(payload.message):
+                        info_reply = (
+                            "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
+                            "Če želite, povejte katero smučišče vas zanima za točne razdalje."
+                        )
+                        ctx["pending_tourism"] = True
+                    else:
+                        info_reply = answer_farm_info(payload.message)
+                    reply = f"{info_reply}\n\n---\n\n{booking_reply}"
+                else:
+                    reply = booking_reply
+                return unified_finalize(reply, "unified_booking_room_start")
+
         # Handle SWITCH from one booking type to another during active flow
         if is_in_flow(unified_state) and state.get("step") is not None:
-            lowered_msg = payload.message.lower()
             current_type = state.get("type")
-            # Check if user wants to switch to room
-            wants_room = any(kw in lowered_msg for kw in ["sobo", "soba", "sobe", "room", "nočitev", "nocitev", "prenočitev"])
-            wants_table = any(kw in lowered_msg for kw in ["mizo", "miza", "mize", "table", "kosilo"])
+            detected_switch = parse_reservation_type(payload.message)
+            # Use word-boundary aware detection (avoids "sobota" -> "sobo")
+            wants_room = detected_switch == "room"
+            wants_table = detected_switch == "table"
 
             if wants_room and current_type == "table":
                 reset_reservation_state(state)

@@ -2352,6 +2352,47 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "interrupt_unified", followup_flag=False)
 
+    # Unified router: start booking flow when idle
+    if USE_UNIFIED_ROUTER and state.get("step") is None and inquiry_state.get("step") is None:
+        decision = unified_route_decide(payload.message, state, inquiry_state)
+        primary_intent = decision.get("primary_intent")
+        secondary_intent = decision.get("secondary_intent")
+        if primary_intent in {"BOOKING_TABLE", "BOOKING_ROOM"}:
+            reset_reservation_state(state)
+            state["type"] = "table" if primary_intent == "BOOKING_TABLE" else "room"
+            booking_reply = handle_reservation_flow(payload.message, state)
+            if secondary_intent == "PRODUCT":
+                product_reply = answer_product_question(payload.message)
+                product_reply = append_shop_link_if_needed(product_reply)
+                reply = f"{product_reply}\n\n---\n\n{booking_reply}"
+            elif secondary_intent == "INFO":
+                tourist_reply = answer_tourist_question(payload.message)
+                if tourist_reply:
+                    info_reply = tourist_reply
+                elif is_tourist_query(payload.message):
+                    info_reply = (
+                        "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
+                        "Če želite, povejte katero smučišče vas zanima za točne razdalje."
+                    )
+                    ctx["pending_tourism"] = True
+                else:
+                    info_reply = answer_farm_info(payload.message)
+                reply = f"{info_reply}\n\n---\n\n{booking_reply}"
+            else:
+                reply = booking_reply
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "unified_booking_start", followup_flag=False)
+        if primary_intent == "INQUIRY":
+            if inquiry_state.get("step") is None:
+                if is_strong_inquiry_request(payload.message):
+                    inquiry_state["details"] = payload.message.strip()
+                    inquiry_state["step"] = "awaiting_deadline"
+                    reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+                else:
+                    reply = start_inquiry_consent(inquiry_state)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "unified_inquiry_start", followup_flag=False)
+
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
         nonlocal needs_followup
         global conversation_history
@@ -2390,6 +2431,20 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             conversation_history = conversation_history[-12:]
         _save_session_context(session_id, ctx)
         return ChatResponse(reply=final_reply)
+
+    # Tourism follow-up: če smo prej prosili za smučišče, odgovorimo in nadaljujemo
+    if ctx.get("pending_tourism"):
+        ctx["pending_tourism"] = False
+        resort = payload.message.strip()
+        tourism_reply = (
+            f"Hvala! Za točne razdalje do {resort} jih trenutno nimam pri roki. "
+            "Lahko preverim in vam sporočim.\n\n"
+        )
+        if state.get("step") is not None:
+            continuation = get_booking_continuation(state.get("step"), state)
+            tourism_reply += f"---\n\n📝 **Nadaljujemo z rezervacijo:**\n{continuation}"
+        tourism_reply = maybe_translate(tourism_reply, detected_lang)
+        return finalize(tourism_reply, "tourism_followup", followup_flag=False)
 
     # === SMART ROUTER (LLM-based) ===
     # Uporabi samo za nejasne ali mešane primere (hibridni routing)
@@ -2787,9 +2842,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     # Zamenjava tipa rezervacije med aktivnim flowom (npr. "mizo bi" med room bookingom)
     if state["step"] is not None:
         current_type = state.get("type")
-        lowered_msg = payload.message.lower()
-        wants_table = any(tok in lowered_msg for tok in ["mizo", "miza", "mize", "table", "kosilo"])
-        wants_room = any(tok in lowered_msg for tok in ["sobo", "soba", "sobe", "room", "nočitev"])
+        detected_switch = parse_reservation_type(payload.message)
+        # Use word-boundary aware detection (avoids "sobota" -> "sobo")
+        wants_table = detected_switch == "table"
+        wants_room = detected_switch == "room"
         # Če uporabnik želi drug tip kot trenutni, zamenjaj flow
         if wants_table and not wants_room and current_type != "table":
             reset_reservation_state(state)

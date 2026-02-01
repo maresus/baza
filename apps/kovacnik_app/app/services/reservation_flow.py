@@ -367,7 +367,19 @@ def _handle_room_reservation_impl(
 
         input_norm = normalize(message)
         selected = []
-        any_keywords = {"vseeno", "vseen", "vseeni", "katerakoli", "katerakol", "karkoli", "any"}
+        any_keywords = {
+            "vseeno",
+            "vseen",
+            "vseeni",
+            "katerakoli",
+            "katerakol",
+            "karkoli",
+            "any",
+            "ne vem",
+            "nevem",
+            "ti izberi",
+            "izberi ti",
+        }
         for opt in options:
             opt_norm = normalize(opt)
             if opt_norm in input_norm or input_norm == opt_norm:
@@ -375,7 +387,9 @@ def _handle_room_reservation_impl(
         if input_norm.strip() in any_keywords and not selected:
             selected = options[:]
         if not selected:
-            return "Prosim izberite med: " + ", ".join(options)
+            # Če uporabnik ne izbere sobe, dodelimo prvo razpoložljivo
+            needed = reservation_state.get("rooms") or 1
+            selected = options[:needed]
         needed = reservation_state.get("rooms") or 1
         if len(selected) < needed:
             for opt in options:
@@ -463,8 +477,18 @@ def _handle_room_reservation_impl(
         return "Želite še kaj sporočiti? (posebne želje, alergije, praznovanje...)"
 
     if step == "awaiting_note":
+        normalized = message.strip().lower()
         skip_words = {"ne", "nic", "nič", "nimam", "brez"}
-        note_text = "" if any(word in message.lower() for word in skip_words) else message.strip()
+        action = None if normalized in skip_words else parse_action(message)
+        if action == "cancel":
+            reset_reservation_state(state)
+            return "V redu, rezervacijo sem preklical. Kako vam lahko pomagam?"
+        if action == "confirm":
+            note_text = ""
+        else:
+            note_text = ""
+        if action is None:
+            note_text = "" if any(word in normalized for word in skip_words) else message.strip()
         reservation_state["note"] = note_text
         reservation_state["step"] = "awaiting_confirmation"
         chosen_location = reservation_state.get("location") or "Sobe (dodelimo ob potrditvi)"
@@ -600,6 +624,10 @@ def _handle_table_reservation_impl(
 
     if step == "awaiting_table_date":
         proposed = extract_date(message) or ""
+        prefill_time = extract_time(message) if ":" in message else None
+        if not proposed and prefill_time:
+            reservation_state["time"] = reservation_service._parse_time(prefill_time)
+            return "Najprej prosim datum (sobota/nedelja), nato uro."
         if not proposed:
             return "Za kateri datum (sobota/nedelja)? (DD.MM ali DD.MM.YYYY)"
         ok, error_message = reservation_service.validate_table_rules(proposed, "12:00")
@@ -662,8 +690,18 @@ def _handle_table_reservation_impl(
         return proceed_after_table_people(reservation_state, reservation_service)
 
     if step == "awaiting_note":
+        normalized = message.strip().lower()
         skip_words = {"ne", "nic", "nič", "nimam", "brez"}
-        note_text = "" if any(word in message.lower() for word in skip_words) else message.strip()
+        action = None if normalized in skip_words else parse_action(message)
+        if action == "cancel":
+            reset_reservation_state(state)
+            return "V redu, rezervacijo sem preklical. Kako vam lahko pomagam?"
+        if action == "confirm":
+            note_text = ""
+        else:
+            note_text = ""
+        if action is None:
+            note_text = "" if any(word in normalized for word in skip_words) else message.strip()
         reservation_state["note"] = note_text
         reservation_state["step"] = "awaiting_confirmation"
         lines = [
@@ -851,7 +889,7 @@ def handle_reservation_flow(
     def _tr(text: str) -> str:
         return translate_response(text, reservation_state.get("language", "si"))
 
-    if any(word in message.lower() for word in exit_keywords):
+    if reservation_state.get("step") != "awaiting_note" and any(word in message.lower() for word in exit_keywords):
         reset_reservation_state(state)
         return _tr("V redu, rezervacijo sem preklical. Kako vam lahko pomagam?")
 
