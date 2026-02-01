@@ -222,17 +222,9 @@ def is_greeting(message: str) -> bool:
 INFO_RESPONSES = {
     "pozdrav": """Pozdravljeni! 😊
 
-Sem vaš digitalni pomočnik in lahko vas **takoj naročim na pregled**!
+Sem vaš digitalni pomočnik v zdravstvenem centru. Kako vam lahko pomagam?
 
-Na voljo imam termine za:
-- Dermatološki pregled
-- Ortopedski pregled
-- Okulistični pregled
-- Laserski poseg
-- Estetski poseg
-- Kozmetični salon
-
-**Začnimo z naročilom** - kateri pregled vas zanima?""",
+Lahko vam pomagam z informacijami o naših storitvah, delovnem času, ali pa vas naročim na pregled, če želite.""",
 
     "kdo_si": """Sem digitalni pomočnik zdravstvenega centra.
 
@@ -914,7 +906,9 @@ def answer_with_hybrid_kb(query: str, history: list = None, session_id: str = No
 
         # Store confidence metadata in session state for analytics
         if session_id and results:
-            state = conversation_state.get(session_id, {})
+            # Ensure state store exists even in legacy deployments
+            state_store = globals().setdefault("conversation_state", {})
+            state = state_store.get(session_id, {})
             confidence_meta = results[0].get("confidence_metadata", {}) if results else {}
             state["last_confidence_metadata"] = {
                 "query_type": query_analysis["type"],
@@ -927,6 +921,7 @@ def answer_with_hybrid_kb(query: str, history: list = None, session_id: str = No
                 "reranker_used": confidence_meta.get("reranker_used", False),
                 "num_results": len(results)
             }
+            state_store[session_id] = state
 
         if not results:
             # No results found - ask for clarification
@@ -1083,6 +1078,10 @@ def extract_service_type(message: str) -> Optional[str]:
                 return service_key
 
     return None
+
+def detect_service_from_message(message: str) -> Optional[str]:
+    """Backward-compatible alias for older call sites."""
+    return extract_service_type(message)
 
 def get_resume_prompt(state: dict) -> str:
     """Get prompt for current booking step (used when resuming after OFF-TOPIC)"""
