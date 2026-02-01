@@ -26,6 +26,16 @@ RESERVATION_KEYWORDS = {
     "reservation",
 }
 
+BOOKING_HINTS = {
+    "rad bi",
+    "rada bi",
+    "bi rad",
+    "želim",
+    "zelim",
+    "prišli bi",
+    "prisli bi",
+}
+
 TABLE_KEYWORDS = {"miza", "mizo", "mize", "table", "kosilo", "večerja", "vecerja"}
 ROOM_KEYWORDS = {
     "soba", "sobo", "sobe",
@@ -52,6 +62,10 @@ INFO_KEYWORDS = {
     "zajtrk",
     "večerja",
     "vecerja",
+    "soba",
+    "sobe",
+    "koliko sob",
+    "kakšne sobe",
     "otroci",
     "igrišče",
 }
@@ -144,19 +158,26 @@ def compute_confidence(message: str, intent: str) -> float:
     if intent == "BOOKING_TABLE":
         base = _score_from_keywords(text, RESERVATION_KEYWORDS)
         has_table_kw = any(k in text for k in TABLE_KEYWORDS)
+        has_booking_hint = any(k in text for k in RESERVATION_KEYWORDS) or any(k in text for k in BOOKING_HINTS)
+        if not (has_table_kw and has_booking_hint):
+            return 0.0
         base += 0.6 if has_table_kw else 0.0
         base += _score_question_marker(text)
         # Boost when people count mentioned (e.g., "za 4 osebe")
         if has_table_kw and any(p in text for p in ["oseb", "osebe", "oseba", "ljudi", "nas bo"]):
             base += 0.3
         # Boost for intent expressions (rad bi, želim, prišli bi)
-        if has_table_kw and any(i in text for i in ["rad bi", "rada bi", "želim", "zelim", "prišli bi", "prisli bi"]):
+        if has_table_kw and any(i in text for i in BOOKING_HINTS):
             base += 0.3
         return min(base, 1.0)
 
     if intent == "BOOKING_ROOM":
         base = _score_from_keywords(text, RESERVATION_KEYWORDS)
-        base += 0.6 if any(k in text for k in ROOM_KEYWORDS) else 0.0
+        has_room_kw = any(k in text for k in ROOM_KEYWORDS)
+        has_booking_hint = any(k in text for k in RESERVATION_KEYWORDS) or any(k in text for k in BOOKING_HINTS)
+        if not (has_room_kw and has_booking_hint):
+            return 0.0
+        base += 0.6 if has_room_kw else 0.0
         base += _score_question_marker(text)
         return min(base, 1.0)
 
