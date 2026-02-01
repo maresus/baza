@@ -14,6 +14,7 @@ from app.services.parsing import (
     parse_kids_response,
     parse_people_count,
 )
+from app.services.intent_helpers import is_reservation_related
 
 # Action tokens za nedvoumno potrjevanje
 ACTION_TOKENS = {
@@ -277,6 +278,8 @@ def _handle_room_reservation_impl(
         nights_candidate = extract_nights(message)
         if not date_candidate:
             reservation_state["date"] = None
+            if is_reservation_related(message):
+                return "Za kateri datum prihoda? (DD.MM ali DD.MM.YYYY)"
             return "Z veseljem uredim sobo. 😊 Sporočite datum prihoda (DD.MM ali DD.MM.YYYY) in približno število nočitev?"
         if not nights_candidate:
             reservation_state["date"] = date_candidate

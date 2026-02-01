@@ -108,6 +108,10 @@ def route(message: str, unified_state: Dict[str, Any]) -> Decision:
         # WINE/MENU/INFO/PRODUCT during flow = soft interrupt (answer + continue)
         if primary_intent in {IntentType.INFO, IntentType.PRODUCT, IntentType.WINE, IntentType.MENU}:
             action = SwitchAction.SOFT_INTERRUPT
+        elif flow == "reservation_room" and primary_intent == IntentType.BOOKING_ROOM:
+            action = SwitchAction.IGNORE
+        elif flow == "reservation_table" and primary_intent == IntentType.BOOKING_TABLE:
+            action = SwitchAction.IGNORE
         else:
             action = decide_action(confidence)
 
