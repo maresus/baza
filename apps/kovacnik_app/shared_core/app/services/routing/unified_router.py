@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any, Dict
 
 from .confidence import detect_intents, pick_primary_secondary, decide_action, SwitchAction
+from .confidence import PRODUCT_KEYWORDS
 
 
 class IntentType(str, Enum):
@@ -95,6 +96,10 @@ def route(message: str, unified_state: Dict[str, Any]) -> Decision:
     secondary_intent = (
         IntentType(secondary) if secondary in IntentType._value2member_map_ else None
     )
+    text = message.lower()
+    if secondary_intent is None and primary_intent in {IntentType.BOOKING_TABLE, IntentType.BOOKING_ROOM}:
+        if any(k in text for k in PRODUCT_KEYWORDS):
+            secondary_intent = IntentType.PRODUCT
 
     # 3. Determine action based on current flow
     flow = unified_state.get("flow", "idle")

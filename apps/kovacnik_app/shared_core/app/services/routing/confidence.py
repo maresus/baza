@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Dict, Tuple
+import re
 
 
 class SwitchAction(str, Enum):
@@ -147,6 +148,11 @@ def _score_question_marker(message: str) -> float:
     return 0.3 if any(m in message for m in QUESTION_MARKERS) else 0.0
 
 
+def _contains_word(message: str, words: set[str]) -> bool:
+    # word-boundary match to avoid "sobota" -> "soba"
+    return any(re.search(rf"\b{re.escape(w)}\b", message) for w in words)
+
+
 def compute_confidence(message: str, intent: str) -> float:
     text = message.lower()
 
@@ -157,7 +163,7 @@ def compute_confidence(message: str, intent: str) -> float:
 
     if intent == "BOOKING_TABLE":
         base = _score_from_keywords(text, RESERVATION_KEYWORDS)
-        has_table_kw = any(k in text for k in TABLE_KEYWORDS)
+        has_table_kw = _contains_word(text, TABLE_KEYWORDS)
         has_booking_hint = any(k in text for k in RESERVATION_KEYWORDS) or any(k in text for k in BOOKING_HINTS)
         if not (has_table_kw and has_booking_hint):
             return 0.0
@@ -173,7 +179,7 @@ def compute_confidence(message: str, intent: str) -> float:
 
     if intent == "BOOKING_ROOM":
         base = _score_from_keywords(text, RESERVATION_KEYWORDS)
-        has_room_kw = any(k in text for k in ROOM_KEYWORDS)
+        has_room_kw = _contains_word(text, ROOM_KEYWORDS)
         has_booking_hint = any(k in text for k in RESERVATION_KEYWORDS) or any(k in text for k in BOOKING_HINTS)
         if not (has_room_kw and has_booking_hint):
             return 0.0

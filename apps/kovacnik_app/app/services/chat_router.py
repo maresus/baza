@@ -1273,6 +1273,11 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
         product_reply = strip_product_followup(product_reply)
         product_reply = append_shop_link_if_needed(product_reply)
         return f"{product_reply}\n\n---\n\nŽelite nadaljevati povpraševanje? (da/ne)"
+    if step in {"awaiting_deadline", "awaiting_contact"} and is_inquiry_trigger(message):
+        # uporabnik spremeni povpraševanje (npr. teambuilding -> poroka)
+        state["details"] = text
+        state["step"] = "awaiting_deadline"
+        return "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
     if is_negative(message):
         reset_inquiry_state(state)
         return "V redu, prekinil sem povpraševanje. Kako vam lahko še pomagam?"
@@ -1652,6 +1657,13 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 tourism_reply = f"{tourism_reply}\n\n---\n\n{continuation}"
             return unified_finalize(tourism_reply, "unified_tourism_followup")
 
+        # Global escape: prekliči vse flowe
+        if is_escape_command(payload.message) or is_switch_topic_command(payload.message):
+            reset_reservation_state(state)
+            reset_inquiry_state(inquiry_state)
+            reset_flow(unified_state)
+            return unified_finalize("V redu, prekinil sem. Kako vam lahko še pomagam?", "unified_escape")
+
         # Inquiry flow should continue even if message doesn't look like INQUIRY
         if inquiry_state.get("step") is not None:
             inquiry_reply = handle_inquiry_flow(payload.message, inquiry_state, session_id)
@@ -1726,6 +1738,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "table"
                 start_flow(unified_state, FlowType.RESERVATION_TABLE)
                 booking_reply = handle_reservation_flow(payload.message, state)
+                if state.get("step") is None:
+                    reset_flow(unified_state)
                 # Handle secondary intent (mixed: miza + info/produkt)
                 if decision.secondary_intent == IntentType.PRODUCT:
                     product_reply = answer_product_question(payload.message)
@@ -1754,6 +1768,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "room"
                 start_flow(unified_state, FlowType.RESERVATION_ROOM)
                 booking_reply = handle_reservation_flow(payload.message, state)
+                if state.get("step") is None:
+                    reset_flow(unified_state)
                 # Handle secondary intent (mixed: soba + info/produkt)
                 if decision.secondary_intent == IntentType.PRODUCT:
                     product_reply = answer_product_question(payload.message)
@@ -1784,6 +1800,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "table"
                 start_flow(unified_state, FlowType.RESERVATION_TABLE)
                 booking_reply = handle_reservation_flow(payload.message, state)
+                if state.get("step") is None:
+                    reset_flow(unified_state)
                 if decision.secondary_intent == IntentType.PRODUCT:
                     product_reply = answer_product_question(payload.message)
                     product_reply = append_shop_link_if_needed(product_reply)
@@ -1810,6 +1828,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "room"
                 start_flow(unified_state, FlowType.RESERVATION_ROOM)
                 booking_reply = handle_reservation_flow(payload.message, state)
+                if state.get("step") is None:
+                    reset_flow(unified_state)
                 if decision.secondary_intent == IntentType.PRODUCT:
                     product_reply = answer_product_question(payload.message)
                     product_reply = append_shop_link_if_needed(product_reply)
@@ -1845,6 +1865,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "room"
                 start_flow(unified_state, FlowType.RESERVATION_ROOM)
                 reply = handle_reservation_flow(payload.message, state)
+                if state.get("step") is None:
+                    reset_flow(unified_state)
                 return unified_finalize(reply, "unified_switch_to_room")
 
             if wants_table and current_type == "room":
@@ -1853,6 +1875,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 state["type"] = "table"
                 start_flow(unified_state, FlowType.RESERVATION_TABLE)
                 reply = handle_reservation_flow(payload.message, state)
+                if state.get("step") is None:
+                    reset_flow(unified_state)
                 return unified_finalize(reply, "unified_switch_to_table")
 
         # Handle INFO
@@ -1879,6 +1903,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         # If in reservation flow, continue it
         if state.get("step") is not None:
             reply = handle_reservation_flow(payload.message, state)
+            if state.get("step") is None:
+                reset_flow(unified_state)
             return unified_finalize(reply, "unified_reservation_continue")
 
         # Fallback to LLM/RAG

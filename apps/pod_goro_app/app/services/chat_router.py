@@ -1973,6 +1973,11 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
         product_reply = strip_product_followup(product_reply)
         product_reply = append_shop_link_if_needed(product_reply)
         return f"{product_reply}\n\n---\n\nŽelite nadaljevati povpraševanje? (da/ne)"
+    if step in {"awaiting_deadline", "awaiting_contact"} and is_inquiry_trigger(message):
+        # uporabnik spremeni povpraševanje (npr. teambuilding -> poroka)
+        state["details"] = text
+        state["step"] = "awaiting_deadline"
+        return "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
     if is_negative(message):
         reset_inquiry_state(state)
         return "V redu, prekinil sem povpraševanje. Kako vam lahko še pomagam?"

@@ -538,6 +538,8 @@ def is_inquiry_trigger(message: str) -> bool:
         "vecja kolicina",
         "teambuilding",
         "poroka",
+        "porok",
+        "poroko",
         "pogrebščina",
         "pogrebscina",
         "pogostitev",
