@@ -1966,7 +1966,13 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
     lowered = text.lower()
     step = state.get("step")
     if is_info_query(message) or detect_info_intent(message):
-        info_reply = answer_farm_info(message)
+        tourist_reply = answer_tourist_question(message)
+        if not tourist_reply and is_tourist_query(message):
+            tourist_reply = (
+                "V bližini so smučišča na Pohorju (npr. Mariborsko Pohorje, Areh). "
+                "Če želite, povejte katero smučišče vas zanima za točne razdalje."
+            )
+        info_reply = tourist_reply if tourist_reply else answer_farm_info(message)
         return f"{info_reply}\n\n---\n\nŽelite nadaljevati povpraševanje? (da/ne)"
     if is_product_query(message):
         product_reply = answer_product_question(message)
