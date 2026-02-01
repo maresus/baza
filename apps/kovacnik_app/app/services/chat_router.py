@@ -2587,18 +2587,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         return finalize(reply, "weekly_menu")
 
     if intent == "room_info":
-        reply = """Seveda! 😊 Imamo tri prijetne družinske sobe:
-
-🛏️ **Soba ALJAŽ** - soba z balkonom (2+2 osebi)
-🛏️ **Soba JULIJA** - družinska soba z balkonom (2 odrasla + 2 otroka)  
-🛏️ **Soba ANA** - družinska soba z dvema spalnicama (2 odrasla + 2 otroka)
-
-**Cena**: 50€/osebo/noč z zajtrkom
-**Večerja**: dodatnih 25€/osebo
-
-Sobe so klimatizirane, Wi-Fi je brezplačen. Prijava ob 14:00, odjava ob 10:00.
-
-Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
+        reply = answer_farm_info(payload.message)
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "room_info")
 

@@ -2,6 +2,8 @@
 Farm info answer functions.
 """
 
+import random
+
 from .data import FARM_INFO
 from app.services.validators import is_hours_question
 
@@ -19,10 +21,13 @@ def answer_farm_info(message: str) -> str:
 
     # Sobe / število sob
     if any(phrase in lowered for phrase in ["koliko sob", "koliko soba", "kakšne sobe", "sobe imate"]):
-        return (
-            "Imamo **3 sobe**: ALJAŽ, JULIJA in ANA (vse za do 4 osebe). "
-            "Če želite, povem še podrobnosti ali začnemo z rezervacijo."
-        )
+        variants = [
+            "Imamo **3 sobe**: ALJAŽ, JULIJA in ANA (vse za do 4 osebe). Če želite, povem še podrobnosti ali začnemo z rezervacijo.",
+            "Na voljo so **3 družinske sobe** (ALJAŽ, JULIJA, ANA), vsaka do 4 osebe. Če želite, vam povem več ali uredimo rezervacijo.",
+            "Trenutno imamo **3 sobe**: ALJAŽ, JULIJA in ANA. Vse so družinske (2+2). Želite še podrobnosti ali datum?",
+            "Pri nas so **3 sobe** (ALJAŽ, JULIJA, ANA), primerne za družine. Če želite, nadaljujemo z rezervacijo.",
+        ]
+        return random.choice(variants)
 
     # Zadnji prihod na kosilo
     if "zadnji prihod" in lowered and "kosilo" in lowered:
