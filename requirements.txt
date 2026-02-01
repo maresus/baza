@@ -3,6 +3,7 @@ uvicorn[standard]
 pydantic
 httpx
 python-dotenv
+python-multipart
 requests
 resend
 beautifulsoup4
