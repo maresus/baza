@@ -50,7 +50,7 @@ def decide(message: str, state: Dict[str, Any], inquiry_state: Dict[str, Any]) -
 
     action = SwitchAction.IGNORE
     if flow != "idle":
-        if primary in {"INFO", "PRODUCT"}:
+        if primary in {"INFO", "PRODUCT", "WINE", "MENU"}:
             action = SwitchAction.SOFT_INTERRUPT
         elif primary == "INQUIRY":
             action = decide_action(confidence)
@@ -72,24 +72,23 @@ def decide(message: str, state: Dict[str, Any], inquiry_state: Dict[str, Any]) -
     }
 
 
-def _detect_special_intent(message: str) -> IntentType | None:
-    text = message.lower()
-    if text.strip() in {"da", "ja", "ok", "seveda", "res je"}:
+def _detect_affirmative_negative(message: str) -> IntentType | None:
+    """Detect simple yes/no responses (exact match only)."""
+    text = message.lower().strip()
+    if text in {"da", "ja", "ok", "okej", "seveda", "res je", "tako je", "vredu", "v redu"}:
         return IntentType.AFFIRMATIVE
-    if text.strip() in {"ne", "ne hvala", "ne, hvala", "ne bom"}:
+    if text in {"ne", "ne hvala", "ne, hvala", "ne bom", "nočem", "nochem", "pustimo"}:
         return IntentType.NEGATIVE
-    if any(k in text for k in {"meni", "jedilnik", "menu"}):
-        return IntentType.MENU
-    if any(k in text for k in {"vino", "vinska", "rdeča vina", "bela vina"}):
-        return IntentType.WINE
     return None
 
 
 def route(message: str, unified_state: Dict[str, Any]) -> Decision:
-    special = _detect_special_intent(message)
-    if special in {IntentType.AFFIRMATIVE, IntentType.NEGATIVE, IntentType.MENU, IntentType.WINE}:
-        return Decision(primary_intent=special, confidence=1.0, action=SwitchAction.IGNORE)
+    # 1. Check for simple yes/no (exact match)
+    affneg = _detect_affirmative_negative(message)
+    if affneg:
+        return Decision(primary_intent=affneg, confidence=1.0, action=SwitchAction.IGNORE)
 
+    # 2. Score all intents through unified system
     scores = detect_intents(message)
     primary, secondary, confidence = pick_primary_secondary(scores)
     primary_intent = IntentType(primary) if primary in IntentType._value2member_map_ else IntentType.GENERAL
@@ -97,10 +96,12 @@ def route(message: str, unified_state: Dict[str, Any]) -> Decision:
         IntentType(secondary) if secondary in IntentType._value2member_map_ else None
     )
 
+    # 3. Determine action based on current flow
     flow = unified_state.get("flow", "idle")
     action = SwitchAction.IGNORE
     if flow != "idle":
-        if primary_intent in {IntentType.INFO, IntentType.PRODUCT}:
+        # WINE/MENU/INFO/PRODUCT during flow = soft interrupt (answer + continue)
+        if primary_intent in {IntentType.INFO, IntentType.PRODUCT, IntentType.WINE, IntentType.MENU}:
             action = SwitchAction.SOFT_INTERRUPT
         else:
             action = decide_action(confidence)

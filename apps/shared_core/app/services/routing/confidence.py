@@ -98,6 +98,22 @@ INQUIRY_KEYWORDS = {
 GREETING_KEYWORDS = {"zdravo", "živjo", "pozdrav", "dobro jutro", "dober dan", "hello", "hi"}
 GOODBYE_KEYWORDS = {"hvala", "adijo", "nasvidenje", "lep pozdrav", "bye"}
 
+WINE_KEYWORDS = {
+    "vino", "vina", "vin",
+    "rdeč", "rdečo", "rdeca", "rdece",
+    "belo", "bela",
+    "peneč", "penina", "penece",
+    "frankinja", "pinot", "rizling", "sauvignon", "muškat", "muskat",
+    "vinska karta", "vinsko",
+}
+
+MENU_KEYWORDS = {
+    "jedilnik", "meni", "menu",
+    "kaj ponujate", "kaj imate za jest",
+    "hrana", "jedi", "kosilo", "večerja menu",
+    "sezonski meni", "dnevni meni",
+}
+
 QUESTION_MARKERS = {"?", "ali", "a ", "a imate", "imate", "kaj", "koliko", "kdaj"}
 
 
@@ -147,6 +163,16 @@ def compute_confidence(message: str, intent: str) -> float:
         base = _score_question_marker(text)
         return min(base, 1.0)
 
+    if intent == "WINE":
+        if any(k in text for k in WINE_KEYWORDS):
+            return 0.9
+        return 0.0
+
+    if intent == "MENU":
+        if any(k in text for k in MENU_KEYWORDS):
+            return 0.9
+        return 0.0
+
     return 0.0
 
 
@@ -159,6 +185,8 @@ def detect_intents(message: str) -> Dict[str, float]:
         "INQUIRY",
         "GREETING",
         "GOODBYE",
+        "WINE",
+        "MENU",
     ]
     return {intent: compute_confidence(message, intent) for intent in intents}
 
