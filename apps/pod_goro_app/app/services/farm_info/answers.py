@@ -10,6 +10,35 @@ def answer_farm_info(message: str) -> str:
     """Answer questions about the farm (location, contact, hours, etc.)."""
     lowered = message.lower()
 
+    # Zajtrk
+    if "zajtrk" in lowered:
+        return (
+            "Zajtrk postrežemo med **8:00 in 9:00** in je **vključen v ceno nočitve**. "
+            "Ob posebnih željah nam to sporočite ob rezervaciji."
+        )
+
+    # Sobe / število sob
+    if any(phrase in lowered for phrase in ["koliko sob", "koliko soba", "kakšne sobe", "sobe imate"]):
+        return (
+            "Imamo **3 sobe** (vse za do 4 osebe). "
+            "Če želite, povem še podrobnosti ali začnemo z rezervacijo."
+        )
+
+    # Zadnji prihod na kosilo
+    if "zadnji prihod" in lowered and "kosilo" in lowered:
+        return "Zadnji prihod na kosilo je ob **15:00**."
+
+    # Ponedeljki / torki
+    if "ponedelj" in lowered or "torek" in lowered:
+        return "Ob ponedeljkih in torkih je kuhinja zaprta. Sobe so takrat zaprte za prihod."
+
+    # Večerja
+    if "večerj" in lowered or "vecerj" in lowered:
+        return (
+            "Večerja je za nočitvene goste ob **18:00** (pon./tor. brez večerij). "
+            "Če želite, vam povem še ceno ali uredimo rezervacijo sobe."
+        )
+
     # Zajčki / živali
     if any(word in lowered for word in ["zajc", "zajček", "zajcka", "zajčki", "kunec", "zajce"]):
         return "Imamo prijazne zajčke, ki jih lahko obiskovalci božajo. Ob obisku povejte, pa vas usmerimo do njih."

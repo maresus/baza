@@ -26,8 +26,13 @@ RESERVATION_KEYWORDS = {
     "reservation",
 }
 
-TABLE_KEYWORDS = {"miza", "mizo", "mize", "table"}
-ROOM_KEYWORDS = {"soba", "sobo", "sobe", "nočitev", "nocitev", "prenočitev", "prenocitev", "room", "overnight"}
+TABLE_KEYWORDS = {"miza", "mizo", "mize", "table", "kosilo", "večerja", "vecerja"}
+ROOM_KEYWORDS = {
+    "soba", "sobo", "sobe",
+    "nočitev", "nocitev", "prenočitev", "prenocitev",
+    "prenocil", "prenočil", "prespati", "prespali", "prespim",
+    "room", "overnight",
+}
 
 INFO_KEYWORDS = {
     "kdaj",
@@ -66,6 +71,9 @@ PRODUCT_KEYWORDS = {
     "pesto",
     "čemaž",
     "cemaz",
+    "namaz",
+    "paštet",
+    "pastet",
     "marmelad",
     "džem",
     "dzem",
@@ -109,8 +117,8 @@ WINE_KEYWORDS = {
 
 MENU_KEYWORDS = {
     "jedilnik", "meni", "menu",
-    "kaj ponujate", "kaj imate za jest",
-    "hrana", "jedi", "kosilo", "večerja menu",
+    "kaj ponujate", "kaj imate za jest", "kva mate za jest",
+    "hrana", "jedi",
     "sezonski meni", "dnevni meni",
 }
 
@@ -135,8 +143,15 @@ def compute_confidence(message: str, intent: str) -> float:
 
     if intent == "BOOKING_TABLE":
         base = _score_from_keywords(text, RESERVATION_KEYWORDS)
-        base += 0.6 if any(k in text for k in TABLE_KEYWORDS) else 0.0
+        has_table_kw = any(k in text for k in TABLE_KEYWORDS)
+        base += 0.6 if has_table_kw else 0.0
         base += _score_question_marker(text)
+        # Boost when people count mentioned (e.g., "za 4 osebe")
+        if has_table_kw and any(p in text for p in ["oseb", "osebe", "oseba", "ljudi", "nas bo"]):
+            base += 0.3
+        # Boost for intent expressions (rad bi, želim, prišli bi)
+        if has_table_kw and any(i in text for i in ["rad bi", "rada bi", "želim", "zelim", "prišli bi", "prisli bi"]):
+            base += 0.3
         return min(base, 1.0)
 
     if intent == "BOOKING_ROOM":

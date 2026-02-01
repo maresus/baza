@@ -666,9 +666,23 @@ def answer_product_question(message: str) -> str:
     from app.rag.knowledge_base import KNOWLEDGE_CHUNKS
 
     lowered = message.lower()
+    if any(phrase in lowered for phrase in ["po pošti", "po posti", "pošta", "posta", "dostava", "pošljete", "posljete"]):
+        return (
+            "Da, izdelke lahko pošljemo po pošti. Naročilo oddate v spletni trgovini: "
+            "https://kovacnik.com/katalog."
+        )
+    if any(phrase in lowered for phrase in ["kje kupim", "kje lahko kupim", "kako kupim", "trgovina", "katalog"]):
+        return "Izdelke najdete v naši spletni trgovini: https://kovacnik.com/katalog."
+    if ("pesto" in lowered or "čemaž" in lowered or "cemaz" in lowered) and "cena" in lowered:
+        return (
+            "Čemažev pesto (212 ml) stane 5,50 €. "
+            "Naročilo: https://kovacnik.com/katalog."
+        )
     category = None
     if "marmelad" in lowered or "džem" in lowered or "dzem" in lowered:
         category = "marmelad"
+    elif "pesto" in lowered or "čemaž" in lowered or "cemaz" in lowered:
+        category = "pesto"
     elif (
         "liker" in lowered
         or "žganj" in lowered
@@ -707,6 +721,8 @@ def answer_product_question(message: str) -> str:
             if category == "marmelad" and ("marmelad" in url_lower or "marmelad" in title_lower):
                 if "paket" in url_lower or "paket" in title_lower:
                     continue
+                results.append(c)
+            elif category == "pesto" and ("pesto" in url_lower or "pesto" in title_lower):
                 results.append(c)
             elif category == "liker" and ("liker" in url_lower or "tepkovec" in url_lower):
                 results.append(c)
