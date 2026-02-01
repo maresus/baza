@@ -1980,6 +1980,12 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
     lowered = text.lower()
     step = state.get("step")
     if is_info_query(message) or detect_info_intent(message):
+        # Če je uporabnik v inquiry flowu in vpraša splošno info, to je zamenjava teme
+        if step is not None and not is_inquiry_trigger(message):
+            reset_inquiry_state(state)
+            tourism_reply = _tourism_barrier_reply(message)
+            info_reply = tourism_reply if tourism_reply else answer_farm_info(message)
+            return info_reply
         tourism_reply = _tourism_barrier_reply(message)
         info_reply = tourism_reply if tourism_reply else answer_farm_info(message)
         return f"{info_reply}\n\n---\n\nŽelite nadaljevati povpraševanje? (da/ne)"
