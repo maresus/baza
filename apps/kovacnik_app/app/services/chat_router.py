@@ -2575,18 +2575,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         return finalize(reply, "followup_email", followup_flag=False)
 
     # Legacy router (USE_FULL_KB_LLM / USE_ROUTER_V2) is disabled when USE_UNIFIED_ROUTER is on.
-            semantic_reply = semantic_info_answer(payload.message)
-            if semantic_reply:
-                semantic_reply = maybe_translate(semantic_reply, detected_lang)
-                return finalize(semantic_reply, "info_semantic", followup_flag=False)
-            # Če še vedno nič, priznaj neznano in ponudi email
-            if state.get("step") is None:
-                inquiry_reply = start_inquiry_consent(inquiry_state)
-                inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
-                return finalize(inquiry_reply, "info_unknown", followup_flag=False)
-            reply = random.choice(UNKNOWN_RESPONSES)
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "info_unknown", followup_flag=False)
     # Info ali produkt med aktivno rezervacijo: odgovor + nadaljevanje
     info_during = handle_info_during_booking(payload.message, state)
     if info_during:
