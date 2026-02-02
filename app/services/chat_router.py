@@ -647,7 +647,7 @@ def classify_intent(message: str, history: list = None) -> str:
 
     # If rules found a clear intent, use it immediately
     if rules_intent in ["greeting", "info_hours", "info_contact", "info_prices",
-                        "info_services", "health_symptoms", "check_availability"]:
+                        "info_services", "check_availability"]:
         return rules_intent
 
     # If rules found a booking intent, use it
@@ -666,7 +666,7 @@ def classify_intent(message: str, history: list = None) -> str:
             return f"book_{service}"
         return "book_general"
     elif intent == "health_advice":
-        return "health_symptoms"
+        return "question"  # Let it go through normal RAG flow
     elif intent == "question":
         return "question"
     elif intent == "info_narocanje":
@@ -733,19 +733,18 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     if any(word in lowered for word in ["pozdravljeni", "živjo", "zivjo", "dober dan", "zdravo", "hej", "halo", "bok"]):
         return "greeting"
 
-    # Health symptoms - detect pain/discomfort/health concern descriptions
-    # This catches ANY health-related query and routes to LLM for personalized advice
-    symptom_words = [
-        "boli", "bolečina", "bolecina", "boleče", "bolece",
-        "peče", "pece", "srbi", "otekl", "zatekl",
-        "slabo vidim", "slabo slišim", "težave z", "problem z",
-        "pika", "izpuščaj", "izpuscaj", "rdečina", "rdecina",
-        "vrtoglavica", "slabost", "utrujenost", "nespečnost",
-        "čudno", "cudno", "nenavadno", "neprijetno",
-        "rana", "modrica", "oteklina", "vnetje"
-    ]
+    # Health symptoms → map to appropriate service (NOT LLM health advice)
+    symptom_words = ["boli", "bolečina", "bolecina", "boleče", "bolece", "peče", "pece", "srbi", "težave"]
     if any(word in lowered for word in symptom_words):
-        return "health_symptoms"
+        # Map body part to service
+        if any(part in lowered for part in ["koleno", "noga", "noge", "hrbet", "hrbten", "rama", "ramo", "sklep", "mišic", "kolk"]):
+            return "info_ortopedija"
+        if any(part in lowered for part in ["koža", "koza", "pika", "izpuščaj", "izpuscaj", "rdečina", "akne", "luskavica"]):
+            return "info_dermatologija"
+        if any(part in lowered for part in ["oči", "oci", "vid", "vidim", "oko"]):
+            return "info_oftalmologija"
+        # Default to ortoped for general pain
+        return "info_ortopedija"
 
     return "question"
 
@@ -1677,10 +1676,6 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
 
     elif intent == "info_hours":
         response_text = INFO_RESPONSES["delovni_cas"]
-
-    # ===== HEALTH SYMPTOMS - LLM generates personalized advice =====
-    elif intent == "health_symptoms":
-        response_text = generate_health_advice(message)
 
     elif intent.startswith("info_"):
         service_key = intent.replace("info_", "")
