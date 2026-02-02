@@ -1193,6 +1193,18 @@ Naši specialisti:
 Želite, da vas naročim na pregled?"""
 
 
+def answer_health_query(message: str) -> str:
+    """
+    Health advice strategy:
+    - Always provide safe LLM advice + offer booking.
+    """
+    try:
+        return generate_health_advice(message)
+    except Exception as e:
+        print(f"[HEALTH_ADVICE] Fallback error: {e}")
+        return generate_health_advice(message)
+
+
 def extract_service_type(message: str) -> Optional[str]:
     """Extract service type from message using word boundary matching"""
     import re
@@ -1730,8 +1742,8 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
         response_text = INFO_RESPONSES["delovni_cas"]
 
     elif intent == "health_symptoms":
-        # Use RAG engine which searches knowledge.jsonl (contains health advice)
-        response_text = rag_engine.answer(message)
+        # Use KB if possible; otherwise LLM health advice
+        response_text = answer_health_query(message)
 
     elif intent.startswith("info_"):
         service_key = intent.replace("info_", "")
@@ -1804,8 +1816,8 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                     is_health_query = any(kw in lowered_msg for kw in health_keywords)
 
                     if is_health_query:
-                        # Use RAG engine which searches knowledge.jsonl directly
-                        response_text = rag_engine.answer(message)
+                        # Use KB if possible; otherwise LLM health advice
+                        response_text = answer_health_query(message)
                     else:
                         # ===== HYBRID KNOWLEDGE BASE =====
                         # Use hybrid retrieval (BM25 + vector embeddings) with confidence gating
