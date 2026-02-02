@@ -318,95 +318,6 @@ Profesionalna nega obraza, tretmaji kože
 
 🎯 **Naročite se TAKOJ** - samo povejte kateri pregled vas zanima in začnimo!""",
 
-    # ===== ZDRAVSTVENI NASVETI ZA SIMPTOME =====
-    "bolecina_noga": """Razumem, da vas boli noga. Tukaj je nekaj splošnih nasvetov za lajšanje:
-
-🧊 **Takojšnji ukrepi:**
-- Počitek in razbremenitev noge
-- Hladen obkladek (15-20 min) za zmanjšanje otekline
-- Nogo dvignite višje od srca ko počivate
-
-🏃 **Razgibavanje:**
-- Nežno raztezanje mečnih mišic
-- Kroženje s stopalom
-- Počasni sprehodi, če bolečina dopušča
-
-💊 **Splošno:**
-- Pri otekanju pomagajo kompresijske nogavice
-- Izogibajte se dolgotrajnemu stanju ali sedenju
-
-⚠️ **Če bolečina traja več dni ali se stopnjuje**, priporočam pregled pri ortopedu.
-
-Želite, da vas naročim na ortopedski pregled?""",
-
-    "bolecina_hrbet": """Razumem, bolečina v hrbtu je lahko zelo neprijetna. Nekaj nasvetov:
-
-🧊 **Takojšnji ukrepi:**
-- Počitek v udobnem položaju (na boku z blazino med koleni)
-- Hladen obkladek prvih 48 ur, nato topel
-- Izogibajte se dvigovanju težkih bremen
-
-🏃 **Razgibavanje:**
-- Nežno raztezanje hrbta (kolena k prsim)
-- Mačka-krava vaja za hrbtenico
-- Kratki sprehodi vsako uro
-
-💺 **Preventiva:**
-- Ergonomski stol pri delu
-- Redno vstajanje in raztezanje
-- Krepitev trebušnih mišic
-
-⚠️ **Obiščite zdravnika**, če bolečina seva v noge, občutite mravljinčenje ali težave z mehurjem.
-
-Želite, da vas naročim na ortopedski pregled?""",
-
-    "bolecina_glava": """Razumem, glavobol je lahko zelo moteč. Nekaj splošnih nasvetov:
-
-💧 **Takojšnji ukrepi:**
-- Spijte kozarec vode (dehidracija je pogost vzrok)
-- Odpočijte si v temnem, tihem prostoru
-- Hladen obkladek na čelo ali zatilje
-
-😌 **Sproščanje:**
-- Nežna masaža senc in tilnika
-- Globoko dihanje (vdih 4s, zadržite 4s, izdih 4s)
-- Raztezanje vratnih mišic
-
-🌿 **Preventiva:**
-- Redni obroki in zadostna hidracija
-- Omejevanje kave in alkohola
-- Dovolj spanja (7-9 ur)
-
-⚠️ **Obiščite zdravnika**, če je glavobol nenaden in močan, ali če je spremljan z vročino, togostjo vratu ali motnjami vida.
-
-Ali bi želeli več informacij o naših storitvah ali naročanje na pregled?""",
-
-    "bolecina_splosno": """Razumem, da imate težave. Tukaj je nekaj splošnih nasvetov za lajšanje:
-
-🧊 **Splošni ukrepi:**
-- Počitek in razbremenitev bolečega predela
-- Hladen obkladek za akutne poškodbe (15-20 min)
-- Topel obkladek za mišične napetosti
-
-🏃 **Razgibavanje:**
-- Nežno raztezanje prizadetega predela
-- Izogibajte se premočnim obremenitvam
-- Ohranjajte zmerno aktivnost
-
-💊 **Splošno:**
-- Zadostna hidracija
-- Počitek, vendar ne popolna imobilizacija
-- Pozornost na položaj telesa
-
-⚠️ **Priporočam obisk specialista**, če težave trajajo več dni ali se stopnjujejo.
-
-Glede na vaše težave bi vam lahko pomagali naši:
-- **Ortoped** - za bolečine v sklepih, hrbtenici, mišicah
-- **Dermatolog** - za težave s kožo
-- **Fizioterapevt** - za rehabilitacijo in razgibavanje
-
-Kateri pregled vas zanima?""",
-
     "dermatolog": """**Dermatološki pregled**
 Trajanje: 30 minut
 Cena: 25-150 € (odvisno od posega)
@@ -809,17 +720,19 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     if any(word in lowered for word in ["pozdravljeni", "živjo", "zivjo", "dober dan", "zdravo", "hej", "halo", "bok"]):
         return "greeting"
 
-    # Health symptoms - detect pain/discomfort descriptions
-    pain_words = ["boli", "bolečina", "bolecina", "boleče", "bolece", "peče", "pece", "srbi", "otekl", "zatekl"]
-    if any(word in lowered for word in pain_words):
-        # Detect body part for specific advice
-        if any(part in lowered for part in ["noga", "noge", "nogo", "koleno", "gleženj", "glezenj", "stopalo"]):
-            return "symptom_noga"
-        if any(part in lowered for part in ["hrbet", "hrbtenica", "križ", "kriz", "ledja"]):
-            return "symptom_hrbet"
-        if any(part in lowered for part in ["glava", "glavo", "glavobol"]):
-            return "symptom_glava"
-        return "symptom_splosno"
+    # Health symptoms - detect pain/discomfort/health concern descriptions
+    # This catches ANY health-related query and routes to LLM for personalized advice
+    symptom_words = [
+        "boli", "bolečina", "bolecina", "boleče", "bolece",
+        "peče", "pece", "srbi", "otekl", "zatekl",
+        "slabo vidim", "slabo slišim", "težave z", "problem z",
+        "pika", "izpuščaj", "izpuscaj", "rdečina", "rdecina",
+        "vrtoglavica", "slabost", "utrujenost", "nespečnost",
+        "čudno", "cudno", "nenavadno", "neprijetno",
+        "rana", "modrica", "oteklina", "vnetje"
+    ]
+    if any(word in lowered for word in symptom_words):
+        return "health_symptoms"
 
     return "question"
 
@@ -1159,6 +1072,68 @@ Kaj vas zanima?"""
 
         # Fallback to old method
         return generate_llm_answer(query, history=history or [])
+
+
+def generate_health_advice(symptom_description: str) -> str:
+    """
+    Generate personalized health advice using LLM.
+    Gives general wellness tips (NOT diagnosis) and suggests appropriate specialist.
+    """
+    try:
+        llm_client = get_llm_client()
+
+        system_prompt = """Si prijazni zdravstveni svetovalec v zdravstvenem centru.
+
+TVOJA NALOGA:
+1. Daj SPLOŠNE nasvete za lajšanje težav (počitek, obkladki, razgibavanje, hidracija itd.)
+2. NIKOLI ne postavljaj diagnoz - to je naloga zdravnika
+3. Na koncu VEDNO predlagaj ustrezen pregled pri specialistu
+
+STRUKTURA ODGOVORA:
+- Najprej izrazi razumevanje ("Razumem, da imate težave z...")
+- Potem daj 3-4 splošne nasvete za lajšanje
+- Na koncu predlagaj ustreznega specialista iz naše ponudbe:
+  • Dermatolog - za kožne težave, pike, izpuščaje
+  • Ortoped - za bolečine v sklepih, hrbtu, mišicah
+  • Okulist - za težave z vidom, očmi
+  • Fizioterapevt - za rehabilitacijo, razgibavanje
+  • Estetski posegi - za botox, fillerje
+  • Kozmetika - za nego kože
+
+POMEMBNO:
+- Bodi topel in empatičen
+- Nasveti naj bodo praktični in izvedljivi doma
+- Vedno omeni "če težave trajajo več dni, priporočam pregled"
+- Ponudi možnost naročanja ("Želite, da vas naročim na pregled?")
+
+Odgovarjaj v slovenščini."""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": symptom_description}
+        ]
+
+        response = llm_client.chat(messages, temperature=0.7)
+        return response.strip()
+
+    except Exception as e:
+        print(f"[HEALTH_ADVICE] Error: {e}")
+        # Fallback to generic response
+        return """Razumem, da imate zdravstvene težave.
+
+Nekaj splošnih nasvetov:
+🧊 Počitek in razbremenitev prizadetega dela
+💧 Zadostna hidracija
+🏃 Nežno razgibavanje, če bolečina dopušča
+
+⚠️ Če težave trajajo več dni ali se stopnjujejo, priporočam pregled pri specialistu.
+
+Naši specialisti:
+- **Ortoped** - za bolečine v sklepih, hrbtu
+- **Dermatolog** - za težave s kožo
+- **Okulist** - za težave z vidom
+
+Želite, da vas naročim na pregled?"""
 
 
 def extract_service_type(message: str) -> Optional[str]:
@@ -1697,18 +1672,9 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
     elif intent == "info_hours":
         response_text = INFO_RESPONSES["delovni_cas"]
 
-    # ===== HEALTH SYMPTOMS - give advice before suggesting specialist =====
-    elif intent == "symptom_noga":
-        response_text = INFO_RESPONSES["bolecina_noga"]
-
-    elif intent == "symptom_hrbet":
-        response_text = INFO_RESPONSES["bolecina_hrbet"]
-
-    elif intent == "symptom_glava":
-        response_text = INFO_RESPONSES["bolecina_glava"]
-
-    elif intent == "symptom_splosno":
-        response_text = INFO_RESPONSES["bolecina_splosno"]
+    # ===== HEALTH SYMPTOMS - LLM generates personalized advice =====
+    elif intent == "health_symptoms":
+        response_text = generate_health_advice(message)
 
     elif intent.startswith("info_"):
         service_key = intent.replace("info_", "")
