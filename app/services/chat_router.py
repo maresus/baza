@@ -40,7 +40,7 @@ from app.services import knowledge_base as kb_module
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
-USE_FULL_KB_LLM = True
+USE_FULL_KB_LLM = False  # False = RAG (hitro), True = full KB (počasno)
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 # ========== ANTI-LOOP & CACHE MECHANISMS ==========
