@@ -342,6 +342,55 @@ Storitve:
 
 🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
+    # Symptom-based templates with health advice
+    "ortopedija": """Razumem, da imate bolečine. Nekaj nasvetov:
+
+🧊 **Takojšnja pomoč:**
+- Počitek in razbremenitev
+- Hladen obkladek 15-20 min
+- Nežno razgibavanje ko bolečina popusti
+
+**Ortopedski pregled** (30 min, 40-80 €)
+- Pregledi sklepov in hrbtenice
+- Športne poškodbe
+- Bolečine v kolenih, ramenih, hrbtu
+
+⚠️ Če bolečina traja več dni, priporočam pregled.
+
+🎯 **Želite termin?** Povejte mi datum!""",
+
+    "dermatologija": """Razumem vaše skrbi glede kože. Nekaj nasvetov:
+
+🧴 **Splošna nega:**
+- Izogibajte se praskanju
+- Uporabite blago kremo
+- Zaščita pred soncem
+
+**Dermatološki pregled** (30 min, 25-150 €)
+- Pregled kožnih sprememb
+- Diagnostika kožnih bolezni
+- Laserski in estetski posegi
+
+⚠️ Pri sumljivih spremembah priporočam čimprejšnji pregled.
+
+🎯 **Želite termin?** Povejte mi datum!""",
+
+    "oftalmologija": """Razumem, da imate težave z vidom. Nekaj nasvetov:
+
+👁️ **Takojšnja pomoč:**
+- Počitek oči (odmor od zaslonov)
+- Umetne solze za suhe oči
+- Zadostna osvetlitev pri branju
+
+**Okulistični pregled** (30 min, 35-70 €)
+- Pregled vida in očesnega ozadja
+- Predpis očal in kontaktnih leč
+- Merjenje očesnega pritiska
+
+⚠️ Pri nenadnih spremembah vida priporočam čimprejšnji pregled.
+
+🎯 **Želite termin?** Povejte mi datum!""",
+
     "okulist": """**Okulistični pregled**
 Trajanje: 30 minut
 Cena: 35-70 €
