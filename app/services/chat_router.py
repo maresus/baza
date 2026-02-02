@@ -213,6 +213,14 @@ def is_affirmative(message: str) -> bool:
     return False
 
 
+def is_negative(message: str) -> bool:
+    """Check if message is a negative response"""
+    tokens = message.lower().strip().split()
+    if len(tokens) <= 3:  # Short response
+        return any(word in {"ne", "no", "ne hvala", "preklic", "prekliči", "preklici", "stop", "ne bom"} for word in tokens) or message.lower().strip().startswith("ne ")
+    return False
+
+
 def is_greeting(message: str) -> bool:
     """Check if message is a greeting"""
     lowered = message.lower()
@@ -237,7 +245,7 @@ Z veseljem odgovorim na vprašanja o naših storitvah, cenah in razpoložljivih 
 2. Izberete želeni datum
 3. Izberete ustrezen termin
 4. Podate svoje podatke (ime, email, telefon)
-5. Potrдите naročilo ✅
+5. Potrdite naročilo ✅
 
 **To je to!** Celoten postopek traja manj kot 2 minuti.
 
@@ -561,6 +569,7 @@ def _blank_appointment_state() -> dict[str, Optional[str | int]]:
         "patient_health_card": None,
         "note": None,
         "waiting_resume_confirmation": False,  # Flag for OFF-TOPIC pause
+        "awaiting_booking_confirmation": False,
     }
 
 # Session states
@@ -569,6 +578,7 @@ conversation_state: dict[str, dict[str, Any]] = {}  # Session → metadata (conf
 conversation_history: list[dict[str, str]] = []
 last_interaction: Optional[datetime] = None
 chat_session_id: str = str(uuid.uuid4())[:8]
+last_user_message_by_session: dict[str, str] = {}
 
 def get_appointment_state(session_id: str) -> dict[str, Optional[str | int]]:
     """Get or create appointment state for session"""
@@ -691,12 +701,23 @@ def _service_mentioned_in_message(message: str, service: str) -> bool:
 def classify_intent(message: str, history: list = None) -> str:
     """Classify intent - FAST rules first, LLM only for complex cases"""
 
+    # Hard guard: booking keywords without explicit service -> book_general (avoid LLM guessing)
+    has_price_kw = any(word in message.lower() for word in ["cena", "cene", "cenik", "koliko", "stane"])
+    if _has_booking_keywords(message) and not has_price_kw and extract_service_type(message) is None and not any(
+        phrase in message.lower()
+        for phrase in [
+            "kako se naročim", "kako se narocim", "kako poteka naročanje", "kako poteka narocanje",
+            "kako rezerviram", "kako rezervirati", "kako do termina", "kako pridem do termina",
+        ]
+    ):
+        return "book_general"
+
     # FAST PATH: Try rules-based classification first (no API call!)
     rules_intent = classify_intent_rules(message, history)
 
     # If rules found a clear intent, use it immediately
     if rules_intent in ["greeting", "info_hours", "info_contact", "info_prices",
-                        "info_services", "check_availability"]:
+                        "info_services", "check_availability", "info_narocanje"]:
         return rules_intent
 
     # If rules found a booking intent, use it
@@ -748,16 +769,34 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     # ===== HEALTH SYMPTOMS: Check FIRST before service keywords =====
     # Detect pain/symptom patterns like "boli me X", "imam težave z X", "boli X"
     symptom_patterns = ["boli me", "boli mi", "imam težave", "imam tezave", "me boli", "mi boli",
-                        "bolečine v", "bolecine v", "srbečica", "srbecica", "otekl", "izpuščaj"]
+                        "bolečine v", "bolecine v", "srbečica", "srbecica", "otekl", "izpuščaj",
+                        "srbi", "srbi me", "srbeče", "srbeco"]
     if any(pattern in lowered for pattern in symptom_patterns):
         return "health_symptoms"
 
     # Also check for standalone symptom keywords without booking intent
-    symptom_words = ["boli", "bolec", "boleč", "bolečin", "težav", "simptom"]
+    symptom_words = ["boli", "bolec", "boleč", "bolečin", "težav", "simptom", "srbi", "srbe", "izpuščaj", "izpuscaj"]
     has_symptom = any(word in lowered for word in symptom_words)
     has_booking = any(word in lowered for word in ["naroči", "termin", "rezerv", "želim naročiti"])
     if has_symptom and not has_booking:
         return "health_symptoms"
+
+    # Info about booking process (should NOT start booking)
+    if any(phrase in lowered for phrase in [
+        "kako se naročim", "kako se narocim", "kako poteka naročanje", "kako poteka narocanje",
+        "kako rezerviram", "kako rezervirati", "kako do termina", "kako pridem do termina"
+    ]):
+        return "info_narocanje"
+
+    # Availability checks should be handled explicitly
+    if any(phrase in lowered for phrase in ["proste termine", "prosti termini", "razpoložljivi termini", "razpolozljivi termini"]):
+        return "check_availability"
+
+    # Mixed intent: booking + price -> answer price info first
+    has_price = any(word in lowered for word in ["cena", "cene", "cenik", "koliko", "stane"])
+    has_booking_kw = any(word in lowered for word in ["naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv", "želim", "zelim", "potrebujem"])
+    if has_price and has_booking_kw:
+        return "info_prices"
 
     # Appointment booking intents (with and without diacritics)
     if any(word in lowered for word in ["naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv", "želim", "zelim", "potrebujem"]):
@@ -1153,11 +1192,11 @@ def generate_health_advice(symptom_description: str) -> str:
 
         system_prompt = """Si zdravstveni svetovalec. Daj SPLOŠNE nasvete (počitek, obkladki, razgibavanje) - NIKOLI diagnoz.
 
-Format: 1) Razumevanje 2) 2-3 kratki nasveti 3) Predlagaj specialista (ortoped/dermatolog/okulist/fizioterapevt)
+Format: kratek, človeški odstavek + 2-3 kratki nasveti v alinejah + priporočilo specialista.
+Ne uporabljaj oštevilčenja (1/2/3).
+Zaključi z: "Želite, da vas naročim na pregled?"
 
-Konec: "Želite, da vas naročim na pregled?"
-
-Slovenščina, kratko."""
+Slovenščina, jedrnato."""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -1176,19 +1215,14 @@ Slovenščina, kratko."""
     except Exception as e:
         print(f"[HEALTH_ADVICE] Error: {e}")
         # Fallback to generic response
-        return """Razumem, da imate zdravstvene težave.
+        return """Razumem, da imate zdravstvene težave in da je to lahko zelo neprijetno.
 
 Nekaj splošnih nasvetov:
-🧊 Počitek in razbremenitev prizadetega dela
-💧 Zadostna hidracija
-🏃 Nežno razgibavanje, če bolečina dopušča
+- Počitek in razbremenitev prizadetega dela
+- Zadostna hidracija
+- Nežno razgibavanje, če bolečina dopušča
 
-⚠️ Če težave trajajo več dni ali se stopnjujejo, priporočam pregled pri specialistu.
-
-Naši specialisti:
-- **Ortoped** - za bolečine v sklepih, hrbtu
-- **Dermatolog** - za težave s kožo
-- **Okulist** - za težave z vidom
+Če težave trajajo več dni ali se stopnjujejo, priporočam pregled pri specialistu (ortoped/dermatolog/okulist, odvisno od težav).
 
 Želite, da vas naročim na pregled?"""
 
@@ -1281,6 +1315,10 @@ def handle_appointment_booking(message: str, session_id: str) -> str:
         reset_appointment_state(state)
         conversation_tracker.reset_loop_count(session_id)  # Reset loop detection on cancel
         return "V redu, rezervacije ne bom nadaljeval. Kaj vas še zanima?"
+    if is_negative(message):
+        reset_appointment_state(state)
+        conversation_tracker.reset_loop_count(session_id)
+        return "V redu, naročilo sem preklical. Če želite, lahko začnemo znova."
 
     # Če je service_type že nastavljen (iz classify_intent) ampak step je None -> preskoči na datum
     if state["service_type"] is not None and state["step"] is None:
@@ -1526,6 +1564,19 @@ async def chat(request: ChatRequest) -> ChatResponse:
     session_id = request.session_id or chat_session_id
     lowered = message.lower()
 
+    # If last bot asked to book after health advice, accept short "da"
+    if is_affirmative(message) and conversation_history:
+        last_bot = conversation_history[-1].get("content", "")
+        if "Želite, da vas naročim na pregled?" in last_bot:
+            response_text = handle_appointment_booking(message, session_id)
+            return ChatResponse(reply=response_text, session_id=session_id)
+
+    # If previous user message was a health symptom, treat short "da" as booking confirmation
+    prev_user_msg = last_user_message_by_session.get(session_id, "").lower()
+    if is_affirmative(message) and any(kw in prev_user_msg for kw in ["boli", "bolec", "boleč", "bolečin", "izpuščaj", "simptom", "težav"]):
+        response_text = handle_appointment_booking(message, session_id)
+        return ChatResponse(reply=response_text, session_id=session_id)
+
     # Update last interaction time
     now = datetime.now()
     if last_interaction and (now - last_interaction).total_seconds() > 3600:
@@ -1567,6 +1618,37 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
 
     # Check if user is in booking flow
     state = get_appointment_state(session_id)
+    if session_id not in conversation_state:
+        conversation_state[session_id] = {}
+
+    # ===== HEALTH ADVICE -> BOOKING CONFIRMATION =====
+    last_bot_msg = conversation_state.get(session_id, {}).get("last_bot_message", "")
+    if not last_bot_msg and conversation_history:
+        last_bot_msg = conversation_history[-1].get("content", "")
+    if conversation_state.get(session_id, {}).get("awaiting_booking_confirmation") and is_affirmative(message):
+        conversation_state[session_id]["awaiting_booking_confirmation"] = False
+        response_text = handle_appointment_booking(message, session_id)
+        return ChatResponse(reply=response_text, session_id=session_id)
+    if "Želite, da vas naročim na pregled?" in last_bot_msg and is_affirmative(message):
+        response_text = handle_appointment_booking(message, session_id)
+        return ChatResponse(reply=response_text, session_id=session_id)
+    if is_affirmative(message) and len(conversation_history) >= 2:
+        prev_user = conversation_history[-2].get("content", "").lower()
+        if any(kw in prev_user for kw in ["boli", "bolec", "boleč", "bolečin", "izpuščaj", "simptom", "težav"]):
+            response_text = handle_appointment_booking(message, session_id)
+            return ChatResponse(reply=response_text, session_id=session_id)
+
+    if state.get("awaiting_booking_confirmation"):
+        if is_affirmative(message):
+            state["awaiting_booking_confirmation"] = False
+            response_text = handle_appointment_booking(message, session_id)
+            return ChatResponse(reply=response_text, session_id=session_id)
+        if is_negative(message):
+            state["awaiting_booking_confirmation"] = False
+            return ChatResponse(
+                reply="V redu, brez naročila. Če želite, vam lahko še kako drugače pomagam.",
+                session_id=session_id,
+            )
 
     # ===== OFF-TOPIC DETECTION IN BOOKING FLOW =====
     if state["step"] is not None:
@@ -1598,6 +1680,30 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                     session_id=session_id
                 )
             else:
+                # If user provides valid next-step input, continue instead of cancel
+                step = state.get("step")
+                if step == "date" and extract_date_from_message(message):
+                    state["waiting_resume_confirmation"] = False
+                    response_text = handle_appointment_booking(message, session_id)
+                    return ChatResponse(reply=response_text, session_id=session_id)
+                if step == "time" and extract_time_from_message(message):
+                    state["waiting_resume_confirmation"] = False
+                    response_text = handle_appointment_booking(message, session_id)
+                    return ChatResponse(reply=response_text, session_id=session_id)
+                if step == "name" and is_likely_full_name(message):
+                    state["waiting_resume_confirmation"] = False
+                    response_text = handle_appointment_booking(message, session_id)
+                    return ChatResponse(reply=response_text, session_id=session_id)
+                if step == "phone":
+                    digits_only = re.sub(r"[^\d]", "", message)
+                    if len(digits_only) >= 8:
+                        state["waiting_resume_confirmation"] = False
+                        response_text = handle_appointment_booking(message, session_id)
+                        return ChatResponse(reply=response_text, session_id=session_id)
+                if step == "email" and ("@" in message and "." in message.split("@")[-1]):
+                    state["waiting_resume_confirmation"] = False
+                    response_text = handle_appointment_booking(message, session_id)
+                    return ChatResponse(reply=response_text, session_id=session_id)
                 # User doesn't want to continue - reset booking
                 reset_appointment_state(state)
                 conversation_tracker.reset_loop_count(session_id)  # Reset loop detection on cancel
@@ -1648,6 +1754,29 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
         if input_matches_expected_format:
             response_text = handle_appointment_booking(message, session_id)
             return ChatResponse(reply=response_text, session_id=session_id)
+
+        # If user mentions a different service mid-flow, switch service and reset steps
+        service_switch = extract_service_type(message)
+        if service_switch and service_switch != state.get("service_type"):
+            state["service_type"] = service_switch
+            state["date"] = None
+            state["time"] = None
+            state["name"] = None
+            state["phone"] = None
+            state["email"] = None
+            state["reason"] = None
+            state["step"] = "date"
+            state["waiting_resume_confirmation"] = False
+            info = get_service_info(service_switch)
+            return ChatResponse(
+                reply=f"""Odlično! Naročilo na **{info['name']}**.
+
+Trajanje: {info['duration_minutes']} minut
+Cena: {info['price_range']}
+
+Kateri datum vas zanima? (npr. 15.3.2026)""",
+                session_id=session_id,
+            )
 
         # ===== SECOND: Check OFF-TOPIC only if input didn't match expected format =====
         # Detect if message is OFF-TOPIC (info question during booking)
@@ -1732,8 +1861,13 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
     elif intent == "info_services":
         response_text = INFO_RESPONSES["storitve"]
 
+    elif intent == "info_narocanje":
+        response_text = INFO_RESPONSES["narocanje"]
+
     elif intent == "info_prices":
         response_text = INFO_RESPONSES["cene"]
+        if _has_booking_keywords(message):
+            response_text += "\n\nČe želite, lahko takoj začnemo z naročanjem – povejte, kateri pregled vas zanima."
 
     elif intent == "info_contact":
         response_text = INFO_RESPONSES["kontakt"]
@@ -1744,6 +1878,7 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
     elif intent == "health_symptoms":
         # Use KB if possible; otherwise LLM health advice
         response_text = answer_health_query(message)
+        state["awaiting_booking_confirmation"] = True
 
     elif intent.startswith("info_"):
         service_key = intent.replace("info_", "")
@@ -1818,6 +1953,7 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                     if is_health_query:
                         # Use KB if possible; otherwise LLM health advice
                         response_text = answer_health_query(message)
+                        state["awaiting_booking_confirmation"] = True
                     else:
                         # ===== HYBRID KNOWLEDGE BASE =====
                         # Use hybrid retrieval (BM25 + vector embeddings) with confidence gating
@@ -1842,9 +1978,16 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
 
 Kaj vas zanima?"""
 
+    # If we offered booking after health advice, set confirmation flag
+    if "Želite, da vas naročim na pregled?" in response_text:
+        state["awaiting_booking_confirmation"] = True
+        conversation_state[session_id]["awaiting_booking_confirmation"] = True
+
     # Add to conversation history
     conversation_history.append({"role": "user", "content": message})
     conversation_history.append({"role": "assistant", "content": response_text})
+    conversation_state[session_id]["last_bot_message"] = response_text
+    last_user_message_by_session[session_id] = message
 
     # Keep only last 20 messages
     if len(conversation_history) > 20:
