@@ -653,7 +653,7 @@ def classify_intent(message: str, history: list = None) -> str:
             return f"book_{service}"
         return "book_general"
     elif intent == "health_advice":
-        return "question"
+        return "health_symptoms"
     elif intent == "question":
         return "question"
     elif intent == "info_narocanje":
