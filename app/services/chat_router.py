@@ -1777,13 +1777,25 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
                     rag_answer = answer_tourist_question(message)
                     response_text = rag_answer
                 else:
-                    # ===== HYBRID KNOWLEDGE BASE =====
-                    # Use hybrid retrieval (BM25 + vector embeddings) with confidence gating
-                    response_text = answer_with_hybrid_kb(
-                        message,
-                        history=conversation_history,
-                        session_id=session_id
-                    )
+                    # ===== HEALTH SYMPTOMS: Use RAG engine with knowledge.jsonl =====
+                    # Check if this looks like a health symptom query
+                    health_keywords = ["boli", "bolec", "boleč", "bolečin", "težav", "simptom",
+                                       "koleno", "hrbet", "rama", "noga", "roka", "vrat", "gleženj",
+                                       "koža", "izpuščaj", "srbečic", "oči", "vid", "glava"]
+                    lowered_msg = message.lower()
+                    is_health_query = any(kw in lowered_msg for kw in health_keywords)
+
+                    if is_health_query:
+                        # Use RAG engine which searches knowledge.jsonl directly
+                        response_text = rag_engine.answer(message)
+                    else:
+                        # ===== HYBRID KNOWLEDGE BASE =====
+                        # Use hybrid retrieval (BM25 + vector embeddings) with confidence gating
+                        response_text = answer_with_hybrid_kb(
+                            message,
+                            history=conversation_history,
+                            session_id=session_id
+                        )
 
                     # ===== CACHE RESPONSE =====
                     # Only cache if not a clarification request
