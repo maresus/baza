@@ -185,6 +185,11 @@ SERVICE_INQUIRY_KEYWORDS = {
     "a delate",
     "a zdravite",
     "kaj pomaga",
+    "kako poteka",
+    "kaj vključuje",
+    "kaj vsebuje",
+    "kdo dela",
+    "kdo je",
 }
 
 # ============ INFO KEYWORDS ============
@@ -247,7 +252,7 @@ GOODBYE_KEYWORDS = {
     "adijo",
     "nasvidenje",
     "lep pozdrav",
-    "pozdrav",
+    "lp",
     "bye",
     "čao",
     "cao",
@@ -255,6 +260,7 @@ GOODBYE_KEYWORDS = {
     "se vidimo",
     "na svidenje",
 }
+# Note: "pozdrav" removed - conflicts with "pozdravljeni" (greeting)
 
 # ============ URGENCY KEYWORDS ============
 
@@ -317,21 +323,44 @@ def compute_confidence(message: str, intent: str) -> float:
     """Compute confidence score for given intent."""
     text = message.lower()
 
+    # Pre-compute common signals
+    has_appointment_kw = any(k in text for k in APPOINTMENT_KEYWORDS)
+    has_service_kw = any(k in text for k in SERVICE_KEYWORDS)
+    has_booking_hint = any(k in text for k in BOOKING_HINTS)
+    has_greeting_kw = any(k in text for k in GREETING_KEYWORDS)
+    has_price_kw = any(k in text for k in PRICE_KEYWORDS)
+    has_inquiry_kw = any(k in text for k in SERVICE_INQUIRY_KEYWORDS)
+    has_info_kw = any(k in text for k in INFO_KEYWORDS)
+
+    # Special check: "kako pridem" is INFO, not booking
+    is_kako_pridem = "kako pridem" in text or "kako pridemo" in text
+
     if intent == "GREETING":
-        return 1.0 if any(k in text for k in GREETING_KEYWORDS) else 0.0
+        if not has_greeting_kw:
+            return 0.0
+        # If message has booking/appointment intent, downgrade greeting
+        if has_appointment_kw or has_booking_hint:
+            return 0.3  # Let BOOKING win
+        # If message has price/info intent, downgrade greeting
+        if has_price_kw or has_info_kw:
+            return 0.3
+        # Pure greeting
+        return 1.0
 
     if intent == "GOODBYE":
         return 1.0 if any(k in text for k in GOODBYE_KEYWORDS) else 0.0
 
     if intent == "BOOKING_APPOINTMENT":
-        # Need both appointment keyword AND service/booking hint
-        has_appointment_kw = any(k in text for k in APPOINTMENT_KEYWORDS)
-        has_service_kw = any(k in text for k in SERVICE_KEYWORDS)
-        has_booking_hint = any(k in text for k in BOOKING_HINTS)
-        has_inquiry_kw = any(k in text for k in SERVICE_INQUIRY_KEYWORDS)
+        # "Kako pridem" is INFO, not booking
+        if is_kako_pridem:
+            return 0.0
+
+        # If asking about price, this is PRICE not booking
+        if has_price_kw and not has_booking_hint:
+            return 0.3
 
         # If inquiry keywords present, this is likely SERVICE_INFO not booking
-        if has_inquiry_kw:
+        if has_inquiry_kw and not has_booking_hint:
             return 0.3  # Lower than SERVICE_INFO's 0.9
 
         # Strong signal: explicit appointment + service type
@@ -342,7 +371,11 @@ def compute_confidence(message: str, intent: str) -> float:
         if has_booking_hint and has_service_kw:
             return 0.9
 
-        # Medium signal: just appointment keyword
+        # Strong signal: booking hint + appointment keyword
+        if has_booking_hint and has_appointment_kw:
+            return 0.85
+
+        # Medium signal: just appointment keyword (not "pridem" alone)
         if has_appointment_kw:
             base = 0.6
             if has_booking_hint:
@@ -350,9 +383,9 @@ def compute_confidence(message: str, intent: str) -> float:
             base += _score_question_marker(text)
             return min(base, 1.0)
 
-        # Weak signal: service + question (might be info request)
-        if has_service_kw and has_booking_hint:
-            return 0.7
+        # Weak signal: just booking hint
+        if has_booking_hint:
+            return 0.5
 
         return 0.0
 

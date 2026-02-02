@@ -43,9 +43,11 @@ class Decision:
 def _detect_affirmative_negative(message: str) -> IntentType | None:
     """Detect simple yes/no responses (exact match only)."""
     text = message.lower().strip()
-    if text in {"da", "ja", "ok", "okej", "seveda", "res je", "tako je", "vredu", "v redu", "lahko"}:
+    if text in {"da", "ja", "ok", "okej", "seveda", "res je", "tako je", "vredu", "v redu", "lahko",
+                "ja prosim", "da prosim", "prosim", "seveda ja", "ja seveda", "grem", "gremo"}:
         return IntentType.AFFIRMATIVE
-    if text in {"ne", "ne hvala", "ne, hvala", "ne bom", "nočem", "nochem", "pustimo", "ne rabim", "ni treba"}:
+    if text in {"ne", "ne hvala", "ne, hvala", "ne bom", "nočem", "nochem", "pustimo", "ne rabim", "ni treba",
+                "ne želim", "ne zelim", "raje ne", "rajši ne"}:
         return IntentType.NEGATIVE
     return None
 
