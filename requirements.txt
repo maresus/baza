@@ -12,4 +12,4 @@ psycopg2-binary
 pydantic-settings
 pytest>=7.0.0
 pytest-cov>=4.0.0
-sentence-transformers>=2.2.0
+# sentence-transformers>=2.2.0  # DISABLED: Adds 2GB+ (torch, CUDA) - re-ranker is optional
