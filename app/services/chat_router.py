@@ -1015,8 +1015,13 @@ Vprašanje: {query}
 Odgovori na slovenščini na podlagi konteksta zgoraj."""}
             ]
 
-            response = llm_client.chat(messages, temperature=0.3)
-            answer = response.strip()
+            response = llm_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.3,
+                max_tokens=300
+            )
+            answer = response.choices[0].message.content.strip()
 
             # Validate LLM response quality
             if len(answer) < 20:
@@ -1082,39 +1087,27 @@ def generate_health_advice(symptom_description: str) -> str:
     try:
         llm_client = get_llm_client()
 
-        system_prompt = """Si prijazni zdravstveni svetovalec v zdravstvenem centru.
+        system_prompt = """Si zdravstveni svetovalec. Daj SPLOŠNE nasvete (počitek, obkladki, razgibavanje) - NIKOLI diagnoz.
 
-TVOJA NALOGA:
-1. Daj SPLOŠNE nasvete za lajšanje težav (počitek, obkladki, razgibavanje, hidracija itd.)
-2. NIKOLI ne postavljaj diagnoz - to je naloga zdravnika
-3. Na koncu VEDNO predlagaj ustrezen pregled pri specialistu
+Format: 1) Razumevanje 2) 2-3 kratki nasveti 3) Predlagaj specialista (ortoped/dermatolog/okulist/fizioterapevt)
 
-STRUKTURA ODGOVORA:
-- Najprej izrazi razumevanje ("Razumem, da imate težave z...")
-- Potem daj 3-4 splošne nasvete za lajšanje
-- Na koncu predlagaj ustreznega specialista iz naše ponudbe:
-  • Dermatolog - za kožne težave, pike, izpuščaje
-  • Ortoped - za bolečine v sklepih, hrbtu, mišicah
-  • Okulist - za težave z vidom, očmi
-  • Fizioterapevt - za rehabilitacijo, razgibavanje
-  • Estetski posegi - za botox, fillerje
-  • Kozmetika - za nego kože
+Konec: "Želite, da vas naročim na pregled?"
 
-POMEMBNO:
-- Bodi topel in empatičen
-- Nasveti naj bodo praktični in izvedljivi doma
-- Vedno omeni "če težave trajajo več dni, priporočam pregled"
-- Ponudi možnost naročanja ("Želite, da vas naročim na pregled?")
-
-Odgovarjaj v slovenščini."""
+Slovenščina, kratko."""
 
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": symptom_description}
         ]
 
-        response = llm_client.chat(messages, temperature=0.7)
-        return response.strip()
+        # Use correct OpenAI API - gpt-4o-mini is fast
+        response = llm_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            temperature=0.5,
+            max_tokens=250
+        )
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
         print(f"[HEALTH_ADVICE] Error: {e}")
