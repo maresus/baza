@@ -399,6 +399,9 @@ def compute_confidence(message: str, intent: str) -> float:
         # If message has price/info intent, downgrade greeting
         if has_price_kw or has_info_kw:
             return 0.3
+        # If message has service keywords (symptoms), downgrade greeting
+        if has_service_kw:
+            return 0.3  # Let SERVICE_INFO win
         # Pure greeting
         return 1.0
 

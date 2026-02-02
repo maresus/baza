@@ -40,20 +40,45 @@ class Decision:
     resume_prompt: str | None = None
 
 
-def _detect_affirmative_negative(message: str) -> IntentType | None:
-    """Detect simple yes/no responses (exact match only)."""
-    text = message.lower().strip()
-    # Remove extra spaces
-    text = " ".join(text.split())
+AFFIRMATIVE_WORDS = {
+    "da", "ja", "ok", "okej", "okay", "seveda", "vredu", "lahko", "prosim", "grem", "gremo",
+    "bom", "prišel", "prisla", "prsou", "pridem", "pridm", "yes", "yep", "sure", "cool",
+    "tako", "je", "res", "v", "redu", "d", "a", "super", "odlično", "odlicno", "kul",
+}
 
-    if text in {"da", "ja", "ok", "okej", "okay", "seveda", "res je", "tako je", "vredu", "v redu", "lahko",
-                "ja prosim", "da prosim", "prosim", "seveda ja", "ja seveda", "grem", "gremo",
-                "bom", "bom prišel", "bom prisla", "bom prsou", "pridem", "pridm",
-                "yes", "yep", "sure", "cool", "d a"}:
+NEGATIVE_WORDS = {
+    "ne", "nočem", "nochem", "pustimo", "rabim", "treba", "želim", "zelim", "raje", "rajši",
+    "no", "nope", "hvala", "ni",
+}
+
+
+def _detect_affirmative_negative(message: str) -> IntentType | None:
+    """Detect simple yes/no responses (word-based matching)."""
+    text = message.lower().strip()
+    # Remove extra spaces and punctuation
+    text = " ".join(text.split())
+    # Remove common punctuation
+    for char in ".,!?":
+        text = text.replace(char, "")
+
+    words = text.split()
+    if not words:
+        return None
+
+    # Check exact matches first (highest priority)
+    if text in {"da", "ja", "ok", "okej", "okay", "ne", "yes", "no", "nope", "d a", "n e"}:
+        if text in {"ne", "no", "nope", "n e"}:
+            return IntentType.NEGATIVE
         return IntentType.AFFIRMATIVE
-    if text in {"ne", "ne hvala", "ne, hvala", "ne bom", "nočem", "nochem", "pustimo", "ne rabim", "ni treba",
-                "ne želim", "ne zelim", "raje ne", "rajši ne", "n e", "no", "nope"}:
+
+    # Check if ALL words are affirmative words
+    if all(w in AFFIRMATIVE_WORDS for w in words):
+        return IntentType.AFFIRMATIVE
+
+    # Check if message starts with "ne" and rest are negative-compatible
+    if words[0] == "ne" and all(w in NEGATIVE_WORDS or w in {"hvala", "bom"} for w in words):
         return IntentType.NEGATIVE
+
     return None
 
 

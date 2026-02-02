@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Demo - Nove funkcionalnosti</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand: #7b5e3b;
+      --brand-light: #a68b5b;
+      --bg: #f5f4f1;
+      --card: #fff;
+      --muted: #7a7a7a;
+      --border: #e6e2da;
+      --shadow: 0 10px 30px rgba(0,0,0,0.06);
+      --radius: 14px;
+      --success: #2f8f5b;
+      --warning: #c48c1c;
+      --danger: #c0392b;
+      --info: #2f54a3;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: #1b1f1a;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .page { max-width: 1400px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+    .title { font-size: 1.3rem; font-weight: 700; }
+    .subtitle { color: var(--muted); font-size: 0.9rem; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #4b3a28;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+    }
+    .tab:hover { background: #f9f7f2; }
+    .tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card-subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .stat-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 4px; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--brand); }
+    .stat-hint { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+    .stat-card.success .stat-value { color: var(--success); }
+    .stat-card.warning .stat-value { color: var(--warning); }
+    .stat-card.danger .stat-value { color: var(--danger); }
+
+    /* Badges */
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .badge-urgent { background: #fbe0e0; color: #9a1f1f; }
+    .badge-high { background: #fff4d6; color: #8a6500; }
+    .badge-medium { background: #e3ecff; color: #2f54a3; }
+    .badge-low { background: #d7f2dd; color: #226536; }
+    .badge-positive { background: #d7f2dd; color: #226536; }
+    .badge-negative { background: #fbe0e0; color: #9a1f1f; }
+    .badge-neutral { background: #f2ede6; color: #5b4327; }
+
+    /* Lists */
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-main { flex: 1; }
+    .list-item-title { font-weight: 600; }
+    .list-item-meta { color: var(--muted); font-size: 0.85rem; }
+
+    /* Buttons */
+    .btn {
+      border: none;
+      cursor: pointer;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      transition: all 0.2s;
+      background: var(--brand);
+      color: #fff;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn.secondary { background: #f1ede5; color: #4b3a28; }
+    .btn.success { background: var(--success); }
+    .btn.danger { background: var(--danger); }
+    .btn.small { padding: 6px 12px; font-size: 0.85rem; }
+
+    /* Charts (simple CSS bars) */
+    .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+    .bar-row { display: flex; align-items: center; gap: 12px; }
+    .bar-label { width: 100px; font-size: 0.85rem; color: var(--muted); }
+    .bar-track { flex: 1; height: 24px; background: #f2ede6; border-radius: 6px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--brand); border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; color: #fff; font-size: 0.75rem; font-weight: 600; }
+
+    /* Peak Hours Grid */
+    .hours-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+    .hour-cell {
+      padding: 8px 4px;
+      text-align: center;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .hour-cell.low { background: #e9f7f1; color: #1e5142; }
+    .hour-cell.medium { background: #fff4d6; color: #8a6500; }
+    .hour-cell.high { background: #fde7e7; color: #7a1f1f; }
+
+    /* Handoff Queue */
+    .handoff-item {
+      background: #faf8f4;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .handoff-item.priority-urgent { border-left: 4px solid var(--danger); }
+    .handoff-item.priority-high { border-left: 4px solid var(--warning); }
+    .handoff-item.priority-medium { border-left: 4px solid var(--info); }
+    .handoff-item.priority-low { border-left: 4px solid var(--success); }
+    .handoff-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; }
+    .handoff-summary { color: #333; margin-bottom: 8px; }
+    .handoff-info { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
+    .handoff-actions { margin-top: 12px; display: flex; gap: 8px; }
+
+    /* Section visibility */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .hours-grid { grid-template-columns: repeat(6, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <div class="title">Zdravstveni Center - Admin Demo</div>
+        <div class="subtitle">Nove funkcionalnosti za pregled</div>
+      </div>
+      <a href="/admin" class="btn secondary">Nazaj na glavni admin</a>
+    </header>
+
+    <!-- Main Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('analytics')">Analytics Dashboard</button>
+      <button class="tab" onclick="showSection('handoff')">Handoff Queue</button>
+      <button class="tab" onclick="showSection('scheduler')">Smart Scheduler</button>
+      <button class="tab" onclick="showSection('triage')">Triage Test</button>
+    </div>
+
+    <!-- ===================== ANALYTICS SECTION ===================== -->
+    <div id="section-analytics" class="section active">
+      <div class="stats-grid" id="analytics-stats">
+        <div class="stat-card">
+          <div class="stat-label">Pogovorov (7 dni)</div>
+          <div class="stat-value" id="stat-conversations">-</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-label">Pozitivnih</div>
+          <div class="stat-value" id="stat-positive">-</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-label">Negativnih</div>
+          <div class="stat-value" id="stat-negative">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">No-show rate</div>
+          <div class="stat-value" id="stat-noshow">-</div>
+          <div class="stat-hint">%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Trending Topics (7 dni)</div>
+        <div class="card-subtitle">Najpogostejše teme v pogovorih</div>
+        <div id="trending-topics" class="bar-chart">
+          <div class="loading">Nalagam...</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card">
+          <div class="card-title">Sentiment Analysis</div>
+          <div class="card-subtitle">Ton pogovorov</div>
+          <div id="sentiment-chart">
+            <div class="loading">Nalagam...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Peak Hours</div>
+          <div class="card-subtitle">Aktivnost po urah (8:00-18:00)</div>
+          <div id="peak-hours" class="hours-grid">
+            <div class="loading" style="grid-column: span 12;">Nalagam...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Booking Funnel</div>
+        <div class="card-subtitle">Konverzija skozi korake rezervacije</div>
+        <div id="funnel-chart" class="bar-chart">
+          <div class="loading">Nalagam...</div>
+        </div>
+      </div>
+
+      <button class="btn" onclick="loadAnalytics()">Osveži podatke</button>
+    </div>
+
+    <!-- ===================== HANDOFF SECTION ===================== -->
+    <div id="section-handoff" class="section">
+      <div class="stats-grid">
+        <div class="stat-card warning">
+          <div class="stat-label">Caka na recepcijo</div>
+          <div class="stat-value" id="handoff-pending">-</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-label">Urgentni</div>
+          <div class="stat-value" id="handoff-urgent">-</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-label">Reseni danes</div>
+          <div class="stat-value" id="handoff-resolved">-</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Cakalna vrsta za recepcijo</div>
+        <div class="card-subtitle">Pogovori, ki potrebujejo cloveski odgovor</div>
+        <div id="handoff-queue">
+          <div class="loading">Nalagam...</div>
+        </div>
+      </div>
+
+      <button class="btn" onclick="loadHandoffs()">Osveži vrsto</button>
+    </div>
+
+    <!-- ===================== SCHEDULER SECTION ===================== -->
+    <div id="section-scheduler" class="section">
+      <div class="card">
+        <div class="card-title">Smart Scheduler - Predlogi terminov</div>
+        <div class="card-subtitle">AI predlaga optimalne termine glede na zasedenost in preference pacienta</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <label style="font-size: 0.85rem; color: var(--muted);">Storitev</label>
+            <select id="scheduler-service" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+              <option value="dermatolog">Dermatolog</option>
+              <option value="ortoped">Ortoped</option>
+              <option value="okulist">Okulist</option>
+              <option value="estetika">Estetika</option>
+              <option value="laser">Laser</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; color: var(--muted);">Telefon (opcijsko)</label>
+            <input type="text" id="scheduler-phone" placeholder="+38640..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; color: var(--muted);">Zeleni datum</label>
+            <input type="text" id="scheduler-date" placeholder="DD.MM.YYYY" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button class="btn" onclick="getSuggestions()">Predlagaj</button>
+          </div>
+        </div>
+
+        <div id="scheduler-suggestions">
+          <div class="loading">Vnesi podatke in klikni "Predlagaj"</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tedenska zasedenost</div>
+        <div class="card-subtitle">Pregled zasedenosti po dnevih</div>
+        <div id="weekly-load">
+          <div class="loading">Nalagam...</div>
+        </div>
+      </div>
+
+      <button class="btn" onclick="loadSchedulerData()">Osveži podatke</button>
+    </div>
+
+    <!-- ===================== TRIAGE SECTION ===================== -->
+    <div id="section-triage" class="section">
+      <div class="card">
+        <div class="card-title">Quick Triage Test</div>
+        <div class="card-subtitle">Testiraj soft triage sistem - vnesi simptome in poglej priporocilo</div>
+
+        <div style="margin-bottom: 16px;">
+          <textarea id="triage-input" rows="3" placeholder="Opisi simptome, npr: Boli me koleno in je oteceno ze teden dni..." style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem;"></textarea>
+        </div>
+
+        <button class="btn" onclick="runTriage()">Analiziraj simptome</button>
+
+        <div id="triage-result" style="margin-top: 20px; display: none;">
+          <div style="background: #f9f7f2; border-radius: 10px; padding: 16px;">
+            <div style="font-weight: 700; margin-bottom: 8px;">Rezultat triaze:</div>
+            <div id="triage-output"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Knowledge Graph Query</div>
+        <div class="card-subtitle">Testiraj semantic knowledge graph</div>
+
+        <div style="margin-bottom: 16px;">
+          <input type="text" id="kg-input" placeholder="Vnesi simptom, npr: bolecina v oceh" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px;">
+        </div>
+
+        <button class="btn secondary" onclick="queryKnowledgeGraph()">Query Graph</button>
+
+        <div id="kg-result" style="margin-top: 20px; display: none;">
+          <pre id="kg-output" style="background: #f5f4f1; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+
+    // Tab switching
+    function showSection(name) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('section-' + name).classList.add('active');
+      event.target.classList.add('active');
+
+      // Auto-load data
+      if (name === 'analytics') loadAnalytics();
+      if (name === 'handoff') loadHandoffs();
+      if (name === 'scheduler') loadSchedulerData();
+    }
+
+    // ==================== ANALYTICS ====================
+    async function loadAnalytics() {
+      try {
+        // Dashboard stats
+        const dashRes = await fetch(API_BASE + '/api/admin/analytics/dashboard?days=7');
+        if (dashRes.ok) {
+          const data = await dashRes.json();
+          document.getElementById('stat-conversations').textContent = data.total_conversations || 0;
+          document.getElementById('stat-positive').textContent = data.sentiment?.positive || 0;
+          document.getElementById('stat-negative').textContent = data.sentiment?.negative || 0;
+        }
+
+        // Reminder stats for no-show
+        const remRes = await fetch(API_BASE + '/api/admin/analytics/reminder-stats');
+        if (remRes.ok) {
+          const remData = await remRes.json();
+          document.getElementById('stat-noshow').textContent = remData.no_show_rate || 0;
+        }
+
+        // Trending topics
+        const trendRes = await fetch(API_BASE + '/api/admin/analytics/trending?days=7');
+        if (trendRes.ok) {
+          const trendData = await trendRes.json();
+          renderTrending(trendData);
+        }
+
+        // Sentiment
+        const sentRes = await fetch(API_BASE + '/api/admin/analytics/sentiment?days=7');
+        if (sentRes.ok) {
+          const sentData = await sentRes.json();
+          renderSentiment(sentData);
+        }
+
+        // Peak hours
+        const peakRes = await fetch(API_BASE + '/api/admin/analytics/peak-hours?days=7');
+        if (peakRes.ok) {
+          const peakData = await peakRes.json();
+          renderPeakHours(peakData);
+        }
+
+        // Funnel
+        const funnelRes = await fetch(API_BASE + '/api/admin/analytics/funnel?days=30');
+        if (funnelRes.ok) {
+          const funnelData = await funnelRes.json();
+          renderFunnel(funnelData);
+        }
+
+      } catch (err) {
+        console.error('Analytics load error:', err);
+      }
+    }
+
+    function renderTrending(data) {
+      const container = document.getElementById('trending-topics');
+      const topics = data.top_topics || [];
+      if (!topics.length) {
+        container.innerHTML = '<div class="muted">Ni podatkov</div>';
+        return;
+      }
+      const maxCount = Math.max(...topics.map(t => t.count));
+      container.innerHTML = topics.slice(0, 8).map(t => `
+        <div class="bar-row">
+          <div class="bar-label">${t.topic}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${(t.count / maxCount * 100)}%">${t.count}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderSentiment(data) {
+      const container = document.getElementById('sentiment-chart');
+      const total = (data.positive || 0) + (data.negative || 0) + (data.neutral || 0);
+      if (!total) {
+        container.innerHTML = '<div class="muted">Ni podatkov</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+          <span class="badge badge-positive">Pozitivno: ${data.positive || 0}</span>
+          <span class="badge badge-neutral">Nevtralno: ${data.neutral || 0}</span>
+          <span class="badge badge-negative">Negativno: ${data.negative || 0}</span>
+        </div>
+        <div class="bar-track" style="height: 30px;">
+          <div style="display: flex; height: 100%;">
+            <div style="width: ${(data.positive/total*100)}%; background: var(--success);"></div>
+            <div style="width: ${(data.neutral/total*100)}%; background: #e6e2da;"></div>
+            <div style="width: ${(data.negative/total*100)}%; background: var(--danger);"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPeakHours(data) {
+      const container = document.getElementById('peak-hours');
+      const hourly = data.hourly || {};
+      const hours = [];
+      for (let h = 8; h <= 17; h++) {
+        hours.push({ hour: h, count: hourly[h] || 0 });
+      }
+      const maxCount = Math.max(...hours.map(h => h.count), 1);
+      container.innerHTML = hours.map(h => {
+        let level = 'low';
+        if (h.count > maxCount * 0.6) level = 'high';
+        else if (h.count > maxCount * 0.3) level = 'medium';
+        return `<div class="hour-cell ${level}">${h.hour}:00<br>${h.count}</div>`;
+      }).join('');
+    }
+
+    function renderFunnel(data) {
+      const container = document.getElementById('funnel-chart');
+      const stages = data.stages || [];
+      if (!stages.length) {
+        container.innerHTML = '<div class="muted">Ni podatkov</div>';
+        return;
+      }
+      const maxCount = stages[0]?.count || 1;
+      container.innerHTML = stages.map(s => `
+        <div class="bar-row">
+          <div class="bar-label">${s.name}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${(s.count / maxCount * 100)}%; background: ${s.drop_rate > 30 ? 'var(--warning)' : 'var(--brand)'}">
+              ${s.count} ${s.drop_rate ? `(-${s.drop_rate}%)` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==================== HANDOFF ====================
+    async function loadHandoffs() {
+      try {
+        const res = await fetch(API_BASE + '/api/admin/handoff/pending');
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+
+        const handoffs = data.handoffs || [];
+        document.getElementById('handoff-pending').textContent = handoffs.length;
+        document.getElementById('handoff-urgent').textContent = handoffs.filter(h => h.priority === 'URGENT').length;
+        document.getElementById('handoff-resolved').textContent = data.resolved_today || 0;
+
+        const container = document.getElementById('handoff-queue');
+        if (!handoffs.length) {
+          container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--muted);">Ni cakajoih pogovorov</div>';
+          return;
+        }
+
+        container.innerHTML = handoffs.map(h => `
+          <div class="handoff-item priority-${h.priority?.toLowerCase() || 'low'}">
+            <div class="handoff-header">
+              <div>
+                <span class="badge badge-${h.priority?.toLowerCase() || 'low'}">${h.priority || 'LOW'}</span>
+                <span style="margin-left: 8px; font-weight: 600;">Session: ${h.session_id?.slice(0, 8)}...</span>
+              </div>
+              <span style="color: var(--muted); font-size: 0.85rem;">${h.created_at || ''}</span>
+            </div>
+            <div class="handoff-summary">${h.summary || 'Ni povzetka'}</div>
+            <div class="handoff-info">
+              ${h.key_info?.phone ? `<span>Tel: ${h.key_info.phone}</span>` : ''}
+              ${h.key_info?.service_requested ? `<span>Storitev: ${h.key_info.service_requested}</span>` : ''}
+              ${h.sentiment?.frustration_level ? `<span>Frustracija: ${h.sentiment.frustration_level}/10</span>` : ''}
+            </div>
+            <div class="handoff-actions">
+              <button class="btn small" onclick="viewHandoff('${h.session_id}')">Poglej pogovor</button>
+              <button class="btn small success" onclick="resolveHandoff('${h.session_id}')">Oznaci kot reseno</button>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        console.error('Handoff load error:', err);
+        document.getElementById('handoff-queue').innerHTML = '<div class="loading">Napaka pri nalaganju</div>';
+      }
+    }
+
+    async function viewHandoff(sessionId) {
+      window.open('/admin/conversations?session=' + sessionId, '_blank');
+    }
+
+    async function resolveHandoff(sessionId) {
+      if (!confirm('Oznaci ta pogovor kot resen?')) return;
+      try {
+        const res = await fetch(API_BASE + '/api/admin/handoff/resolve/' + sessionId, { method: 'POST' });
+        if (res.ok) {
+          loadHandoffs();
+        }
+      } catch (err) {
+        alert('Napaka: ' + err.message);
+      }
+    }
+
+    // ==================== SCHEDULER ====================
+    async function loadSchedulerData() {
+      try {
+        const res = await fetch(API_BASE + '/api/admin/scheduler/weekly-load');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        const container = document.getElementById('weekly-load');
+        const days = data.days || [];
+        if (!days.length) {
+          container.innerHTML = '<div class="muted">Ni podatkov</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
+            ${days.map(d => `
+              <div style="background: ${d.load > 80 ? '#fde7e7' : d.load > 50 ? '#fff4d6' : '#e9f7f1'}; padding: 12px; border-radius: 8px; text-align: center;">
+                <div style="font-weight: 600;">${d.day_name}</div>
+                <div style="font-size: 0.85rem; color: var(--muted);">${d.date}</div>
+                <div style="font-size: 1.5rem; font-weight: 700; margin: 4px 0;">${d.load}%</div>
+                <div style="font-size: 0.75rem; color: var(--muted);">${d.booked}/${d.total} terminov</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch (err) {
+        console.error('Scheduler load error:', err);
+      }
+    }
+
+    async function getSuggestions() {
+      const service = document.getElementById('scheduler-service').value;
+      const phone = document.getElementById('scheduler-phone').value;
+      const date = document.getElementById('scheduler-date').value;
+
+      const container = document.getElementById('scheduler-suggestions');
+      container.innerHTML = '<div class="loading">Iscem optimalne termine...</div>';
+
+      try {
+        let url = API_BASE + '/api/admin/scheduler/suggestions?service_type=' + service;
+        if (phone) url += '&phone=' + encodeURIComponent(phone);
+        if (date) url += '&preferred_date=' + encodeURIComponent(date);
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        const suggestions = data.suggestions || [];
+        if (!suggestions.length) {
+          container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--muted);">Ni prostih terminov</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <div style="font-weight: 600; margin-bottom: 8px;">Predlagani termini:</div>
+          ${suggestions.map((s, i) => `
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: ${i === 0 ? '#e9f7f1' : '#f9f7f2'}; border-radius: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.2rem;">${i === 0 ? '' : (i+1) + '.'}</span>
+              <span style="flex: 1; font-weight: ${i === 0 ? '600' : '400'};">${s}</span>
+              ${i === 0 ? '<span class="badge badge-positive">Priporoceno</span>' : ''}
+            </div>
+          `).join('')}
+          ${data.message ? `<div style="margin-top: 12px; color: var(--muted); font-size: 0.9rem;">${data.message}</div>` : ''}
+        `;
+
+      } catch (err) {
+        container.innerHTML = '<div style="color: var(--danger);">Napaka: ' + err.message + '</div>';
+      }
+    }
+
+    // ==================== TRIAGE ====================
+    async function runTriage() {
+      const symptoms = document.getElementById('triage-input').value.trim();
+      if (!symptoms) {
+        alert('Vnesi simptome');
+        return;
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/admin/triage/quick?symptoms=' + encodeURIComponent(symptoms), {
+          method: 'POST'
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        const resultDiv = document.getElementById('triage-result');
+        const outputDiv = document.getElementById('triage-output');
+        resultDiv.style.display = 'block';
+
+        outputDiv.innerHTML = `
+          <div style="margin-bottom: 12px;">
+            <strong>Priporocen specialist:</strong>
+            <span class="badge badge-${data.is_urgent ? 'urgent' : 'positive'}">${data.specialist || 'Osebni zdravnik'}</span>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <strong>Sporocilo:</strong><br>
+            ${data.recommendation || data.analysis?.message || 'Posvetujte se z zdravnikom.'}
+          </div>
+          ${data.is_urgent ? '<div style="background: #fbe0e0; padding: 10px; border-radius: 6px; color: #9a1f1f; font-weight: 600;">URGENTNO: Takojna medicinska pomoc potrebna!</div>' : ''}
+          <div style="margin-top: 12px; padding: 10px; background: #fff4d6; border-radius: 6px; font-size: 0.85rem;">
+            To NI diagnoza. Za natancno oceno se vedno posvetujte z zdravnikom.
+          </div>
+        `;
+
+      } catch (err) {
+        alert('Napaka: ' + err.message);
+      }
+    }
+
+    async function queryKnowledgeGraph() {
+      const query = document.getElementById('kg-input').value.trim();
+      if (!query) {
+        alert('Vnesi iskalni niz');
+        return;
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/admin/knowledge-graph/query-symptoms?text=' + encodeURIComponent(query), {
+          method: 'POST'
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        document.getElementById('kg-result').style.display = 'block';
+        document.getElementById('kg-output').textContent = JSON.stringify(data, null, 2);
+
+      } catch (err) {
+        alert('Napaka: ' + err.message);
+      }
+    }
+
+    // Initial load
+    loadAnalytics();
+  </script>
+</body>
+</html>

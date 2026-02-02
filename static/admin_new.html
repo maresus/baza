@@ -627,6 +627,10 @@
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('rezervacije')">📅 Rezervacije</button>
     <button class="tab-btn" onclick="switchTab('analitika')">📊 Orodja & Analitika</button>
+    <button class="tab-btn" onclick="switchTab('dashboard')">📈 Analytics Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('handoff')">📞 Handoff Queue</button>
+    <button class="tab-btn" onclick="switchTab('scheduler')">🗓️ Smart Scheduler</button>
+    <button class="tab-btn" onclick="switchTab('triage')">🩺 Triage Test</button>
   </div>
 
   <div class="container">
@@ -819,6 +823,133 @@
       </div>
     </div>
     <!-- End Tab: Orodja & Analitika -->
+
+    <!-- Tab: Analytics Dashboard -->
+    <div class="tab-content" id="tab-dashboard">
+      <div class="stats-row" style="margin-bottom: 16px;">
+        <div class="stat-badge">💬 Pogovorov (7 dni): <span class="num" id="dash-conversations">-</span></div>
+        <div class="stat-badge confirmed">😊 Pozitivnih: <span class="num" id="dash-positive">-</span></div>
+        <div class="stat-badge pending">😞 Negativnih: <span class="num" id="dash-negative">-</span></div>
+        <div class="stat-badge">📉 No-show rate: <span class="num" id="dash-noshow">-</span>%</div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="widget">
+          <div class="widget-header">📊 Trending Topics (7 dni)</div>
+          <div class="widget-body" id="dash-trending">Nalagam...</div>
+        </div>
+        <div class="widget">
+          <div class="widget-header">😊 Sentiment Analysis</div>
+          <div class="widget-body" id="dash-sentiment">Nalagam...</div>
+        </div>
+        <div class="widget">
+          <div class="widget-header">⏰ Peak Hours (8:00-18:00)</div>
+          <div class="widget-body" id="dash-peak" style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px;">Nalagam...</div>
+        </div>
+        <div class="widget">
+          <div class="widget-header">🔀 Booking Funnel</div>
+          <div class="widget-body" id="dash-funnel">Nalagam...</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="loadDashboardData()" style="margin-top: 16px;">🔄 Osveži podatke</button>
+    </div>
+    <!-- End Tab: Analytics Dashboard -->
+
+    <!-- Tab: Handoff Queue -->
+    <div class="tab-content" id="tab-handoff">
+      <div class="stats-row" style="margin-bottom: 16px;">
+        <div class="stat-badge pending">⏳ Čaka: <span class="num" id="handoff-pending">0</span></div>
+        <div class="stat-badge" style="border-left: 3px solid var(--danger);">🚨 Urgentni: <span class="num" id="handoff-urgent">0</span></div>
+        <div class="stat-badge confirmed">✅ Rešeni danes: <span class="num" id="handoff-resolved">0</span></div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-header">📞 Čakalna vrsta za recepcijo</div>
+        <div class="widget-body" id="handoff-queue" style="max-height: 500px; overflow-y: auto;">
+          Nalagam...
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="loadHandoffQueue()" style="margin-top: 16px;">🔄 Osveži vrsto</button>
+    </div>
+    <!-- End Tab: Handoff Queue -->
+
+    <!-- Tab: Smart Scheduler -->
+    <div class="tab-content" id="tab-scheduler">
+      <div class="widget" style="margin-bottom: 16px;">
+        <div class="widget-header">🗓️ Smart Scheduler - Predlogi terminov</div>
+        <div class="widget-body">
+          <p style="color: var(--text-muted); margin-bottom: 16px;">AI predlaga optimalne termine glede na zasedenost in preference pacienta</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <label style="font-size: 12px; color: var(--text-muted);">Storitev</label>
+              <select id="sched-service" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                <option value="dermatolog">Dermatolog</option>
+                <option value="ortoped">Ortoped</option>
+                <option value="okulist">Okulist</option>
+                <option value="estetika">Estetika</option>
+                <option value="laser">Laser</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--text-muted);">Telefon (opcijsko)</label>
+              <input type="text" id="sched-phone" placeholder="+38640..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+            </div>
+            <div>
+              <label style="font-size: 12px; color: var(--text-muted);">Željeni datum</label>
+              <input type="text" id="sched-date" placeholder="DD.MM.YYYY" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+            </div>
+            <div style="display: flex; align-items: flex-end;">
+              <button class="btn btn-primary" onclick="getSchedulerSuggestions()">Predlagaj</button>
+            </div>
+          </div>
+          <div id="sched-suggestions" style="padding: 16px; background: var(--bg); border-radius: 8px;">
+            Vnesi podatke in klikni "Predlagaj"
+          </div>
+        </div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-header">📅 Tedenska zasedenost</div>
+        <div class="widget-body" id="sched-weekly" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+          Nalagam...
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="loadSchedulerWeekly()" style="margin-top: 16px;">🔄 Osveži podatke</button>
+    </div>
+    <!-- End Tab: Smart Scheduler -->
+
+    <!-- Tab: Triage Test -->
+    <div class="tab-content" id="tab-triage">
+      <div class="widget" style="margin-bottom: 16px;">
+        <div class="widget-header">🩺 Quick Triage Test</div>
+        <div class="widget-body">
+          <p style="color: var(--text-muted); margin-bottom: 12px;">Testiraj soft triage sistem - vnesi simptome in poglej priporočilo</p>
+          <textarea id="triage-input" rows="3" placeholder="Opiši simptome, npr: Boli me koleno in je otečeno že teden dni..."
+                    style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 12px;"></textarea>
+          <button class="btn btn-primary" onclick="runTriageTest()">🔍 Analiziraj simptome</button>
+          <div id="triage-result" style="margin-top: 16px; display: none;">
+            <div style="background: var(--bg); border-radius: 8px; padding: 16px;">
+              <strong>Rezultat triaze:</strong>
+              <div id="triage-output" style="margin-top: 8px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget">
+        <div class="widget-header">🧠 Knowledge Graph Query</div>
+        <div class="widget-body">
+          <p style="color: var(--text-muted); margin-bottom: 12px;">Testiraj semantic knowledge graph</p>
+          <input type="text" id="kg-input" placeholder="Vnesi simptom, npr: bolečina v očeh"
+                 style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px;">
+          <button class="btn btn-secondary" onclick="queryKnowledgeGraph()">Query Graph</button>
+          <div id="kg-result" style="margin-top: 16px; display: none;">
+            <pre id="kg-output" style="background: var(--bg); padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px;"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Tab: Triage Test -->
   </div>
 
   <!-- Modal -->
@@ -1428,10 +1559,291 @@
       });
       document.getElementById(`tab-${tabName}`).classList.add('active');
 
-      // Load analytics when switching to analytics tab
-      if (tabName === 'analitika') {
-        loadAnalytics();
+      // Load data when switching tabs
+      if (tabName === 'analitika') loadAnalytics();
+      if (tabName === 'dashboard') loadDashboardData();
+      if (tabName === 'handoff') loadHandoffQueue();
+      if (tabName === 'scheduler') loadSchedulerWeekly();
+    }
+
+    // ==================== ANALYTICS DASHBOARD ====================
+    async function loadDashboardData() {
+      try {
+        // Dashboard stats
+        const dashRes = await fetch('/api/admin/analytics/dashboard?days=7');
+        if (dashRes.ok) {
+          const data = await dashRes.json();
+          document.getElementById('dash-conversations').textContent = data.total_conversations || 0;
+          document.getElementById('dash-positive').textContent = data.sentiment?.positive || 0;
+          document.getElementById('dash-negative').textContent = data.sentiment?.negative || 0;
+        }
+
+        // No-show rate
+        const remRes = await fetch('/api/admin/analytics/reminder-stats');
+        if (remRes.ok) {
+          const remData = await remRes.json();
+          document.getElementById('dash-noshow').textContent = remData.no_show_rate || 0;
+        }
+
+        // Trending
+        const trendRes = await fetch('/api/admin/analytics/trending?days=7');
+        if (trendRes.ok) {
+          const trendData = await trendRes.json();
+          renderDashTrending(trendData);
+        }
+
+        // Sentiment
+        const sentRes = await fetch('/api/admin/analytics/sentiment?days=7');
+        if (sentRes.ok) {
+          const sentData = await sentRes.json();
+          renderDashSentiment(sentData);
+        }
+
+        // Peak hours
+        const peakRes = await fetch('/api/admin/analytics/peak-hours?days=7');
+        if (peakRes.ok) {
+          const peakData = await peakRes.json();
+          renderDashPeakHours(peakData);
+        }
+
+        // Funnel
+        const funnelRes = await fetch('/api/admin/analytics/funnel?days=30');
+        if (funnelRes.ok) {
+          const funnelData = await funnelRes.json();
+          renderDashFunnel(funnelData);
+        }
+      } catch (err) {
+        console.error('Dashboard load error:', err);
       }
+    }
+
+    function renderDashTrending(data) {
+      const container = document.getElementById('dash-trending');
+      const topics = data.top_topics || [];
+      if (!topics.length) { container.innerHTML = '<div style="color: var(--text-muted);">Ni podatkov</div>'; return; }
+      const maxCount = Math.max(...topics.map(t => t.count));
+      container.innerHTML = topics.slice(0, 6).map(t => `
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="width: 80px; font-size: 12px; color: var(--text-muted);">${t.topic}</span>
+          <div style="flex: 1; height: 16px; background: var(--bg); border-radius: 4px; overflow: hidden;">
+            <div style="width: ${(t.count/maxCount*100)}%; height: 100%; background: var(--primary);"></div>
+          </div>
+          <span style="font-size: 12px; font-weight: 600;">${t.count}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderDashSentiment(data) {
+      const container = document.getElementById('dash-sentiment');
+      const total = (data.positive || 0) + (data.negative || 0) + (data.neutral || 0);
+      if (!total) { container.innerHTML = '<div style="color: var(--text-muted);">Ni podatkov</div>'; return; }
+      container.innerHTML = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px; font-size: 12px;">
+          <span style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 12px;">😊 ${data.positive || 0}</span>
+          <span style="background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 12px;">😐 ${data.neutral || 0}</span>
+          <span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 12px;">😞 ${data.negative || 0}</span>
+        </div>
+        <div style="height: 20px; background: var(--bg); border-radius: 4px; overflow: hidden; display: flex;">
+          <div style="width: ${(data.positive/total*100)}%; background: var(--success);"></div>
+          <div style="width: ${(data.neutral/total*100)}%; background: #9ca3af;"></div>
+          <div style="width: ${(data.negative/total*100)}%; background: var(--danger);"></div>
+        </div>
+      `;
+    }
+
+    function renderDashPeakHours(data) {
+      const container = document.getElementById('dash-peak');
+      const hourly = data.hourly || {};
+      const hours = [];
+      for (let h = 8; h <= 17; h++) { hours.push({ hour: h, count: hourly[h] || 0 }); }
+      const maxCount = Math.max(...hours.map(h => h.count), 1);
+      container.innerHTML = hours.map(h => {
+        let bg = '#d1fae5', color = '#065f46';
+        if (h.count > maxCount * 0.6) { bg = '#fee2e2'; color = '#991b1b'; }
+        else if (h.count > maxCount * 0.3) { bg = '#fef3c7'; color = '#92400e'; }
+        return `<div style="padding: 6px; text-align: center; border-radius: 6px; background: ${bg}; color: ${color}; font-size: 10px;">
+          <div style="font-weight: 600;">${h.hour}:00</div>
+          <div>${h.count}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderDashFunnel(data) {
+      const container = document.getElementById('dash-funnel');
+      const stages = data.stages || [];
+      if (!stages.length) { container.innerHTML = '<div style="color: var(--text-muted);">Ni podatkov</div>'; return; }
+      const maxCount = stages[0]?.count || 1;
+      container.innerHTML = stages.map(s => `
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="width: 80px; font-size: 12px; color: var(--text-muted);">${s.name}</span>
+          <div style="flex: 1; height: 16px; background: var(--bg); border-radius: 4px; overflow: hidden;">
+            <div style="width: ${(s.count/maxCount*100)}%; height: 100%; background: ${s.drop_rate > 30 ? 'var(--warning)' : 'var(--primary)'};"></div>
+          </div>
+          <span style="font-size: 12px; font-weight: 600;">${s.count}</span>
+        </div>
+      `).join('');
+    }
+
+    // ==================== HANDOFF QUEUE ====================
+    async function loadHandoffQueue() {
+      try {
+        const res = await fetch('/api/admin/handoff/pending');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const handoffs = data.handoffs || [];
+
+        document.getElementById('handoff-pending').textContent = handoffs.length;
+        document.getElementById('handoff-urgent').textContent = handoffs.filter(h => h.priority === 'URGENT').length;
+        document.getElementById('handoff-resolved').textContent = data.resolved_today || 0;
+
+        const container = document.getElementById('handoff-queue');
+        if (!handoffs.length) {
+          container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Ni čakajočih pogovorov 🎉</div>';
+          return;
+        }
+
+        container.innerHTML = handoffs.map(h => `
+          <div style="background: var(--bg); border-left: 4px solid ${h.priority === 'URGENT' ? 'var(--danger)' : h.priority === 'HIGH' ? 'var(--warning)' : 'var(--primary)'}; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; background: ${h.priority === 'URGENT' ? '#fee2e2' : h.priority === 'HIGH' ? '#fef3c7' : '#d1fae5'}; color: ${h.priority === 'URGENT' ? '#991b1b' : h.priority === 'HIGH' ? '#92400e' : '#065f46'};">${h.priority || 'LOW'}</span>
+              <span style="font-size: 11px; color: var(--text-muted);">${h.created_at || ''}</span>
+            </div>
+            <div style="font-size: 13px; margin-bottom: 8px;">${h.summary || 'Ni povzetka'}</div>
+            <div style="display: flex; gap: 8px; font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+              ${h.key_info?.phone ? `<span>📞 ${h.key_info.phone}</span>` : ''}
+              ${h.key_info?.service_requested ? `<span>🏥 ${h.key_info.service_requested}</span>` : ''}
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-sm btn-secondary" onclick="viewHandoffSession('${h.session_id}')">Poglej</button>
+              <button class="btn btn-sm btn-success" onclick="resolveHandoffSession('${h.session_id}')">Reši</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Handoff load error:', err);
+        document.getElementById('handoff-queue').innerHTML = '<div style="color: var(--danger);">Napaka pri nalaganju</div>';
+      }
+    }
+
+    async function viewHandoffSession(sessionId) {
+      window.open('/static/conversations.html?session=' + sessionId, '_blank');
+    }
+
+    async function resolveHandoffSession(sessionId) {
+      if (!confirm('Označi ta pogovor kot rešen?')) return;
+      try {
+        const res = await fetch('/api/admin/handoff/resolve/' + sessionId, { method: 'POST' });
+        if (res.ok) {
+          toast('Pogovor označen kot rešen', 'success');
+          loadHandoffQueue();
+        }
+      } catch (err) { toast('Napaka: ' + err.message, 'error'); }
+    }
+
+    // ==================== SMART SCHEDULER ====================
+    async function loadSchedulerWeekly() {
+      try {
+        const res = await fetch('/api/admin/scheduler/weekly-load');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const days = data.days || [];
+        const container = document.getElementById('sched-weekly');
+        if (!days.length) { container.innerHTML = '<div style="color: var(--text-muted);">Ni podatkov</div>'; return; }
+
+        container.innerHTML = days.map(d => {
+          let bg = '#d1fae5', color = '#065f46';
+          if (d.load > 80) { bg = '#fee2e2'; color = '#991b1b'; }
+          else if (d.load > 50) { bg = '#fef3c7'; color = '#92400e'; }
+          return `<div style="background: ${bg}; color: ${color}; padding: 12px; border-radius: 8px; text-align: center;">
+            <div style="font-weight: 600;">${d.day_name}</div>
+            <div style="font-size: 11px; opacity: 0.8;">${d.date}</div>
+            <div style="font-size: 1.5rem; font-weight: 700; margin: 4px 0;">${d.load}%</div>
+            <div style="font-size: 10px;">${d.booked}/${d.total}</div>
+          </div>`;
+        }).join('');
+      } catch (err) { console.error('Scheduler load error:', err); }
+    }
+
+    async function getSchedulerSuggestions() {
+      const service = document.getElementById('sched-service').value;
+      const phone = document.getElementById('sched-phone').value;
+      const date = document.getElementById('sched-date').value;
+      const container = document.getElementById('sched-suggestions');
+      container.innerHTML = '<div style="color: var(--text-muted);">Iščem optimalne termine...</div>';
+
+      try {
+        let url = '/api/admin/scheduler/suggestions?service_type=' + service;
+        if (phone) url += '&phone=' + encodeURIComponent(phone);
+        if (date) url += '&preferred_date=' + encodeURIComponent(date);
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const suggestions = data.suggestions || [];
+
+        if (!suggestions.length) {
+          container.innerHTML = '<div style="color: var(--text-muted);">Ni prostih terminov</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <div style="font-weight: 600; margin-bottom: 8px;">Predlagani termini:</div>
+          ${suggestions.map((s, i) => `
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: ${i === 0 ? '#d1fae5' : '#f9fafb'}; border-radius: 8px; margin-bottom: 6px;">
+              <span style="font-weight: ${i === 0 ? '600' : '400'};">${i === 0 ? '⭐ ' : (i+1) + '. '}${s}</span>
+              ${i === 0 ? '<span style="background: #065f46; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">Priporočeno</span>' : ''}
+            </div>
+          `).join('')}
+          ${data.message ? `<div style="margin-top: 12px; color: var(--text-muted); font-size: 12px;">${data.message}</div>` : ''}
+        `;
+      } catch (err) {
+        container.innerHTML = '<div style="color: var(--danger);">Napaka: ' + err.message + '</div>';
+      }
+    }
+
+    // ==================== TRIAGE TEST ====================
+    async function runTriageTest() {
+      const symptoms = document.getElementById('triage-input').value.trim();
+      if (!symptoms) { toast('Vnesi simptome', 'warning'); return; }
+
+      try {
+        const res = await fetch('/api/admin/triage/quick?symptoms=' + encodeURIComponent(symptoms), { method: 'POST' });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        const resultDiv = document.getElementById('triage-result');
+        const outputDiv = document.getElementById('triage-output');
+        resultDiv.style.display = 'block';
+
+        outputDiv.innerHTML = `
+          <div style="margin-bottom: 12px;">
+            <strong>Priporočen specialist:</strong>
+            <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; background: ${data.is_urgent ? '#fee2e2' : '#d1fae5'}; color: ${data.is_urgent ? '#991b1b' : '#065f46'}; font-weight: 600;">${data.specialist || 'Osebni zdravnik'}</span>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <strong>Sporočilo:</strong><br>
+            <span style="color: var(--text);">${data.recommendation || data.analysis?.message || 'Posvetujte se z zdravnikom.'}</span>
+          </div>
+          ${data.is_urgent ? '<div style="background: #fee2e2; padding: 10px; border-radius: 6px; color: #991b1b; font-weight: 600;">🚨 URGENTNO: Takojšnja medicinska pomoč potrebna!</div>' : ''}
+          <div style="margin-top: 12px; padding: 10px; background: #fef3c7; border-radius: 6px; font-size: 12px; color: #92400e;">
+            ⚠️ To NI diagnoza. Za natančno oceno se vedno posvetujte z zdravnikom.
+          </div>
+        `;
+      } catch (err) { toast('Napaka: ' + err.message, 'error'); }
+    }
+
+    async function queryKnowledgeGraph() {
+      const query = document.getElementById('kg-input').value.trim();
+      if (!query) { toast('Vnesi iskalni niz', 'warning'); return; }
+
+      try {
+        const res = await fetch('/api/admin/knowledge-graph/query-symptoms?text=' + encodeURIComponent(query), { method: 'POST' });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        document.getElementById('kg-result').style.display = 'block';
+        document.getElementById('kg-output').textContent = JSON.stringify(data, null, 2);
+      } catch (err) { toast('Napaka: ' + err.message, 'error'); }
     }
 
     // Analytics functions

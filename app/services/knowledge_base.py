@@ -19,8 +19,11 @@ except ImportError:
 try:
     from sentence_transformers import CrossEncoder
     HAS_CROSS_ENCODER = True
-except ImportError:
+except (ImportError, UnicodeDecodeError, Exception) as e:
+    # Catch all errors including Python 3.14 compatibility issues
     HAS_CROSS_ENCODER = False
+    print(f"[RERANKER] Warning: Could not load sentence-transformers: {e}")
+    print(f"[RERANKER] Re-ranking will be disabled, but hybrid KB will still work")
 
 
 # Slovenian stop words for BM25 tokenization
