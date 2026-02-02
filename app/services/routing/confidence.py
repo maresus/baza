@@ -57,6 +57,17 @@ BOOKING_HINTS = {
     "lahko narocim",
     "se naročim",
     "se narocim",
+    "lohk",        # sleng
+    "bi lohk",     # sleng
+    "mam lohk",    # sleng
+    "a lohk",      # sleng
+    "dobim",       # "a lahko dobim"
+    "book",        # english
+    "booking",     # english
+    "appointment", # english
+    "need",        # english
+    "want",        # english
+    "slots",       # english: "free slots"
 }
 
 # ============ SERVICE TYPE KEYWORDS ============
@@ -66,6 +77,7 @@ DERMATOLOGY_KEYWORDS = {
     "dermato",
     "koža",
     "koza",
+    "kozo",      # sleng/typo: "s kozo"
     "kožn",
     "kozn",
     "akne",
@@ -73,6 +85,7 @@ DERMATOLOGY_KEYWORDS = {
     "psoriaza",
     "izpuščaj",
     "izpuscaj",
+    "tezave s koz", # typo: težave s kožo
     "madež",
     "madez",
     "melanom",
@@ -83,6 +96,8 @@ DERMATOLOGY_KEYWORDS = {
 
 ORTHOPEDICS_KEYWORDS = {
     "ortoped",
+    "ortopet",  # typo
+    "ortopd",   # typo
     "hrbet",
     "hrbten",
     "koleno",
@@ -99,9 +114,13 @@ ORTHOPEDICS_KEYWORDS = {
     "športn",
     "sportn",
     "zlom",
+    "back",     # english
+    "hurts",    # english
 }
 
 OPHTHALMOLOGY_KEYWORDS = {
+    "okulist",
+    "okulsit",  # typo
     "okulist",
     "oftalmolog",
     "očal",
@@ -113,6 +132,8 @@ OPHTHALMOLOGY_KEYWORDS = {
     "vidim",
     "slabo vid",
     "slabše vid",
+    "ocmi",     # typo za oči
+    "oceh",     # typo
 }
 
 # Keywords that need word boundary matching (to avoid "oci" in "naročilo")
@@ -187,17 +208,31 @@ SERVICE_INQUIRY_KEYWORDS = {
     "kaj pomaga",
     "kako poteka",
     "kaj vključuje",
+    "kaj vkljucuje",  # brez šumnikov
     "kaj vsebuje",
+    "bi rad vedel",   # info request
+    "bi rada vedela", # info request
+    "informacije",
+    "informacij",
+    "zanima me",
+    "me zanima",
+    "prpelat",        # sleng: kaj moram pripeljat
+    "prinest",        # kaj moram prinest
     "kdo dela",
     "kdo je",
+    "vprašanje",
+    "vprasanje",
+    "vprasat",        # sleng
 }
 
 # ============ INFO KEYWORDS ============
 
 INFO_KEYWORDS = {
     "kdaj",
+    "kdja",      # typo
     "kje",
     "kam",
+    "kko",       # sleng: kako
     "odprto",
     "odprti",
     "delovni čas",
@@ -207,6 +242,7 @@ INFO_KEYWORDS = {
     "naslov",
     "lokacija",
     "parking",
+    "parkplac",  # sleng
     "parkirišče",
     "parkirisce",
     "kontakt",
@@ -214,7 +250,13 @@ INFO_KEYWORDS = {
     "email",
     "e-mail",
     "kako pridem",
+    "kako pridm", # sleng
+    "kako pridemo",
     "kje ste",
+    "kje se nahajate",
+    "kje se nhajaet",  # typo
+    "located",   # english
+    "where",     # english
 }
 
 PRICE_KEYWORDS = {
@@ -222,6 +264,9 @@ PRICE_KEYWORDS = {
     "cenik",
     "koliko stane",
     "koliko stan",
+    "kolko stane", # sleng
+    "kolko",       # sleng
+    "kva stane",   # sleng
     "cene",
     "stroški",
     "stroski",
@@ -232,23 +277,33 @@ PRICE_KEYWORDS = {
     "zavarovanje",
     "zzzs",
     "dopolnilno",
+    "drago",       # sleng: "a je drago"
+    "price",       # english
+    "prices",      # english
+    "cost",        # english
 }
 
 # ============ GREETING/GOODBYE ============
 
 GREETING_KEYWORDS = {
     "zdravo",
+    "zdravjo",   # typo
     "živjo",
     "zivjo",
     "dobro jutro",
     "dober dan",
     "hello",
     "hi",
+    "hej",
+    "ej",
     "pozdravljeni",
 }
 
 GOODBYE_KEYWORDS = {
     "hvala",
+    "hvaal",     # typo
+    "hval",      # typo
+    "thanks",    # english
     "adijo",
     "nasvidenje",
     "lep pozdrav",
