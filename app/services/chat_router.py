@@ -38,9 +38,28 @@ from app.services.executor_v2 import execute_decision
 from app.services.chat_history_service import get_chat_history_service
 from app.services import knowledge_base as kb_module
 
+# Unified Routing System imports
+from app.services.session.unified_state import (
+    get_unified_state,
+    reset_unified_state,
+    is_in_flow,
+    get_current_step,
+    start_flow,
+    advance_step,
+    set_appointment_field,
+    get_appointment_data,
+    is_appointment_complete,
+    FlowType,
+    FlowStep,
+)
+from app.services.routing.unified_router import route as unified_route, IntentType
+from app.services.routing.confidence import SwitchAction, detect_service_type as unified_detect_service
+from app.services.routing.interrupt_handler import build_interrupt_response, build_resume_prompt
+
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
 USE_FULL_KB_LLM = False  # False = RAG (hitro), True = full KB (počasno)
+USE_UNIFIED_ROUTER = os.getenv("USE_UNIFIED_ROUTER", "false").strip().lower() in {"1", "true", "yes", "on"}
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 # ========== ANTI-LOOP & CACHE MECHANISMS ==========
@@ -1605,6 +1624,99 @@ Napaka: {str(e)}"""
 
     return "Oprostite, nisem razumel. Lahko ponovite?"
 
+
+# ============================================================
+# UNIFIED ROUTING SYSTEM - New architecture
+# ============================================================
+
+def handle_unified_routing(message: str, session_id: str) -> str | None:
+    """
+    Handle message using unified routing system.
+    Returns response string, or None if should fall back to legacy system.
+    """
+    unified_state = get_unified_state(session_id)
+    decision = unified_route(message, unified_state)
+
+    # Log decision for debugging
+    print(f"[UNIFIED] Intent: {decision.primary_intent.value}, Confidence: {decision.confidence:.2f}, Action: {decision.action.value}, Service: {decision.service_type}")
+
+    # Handle AFFIRMATIVE/NEGATIVE in booking flow
+    if decision.primary_intent == IntentType.AFFIRMATIVE and is_in_flow(session_id):
+        step = get_current_step(session_id)
+        if step == FlowStep.CONFIRM.value:
+            # Complete booking
+            appointment_data = get_appointment_data(session_id)
+            if is_appointment_complete(session_id):
+                # Use legacy booking completion
+                return None  # Fall back to handle actual booking
+        # Continue with next step
+        return None  # Fall back to legacy for step handling
+
+    if decision.primary_intent == IntentType.NEGATIVE and is_in_flow(session_id):
+        reset_unified_state(session_id)
+        return "V redu, naročilo preklicano. Kako vam lahko drugače pomagam?"
+
+    # Handle GREETING
+    if decision.primary_intent == IntentType.GREETING:
+        return INFO_RESPONSES.get("pozdrav", "Pozdravljeni! Kako vam lahko pomagam?")
+
+    # Handle GOODBYE
+    if decision.primary_intent == IntentType.GOODBYE:
+        return INFO_RESPONSES.get("hvala", "Hvala za sporočilo! Lep dan!")
+
+    # Handle SOFT_INTERRUPT during booking flow
+    if decision.action == SwitchAction.SOFT_INTERRUPT and is_in_flow(session_id):
+        step = get_current_step(session_id)
+
+        # Answer the interrupting question
+        if decision.primary_intent == IntentType.INFO:
+            # Find appropriate info response
+            lowered = message.lower()
+            if any(k in lowered for k in ["lokacija", "naslov", "kje"]):
+                answer = INFO_RESPONSES.get("lokacija", INFO_RESPONSES.get("kontakt"))
+            elif any(k in lowered for k in ["delovni", "ura", "odprt"]):
+                answer = INFO_RESPONSES.get("delovni_cas")
+            elif any(k in lowered for k in ["parking"]):
+                answer = INFO_RESPONSES.get("parkiranje")
+            else:
+                answer = INFO_RESPONSES.get("kontakt")
+        elif decision.primary_intent == IntentType.PRICE:
+            answer = INFO_RESPONSES.get("cene")
+        elif decision.primary_intent == IntentType.SERVICE_INFO:
+            answer = INFO_RESPONSES.get("storitve")
+        else:
+            answer = None
+
+        if answer:
+            return build_interrupt_response(answer, step, include_resume=True)
+
+    # Handle BOOKING_APPOINTMENT intent
+    if decision.primary_intent == IntentType.BOOKING_APPOINTMENT:
+        if not is_in_flow(session_id):
+            # Start new booking flow
+            service_type = decision.service_type
+            if service_type:
+                set_appointment_field(session_id, "service_type", service_type)
+                start_flow(session_id, FlowType.APPOINTMENT, FlowStep.DATE)
+                return f"Odlično! Naročilo za {service_type.lower()}. Kateri datum vam ustreza? (npr. 15.2.2026)"
+            else:
+                start_flow(session_id, FlowType.APPOINTMENT, FlowStep.SERVICE)
+                return "Na kateri pregled se želite naročiti?\n\n- Dermatolog\n- Ortoped\n- Okulist\n- Laserski poseg\n- Estetski poseg\n- Kozmetika"
+        # Already in flow - fall back to legacy step handling
+        return None
+
+    # Handle URGENCY
+    if decision.primary_intent == IntentType.URGENCY:
+        return """⚠️ **Če gre za nujni primer, prosim pokličite:**
+- Urgenca: 112
+- Zdravstveni center: 01 234 56 78
+
+Za nujne primere nudimo prednostne termine. Želite, da preverim najhitrejši prosti termin?"""
+
+    # For other intents, fall back to legacy system
+    return None
+
+
 @router.post("/", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     """Main chat endpoint for health center assistant"""
@@ -1614,6 +1726,21 @@ async def chat(request: ChatRequest) -> ChatResponse:
     session_id = request.session_id or chat_session_id
     lowered = message.lower()
 
+    # ===== UNIFIED ROUTING SYSTEM =====
+    # New architecture - can be enabled with USE_UNIFIED_ROUTER=true
+    if USE_UNIFIED_ROUTER:
+        unified_response = handle_unified_routing(message, session_id)
+        if unified_response is not None:
+            # Update conversation history
+            conversation_history.append({"role": "user", "content": message})
+            conversation_history.append({"role": "assistant", "content": unified_response})
+            last_user_message_by_session[session_id] = message
+            if len(conversation_history) > 20:
+                conversation_history = conversation_history[-20:]
+            return ChatResponse(reply=unified_response, session_id=session_id)
+        # If None returned, fall through to legacy system
+
+    # ===== LEGACY ROUTING SYSTEM =====
     # If last bot asked to book after health advice, accept short "da"
     if is_affirmative(message) and conversation_history:
         last_bot = conversation_history[-1].get("content", "")

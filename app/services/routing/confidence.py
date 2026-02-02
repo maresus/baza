@@ -31,6 +31,8 @@ APPOINTMENT_KEYWORDS = {
     "narociti",
     "naročim",
     "narocim",
+    "naročil",
+    "narocil",
     "naročilo",
     "narocilo",
     "rezerv",
@@ -108,6 +110,9 @@ OPHTHALMOLOGY_KEYWORDS = {
     "lece",
     "očesn",
     "ocesn",
+    "vidim",
+    "slabo vid",
+    "slabše vid",
 }
 
 # Keywords that need word boundary matching (to avoid "oci" in "naročilo")
