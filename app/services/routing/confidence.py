@@ -101,7 +101,6 @@ ORTHOPEDICS_KEYWORDS = {
     "hrbet",
     "hrbten",
     "koleno",
-    "kolk",
     "rama",
     "ramo",
     "sklep",
@@ -116,6 +115,13 @@ ORTHOPEDICS_KEYWORDS = {
     "zlom",
     "back",     # english
     "hurts",    # english
+}
+
+# Keywords that need word boundary matching (to avoid "kolk" in "kolko")
+ORTHOPEDICS_WORDS = {
+    "kolk",     # hip - needs boundary to not match "kolko" (how much)
+    "kolka",
+    "kolku",
 }
 
 OPHTHALMOLOGY_KEYWORDS = {
@@ -355,6 +361,9 @@ def _detect_service_type(text: str) -> str | None:
         return "DERMATOLOG"
     if any(k in text for k in ORTHOPEDICS_KEYWORDS):
         return "ORTOPED"
+    # Also check word-boundary matches for "kolk" (hip) to avoid matching "kolko" (how much)
+    if _contains_word(text, ORTHOPEDICS_WORDS):
+        return "ORTOPED"
     # Check LASER and PHYSIOTHERAPY before OPHTHALMOLOGY (more specific)
     if any(k in text for k in LASER_KEYWORDS):
         return "LASERSKI_POSEG"
@@ -369,8 +378,6 @@ def _detect_service_type(text: str) -> str | None:
         return "OKULIST"
     if _contains_word(text, OPHTHALMOLOGY_WORDS):
         return "OKULIST"
-    if any(k in text for k in COSMETICS_KEYWORDS):
-        return "KOZMETIKA"
     return None
 
 
