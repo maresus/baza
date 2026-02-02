@@ -81,6 +81,8 @@ Zajtrk je vključen v ceno! 🥐""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": """Kontakt: **02 601 54 00** / **031 330 113**
 Email: **info@kovacnik.com**""",
+    "lokacija": """Nahajamo se na: **Planica 9, 2313 Fram** (Pohorska stran nad Framom). 
+Parking je brezplačen pri domačiji.""",
     "min_nocitve": """Minimalno bivanje je:
 - **3 nočitve** v juniju, juliju in avgustu
 - **2 nočitvi** v ostalih mesecih""",
@@ -95,7 +97,8 @@ Email: **info@kovacnik.com**""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
     "kmetija": """Domačija Kovačnik je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
     "gibanica": """Pohorska gibanica je naša specialiteta. Priporočam, da jo poskusite ob obisku!""",
-    "izdelki": """V ponudbi imamo marmelade, likerje, mesnine, čaje, sirupe in darilne pakete.""",
+    "izdelki": """Imamo **domače izdelke**: marmelade, likerje/žganja, mesnine, čaje, sirupe in darilne pakete. Trgovina: https://kovacnik.com/katalog.""",
+    "priporocilo": """Kako vam lahko priporočam kaj primernega? Ste bolj za sladko ali slano?""",
 }
 
 INFO_RESPONSES_VARIANTS = {key: [value] for key, value in INFO_RESPONSES.items()}
@@ -118,10 +121,6 @@ if _topics_path.exists():
         _TOPIC_RESPONSES = {}
 
 PRODUCT_RESPONSES = {
-    "pesto": [
-        "Imamo **čemažev pesto** v 212 ml kozarčku (5,50 €). Najdete ga v spletni trgovini: https://kovacnik.com/katalog.",
-        "Čemažev pesto je na voljo (212 ml, 5,50 €). Naročilo: https://kovacnik.com/katalog.",
-    ],
     "marmelada": [
         "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kovacnik.com/katalog (sekcija Marmelade).",
         "Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: https://kovacnik.com/katalog.",
@@ -135,8 +134,8 @@ PRODUCT_RESPONSES = {
         "Pohorska bunka je na voljo (18–21 €), skupaj s suho klobaso in salamo.\n\nNaročilo: https://kovacnik.com/katalog.",
     ],
     "izdelki_splosno": [
-        "Prodajamo **domače izdelke** (marmelade, likerji/žganja, mesnine, čaji, sirupi, paketi) ob obisku ali v spletni trgovini: https://kovacnik.com/katalog.",
-        "Na voljo so **marmelade, likerji/žganja, mesnine, čaji, sirupi, darilni paketi**. Naročite na spletu (https://kovacnik.com/katalog) ali kupite ob obisku.",
+        "Prodajamo **domače izdelke** (marmelade, likerji/žganja, mesnine, čaji, sirupi, paketi). Trgovina: https://kovacnik.com/katalog.",
+        "Na voljo so **marmelade, likerji/žganja, mesnine, čaji, sirupi, darilni paketi**. Trgovina: https://kovacnik.com/katalog.",
     ],
     "gibanica_narocilo": """Za naročilo gibanice za domov:
 - Pohorska gibanica s skuto: 40 € za 10 kosov
@@ -192,6 +191,8 @@ RESERVATION_START_PHRASES = {
     "rezerviram mizo",
     "rezervirala bi mizo",
     "rezerviral bi mizo",
+    "kosilo",
+    "večerja",
     "book a room",
     "booking",
     "i want to book",
@@ -325,14 +326,28 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "wifi"
     if any(w in text for w in ["prijava", "odjava", "check in", "check out"]):
         return "prijava_odjava"
-    if "parkir" in text:
+    if any(w in text for w in ["parkir", "parking"]):
         return "parking"
-    if any(w in text for w in ["pes", "psa", "psi", "psov", "mačk", "žival", "ljubljenč", "kuža", "kuz", "dog"]):
+    if re.search(r"(?<!\w)(pes|psa|psi|psov|kuž|kuz|dog)(?!\w)", text) or any(
+        w in text for w in ["mačk", "žival", "ljubljenč"]
+    ):
         return "zivali"
     if any(w in text for w in ["plačilo", "kartic", "gotovina"]):
         return "placilo"
-    if any(w in text for w in ["telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):
+    if any(w in text for w in ["kontakt", "telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):
         return "kontakt"
+    if any(
+        w in text
+        for w in [
+            "kje ste",
+            "kje se nahajate",
+            "naslov",
+            "lokacija",
+            "kje ste doma",
+            "kje ste locirani",
+        ]
+    ):
+        return "lokacija"
     if any(w in text for w in ["minimal", "najmanj noči", "najmanj nočitev", "min nočitev"]):
         return "min_nocitve"
     if any(w in text for w in ["koliko miz", "kapaciteta"]):
@@ -386,6 +401,7 @@ def detect_info_intent(message: str) -> Optional[str]:
             "meniju",
             "menu",
             "kaj imate za jest",
+            "kaj imate za kosilo",
             "kaj ponujate",
             "kaj strežete",
             "kaj je za kosilo",
@@ -395,6 +411,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         ]
     ):
         return "jedilnik"
+    if any(w in text for w in ["zadnji prihod", "zadnji prihod na kosilo"]):
+        return "odpiralni_cas"
     if any(w in text for w in ["družin", "druzina", "druzino"]):
         return "druzina"
     if "kmetij" in text or "kmetijo" in text:
@@ -403,13 +421,13 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "gibanica"
     if any(w in text for w in ["izdelk", "trgovin", "katalog", "prodajate"]):
         return "izdelki"
+    if "priporoč" in text or "priporoc" in text:
+        return "priporocilo"
     return None
 
 
 def detect_product_intent(message: str) -> Optional[str]:
     text = message.lower()
-    if any(w in text for w in ["pesto", "čemaž", "cemaz", "čemažev", "cemazev"]):
-        return "pesto"
     if any(w in text for w in ["liker", "žgan", "zgan", "borovnič", "orehov", "alkohol"]):
         return "liker"
     if any(w in text for w in ["marmelad", "džem", "dzem", "jagod", "marelič"]):
@@ -418,7 +436,11 @@ def detect_product_intent(message: str) -> Optional[str]:
         return "gibanica_narocilo"
     if any(w in text for w in ["bunka", "bunko", "bunke"]):
         return "bunka"
-    if any(w in text for w in ["izdelk", "prodaj", "kupiti", "kaj imate", "trgovin"]):
+    if any(w in text for w in ["čaj", "caj"]):
+        return "caj"
+    if any(w in text for w in ["sirup", "sok"]):
+        return "sirup"
+    if any(w in text for w in ["izdelk", "prodaj", "kupiti", "kupim", "trgovin", "katalog"]):
         return "izdelki_splosno"
     return None
 
@@ -506,10 +528,6 @@ def is_ambiguous_inquiry_request(message: str) -> bool:
     lowered = message.lower()
     if any(w in lowered for w in ["večerj", "vecerj"]):
         return False
-    menu_words = ["jedil", "meni", "menu", "vikend", "kosilo", "kosila", "ponudba kosil", "vikend ponudb"]
-    event_words = ["teambuilding", "porok", "catering", "pogostitev"]
-    if any(w in lowered for w in menu_words) and not any(w in lowered for w in event_words):
-        return False
     explicit = ["povpraš", "ponudb", "naročil", "naročilo", "naroč", "količin"]
     has_explicit = any(w in lowered for w in explicit)
     has_number = re.search(r"\d", lowered) is not None
@@ -523,10 +541,6 @@ def is_inquiry_trigger(message: str) -> bool:
     lowered = message.lower()
     if any(w in lowered for w in ["večerj", "vecerj"]):
         return False
-    menu_words = ["jedil", "meni", "menu", "vikend", "kosilo", "kosila", "ponudba kosil", "vikend ponudb"]
-    event_words = ["teambuilding", "porok", "catering", "pogostitev"]
-    if any(w in lowered for w in menu_words) and not any(w in lowered for w in event_words):
-        return False
     explicit = [
         "povpraš",
         "ponudb",
@@ -539,7 +553,6 @@ def is_inquiry_trigger(message: str) -> bool:
         "teambuilding",
         "poroka",
         "porok",
-        "poroko",
         "pogrebščina",
         "pogrebscina",
         "pogostitev",
@@ -654,37 +667,23 @@ def detect_router_intent(message: str, state: dict[str, Optional[str | int]]) ->
 def format_products(query: str) -> str:
     products = find_products(query)
     if not products:
-        return "Trenutno nimam podatkov o izdelkih, prosim preverite spletno trgovino ali nas kontaktirajte."
+        return "Trenutno nimam podatkov o izdelkih. Trgovina: https://kovacnik.com/katalog."
 
     product_lines = [
         f"- {product.name}: {product.price:.2f} EUR, {product.weight:.2f} kg"
         for product in products
     ]
     header = "Na voljo imamo naslednje izdelke:\n"
-    return header + "\n".join(product_lines)
+    return header + "\n".join(product_lines) + "\n\nTrgovina: https://kovacnik.com/katalog"
 
 
 def answer_product_question(message: str) -> str:
     from app.rag.knowledge_base import KNOWLEDGE_CHUNKS
 
     lowered = message.lower()
-    if any(phrase in lowered for phrase in ["po pošti", "po posti", "pošta", "posta", "dostava", "pošljete", "posljete"]):
-        return (
-            "Da, izdelke lahko pošljemo po pošti. Naročilo oddate v spletni trgovini: "
-            "https://kovacnik.com/katalog."
-        )
-    if any(phrase in lowered for phrase in ["kje kupim", "kje lahko kupim", "kako kupim", "trgovina", "katalog"]):
-        return "Izdelke najdete v naši spletni trgovini: https://kovacnik.com/katalog."
-    if ("pesto" in lowered or "čemaž" in lowered or "cemaz" in lowered) and "cena" in lowered:
-        return (
-            "Čemažev pesto (212 ml) stane 5,50 €. "
-            "Naročilo: https://kovacnik.com/katalog."
-        )
     category = None
     if "marmelad" in lowered or "džem" in lowered or "dzem" in lowered:
         category = "marmelad"
-    elif "pesto" in lowered or "čemaž" in lowered or "cemaz" in lowered:
-        category = "pesto"
     elif (
         "liker" in lowered
         or "žganj" in lowered
@@ -724,8 +723,6 @@ def answer_product_question(message: str) -> str:
                 if "paket" in url_lower or "paket" in title_lower:
                     continue
                 results.append(c)
-            elif category == "pesto" and ("pesto" in url_lower or "pesto" in title_lower):
-                results.append(c)
             elif category == "liker" and ("liker" in url_lower or "tepkovec" in url_lower):
                 results.append(c)
             elif category == "bunka" and "bunka" in url_lower:
@@ -760,13 +757,13 @@ def answer_product_question(message: str) -> str:
         if category == "marmelad":
             return (
                 "Imamo več domačih marmelad (npr. božična, jagodna, borovničeva). "
-                "Celoten izbor si lahko ogledate v spletni trgovini: https://kovacnik.com/kovacnikova-spletna-trgovina/."
+                "Celoten izbor si lahko ogledate v spletni trgovini: https://kovacnik.com/katalog."
             )
         if category == "liker":
-            return "Na voljo je domač borovničev liker (13 €) ter nekaj drugih domačih likerjev."
+            return "Na voljo je domač borovničev liker (13 €) ter nekaj drugih domačih likerjev. Trgovina: https://kovacnik.com/katalog."
         return (
             "Trenutno v bazi ne najdem konkretnih izdelkov za to vprašanje. "
-            "Predlagam, da pobrskaš po spletni trgovini: https://kovacnik.com/kovacnikova-spletna-trgovina/."
+            "Predlagam, da pobrskaš po spletni trgovini: https://kovacnik.com/katalog."
         )
 
     lines = ["Na voljo imamo:"]
@@ -791,6 +788,7 @@ def answer_product_question(message: str) -> str:
             lines.append(f"• **{title}** - {text}")
         lines.append(f"  👉 {c.url}")
 
+    lines.append("\nTrgovina: https://kovacnik.com/katalog")
     return "\n".join(lines)
 
 

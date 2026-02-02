@@ -1,95 +1,428 @@
+from __future__ import annotations
+
+import os
 import sys
 from pathlib import Path
+from typing import List, Tuple
 
-# Add kovacnik app to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps" / "kovacnik_app"))
+os.environ.setdefault("USE_UNIFIED_ROUTER", "true")
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from app.services.routing import decide
+from fastapi.testclient import TestClient  # noqa: E402
+from main import app  # noqa: E402
+import app.services.chat_router as chat_router  # noqa: E402
 
-
-def _state(step=None, type_=None):
-    return {"step": step, "type": type_}
-
-
-def _inquiry(step=None):
-    return {"step": step}
+chat_router.USE_FULL_KB_LLM = False
 
 
-CASES = [
-    # INFO only
-    ("info_opening", "Kdaj ste odprti?", _state(), _inquiry(), "ignore", "INFO"),
-    ("info_monday", "Ali ste odprti ob ponedeljkih?", _state(), _inquiry(), "ignore", "INFO"),
-    ("info_last", "Kdaj je zadnji prihod na kosilo?", _state(), _inquiry(), "ignore", "INFO"),
-    ("info_address", "Kje ste doma?", _state(), _inquiry(), "ignore", "INFO"),
-    ("info_parking", "A imate parking?", _state(), _inquiry(), "ignore", "INFO"),
-    ("info_tourism", "Je v bližini smučišče?", _state(), _inquiry(), "ignore", "INFO"),
+client = TestClient(app)
 
-    # PRODUCT
-    ("product_pesto", "Imate čemažev pesto?", _state(), _inquiry(), "ignore", "PRODUCT"),
-    ("product_marmelada", "Kakšne marmelade prodajate?", _state(), _inquiry(), "ignore", "PRODUCT"),
-    ("product_liker", "Kateri likerji so na voljo?", _state(), _inquiry(), "ignore", "PRODUCT"),
-    ("product_link", "Daj link do trgovine", _state(), _inquiry(), "ignore", "PRODUCT"),
 
-    # Booking table
-    ("booking_table", "Rad bi rezerviral mizo", _state(), _inquiry(), "ignore", "BOOKING_TABLE"),
-    ("booking_table_alt", "Bi rezerviral mizo za jutri", _state(), _inquiry(), "ignore", "BOOKING_TABLE"),
-    ("booking_table_inquiry", "Rezervacija mize", _state(), _inquiry(), "ignore", "BOOKING_TABLE"),
+Scenario = Tuple[str, List[Tuple[str, str]]]
 
-    # Booking room
-    ("booking_room", "Rad bi rezerviral sobo", _state(), _inquiry(), "ignore", "BOOKING_ROOM"),
-    ("booking_room_alt", "Potrebujem sobo za vikend", _state(), _inquiry(), "ignore", "BOOKING_ROOM"),
-
-    # Inquiry
-    ("inquiry_teambuilding", "Bi organiziral teambuilding", _state(), _inquiry(), "ignore", "INQUIRY"),
-    ("inquiry_wedding", "Ali imate prostor za poroko?", _state(), _inquiry(), "ignore", "INQUIRY"),
-
-    # Mixed: booking + product in flow
-    ("mix_pesto_in_booking", "Imate pesto?", _state(step="awaiting_table_time", type_="table"), _inquiry(), "soft_interrupt", "PRODUCT"),
-    ("mix_info_in_booking", "A imate parking?", _state(step="awaiting_room_date", type_="room"), _inquiry(), "soft_interrupt", "INFO"),
-    ("mix_tourism_in_booking", "Je smučišče v bližini?", _state(step="awaiting_room_date", type_="room"), _inquiry(), "soft_interrupt", "INFO"),
-
-    # Inquiry in booking -> hard switch
-    ("teambuilding_switch", "Bi organiziral teambuilding", _state(step="awaiting_table_date", type_="table"), _inquiry(), "hard_switch", "INQUIRY"),
-
-    # Switch booking type
-    ("switch_room_from_table", "Rad bi rezerviral sobo", _state(step="awaiting_table_date", type_="table"), _inquiry(), "hard_switch", "BOOKING_ROOM"),
-    ("switch_table_from_room", "Rad bi rezerviral mizo", _state(step="awaiting_room_date", type_="room"), _inquiry(), "hard_switch", "BOOKING_TABLE"),
-
-    # Greetings/Goodbye
-    ("greeting", "Živjo", _state(), _inquiry(), "ignore", "GREETING"),
-    ("goodbye", "Hvala, adijo", _state(), _inquiry(), "ignore", "GOODBYE"),
-
-    # Edge: short date/time during flow should ignore
-    ("date_only_in_flow", "21.2.2026", _state(step="awaiting_table_date", type_="table"), _inquiry(), "ignore", "GENERAL"),
-    ("time_only_in_flow", "14:00", _state(step="awaiting_table_time", type_="table"), _inquiry(), "ignore", "GENERAL"),
-
-    # Mixed single message (product + booking)
-    ("mixed_single", "Rezerviral bi mizo in kupil marmelado", _state(), _inquiry(), "ignore", "BOOKING_TABLE"),
-
-    # Explicit product typo
-    ("product_typo", "cemazev pesto bi mel", _state(), _inquiry(), "ignore", "PRODUCT"),
-
-    # General
-    ("general", "Kako si?", _state(), _inquiry(), "ignore", "GENERAL"),
+SCENARIOS: List[Scenario] = [
+    (
+        "greeting_then_info",
+        [
+            ("zdravo", "Pozdrav"),
+            ("kdaj ste odprti", "Odprti"),
+        ],
+    ),
+    (
+        "info_parking",
+        [
+            ("ali imate parking", "Parkirišče"),
+        ],
+    ),
+    (
+        "product_pesto",
+        [
+            ("imate čemažev pesto", "Trgovina"),
+        ],
+    ),
+    (
+        "booking_table_flow",
+        [
+            ("rad bi rezerviral mizo", "datum"),
+            ("15.2.2026", "Ob kateri"),
+            ("13:00", "koliko"),
+        ],
+    ),
+    (
+        "booking_room_flow",
+        [
+            ("rad bi rezerviral sobo", "datum"),
+            ("12.6.2026", "Koliko nočitev"),
+        ],
+    ),
+    (
+        "booking_with_info_interrupt",
+        [
+            ("rad bi rezerviral mizo", "datum"),
+            ("ali imate parking", "Parkirišče"),
+        ],
+    ),
+    (
+        "inquiry_teambuilding",
+        [
+            ("bi organiziral teambuilding", "povpraševanje"),
+        ],
+    ),
+    (
+        "info_location",
+        [
+            ("kje se nahajate", "Planica"),
+        ],
+    ),
+    (
+        "info_zajtrk",
+        [
+            ("kaj je za zajtrk", "Zajtrk"),
+        ],
+    ),
+    (
+        "info_vecerja",
+        [
+            ("koliko stane večerja", "Večerja"),
+        ],
+    ),
+    (
+        "menu_request",
+        [
+            ("kaj imate za kosilo", "Jedilnik"),
+        ],
+    ),
+    (
+        "product_marmelada",
+        [
+            ("kakšne marmelade imate", "marmelad"),
+        ],
+    ),
+    (
+        "product_liker",
+        [
+            ("imate liker", "liker"),
+        ],
+    ),
+    (
+        "booking_room_then_product",
+        [
+            ("rezerviral bi sobo", "datum"),
+            ("imate bučni namaz", "Trgovina"),
+        ],
+    ),
+    (
+        "booking_table_then_info",
+        [
+            ("rezerviral bi mizo", "datum"),
+            ("kakšna je kapaciteta mize", "Jedilnica"),
+        ],
+    ),
+    (
+        "info_wine",
+        [
+            ("kakšna vina imate", "vina"),
+        ],
+    ),
+    (
+        "goodbye",
+        [
+            ("hvala, adijo", "Adijo"),
+        ],
+    ),
+    (
+        "reservation_typo",
+        [
+            ("rezrviral bi sobo", "datum"),
+        ],
+    ),
+    (
+        "general_question",
+        [
+            ("kaj ponujate", "Jedilnik"),
+        ],
+    ),
+    (
+        "info_min_nights",
+        [
+            ("minimalno nočitev", "Minimalno"),
+        ],
+    ),
+    (
+        "info_prijava_odjava",
+        [
+            ("prijava in odjava", "Prijava"),
+        ],
+    ),
+    (
+        "info_placilo",
+        [
+            ("ali lahko plačam s kartico", "plačil"),
+        ],
+    ),
+    (
+        "info_pets",
+        [
+            ("ali so psi dovoljeni", "ljubljen"),
+        ],
+    ),
+    (
+        "info_klima",
+        [
+            ("imate klimo", "klimat"),
+        ],
+    ),
+    (
+        "info_wifi",
+        [
+            ("imate wifi", "Wi"),
+        ],
+    ),
+    (
+        "info_contact",
+        [
+            ("kakšna je telefonska", "Kontakt"),
+        ],
+    ),
+    (
+        "product_general",
+        [
+            ("katere izdelke prodajate", "izdelke"),
+        ],
+    ),
+    (
+        "inquiry_poroka",
+        [
+            ("ali lahko pri vas organiziram poroko", "povpraševanje"),
+        ],
+    ),
+    (
+        "interrupt_inquiry_with_info",
+        [
+            ("bi organiziral teambuilding", "povpraševanje"),
+            ("kdaj ste odprti", "Odprti"),
+        ],
+    ),
+    (
+        "booking_room_then_cancel",
+        [
+            ("rad bi rezerviral sobo", "datum"),
+            ("ne, pustimo", "prekinil"),
+        ],
+    ),
+    (
+        "booking_table_then_cancel",
+        [
+            ("rad bi rezerviral mizo", "datum"),
+            ("ne", "prekinil"),
+        ],
+    ),
+    (
+        "info_hours_monday",
+        [
+            ("ali ste odprti ob ponedeljkih", "ponedel"),
+        ],
+    ),
+    (
+        "info_last_arrival",
+        [
+            ("kdaj je zadnji prihod na kosilo", "15:00"),
+        ],
+    ),
+    (
+        "info_breakfast_included",
+        [
+            ("ali je zajtrk vključen", "vključen"),
+        ],
+    ),
+    (
+        "info_dinner_price",
+        [
+            ("koliko stane večerja", "25"),
+        ],
+    ),
+    (
+        "info_min_nights_summer",
+        [
+            ("kakšno je minimalno število nočitev poleti", "Minimalno"),
+        ],
+    ),
+    (
+        "info_checkin_checkout",
+        [
+            ("kdaj je prijava in odjava", "Prijava"),
+        ],
+    ),
+    (
+        "info_wifi",
+        [
+            ("ali imate wifi", "Wi"),
+        ],
+    ),
+    (
+        "info_ac",
+        [
+            ("imate klimo v sobah", "klimat"),
+        ],
+    ),
+    (
+        "info_payment",
+        [
+            ("ali lahko plačam s kartico", "plačil"),
+        ],
+    ),
+    (
+        "info_pets",
+        [
+            ("ali so hišni ljubljenčki dovoljeni", "ljubljen"),
+        ],
+    ),
+    (
+        "info_capacity",
+        [
+            ("kakšna je kapaciteta jedilnice", "Jedilnica"),
+        ],
+    ),
+    (
+        "info_contact_email",
+        [
+            ("kakšen je vaš kontakt", "Kontakt"),
+        ],
+    ),
+    (
+        "info_family",
+        [
+            ("kdo ste vi in družina", "druž"),
+        ],
+    ),
+    (
+        "info_farm",
+        [
+            ("povej kaj o kmetiji", "kmetij"),
+        ],
+    ),
+    (
+        "info_gibanica",
+        [
+            ("kaj je pohorska gibanica", "gibanica"),
+        ],
+    ),
+    (
+        "product_namaz",
+        [
+            ("kakšne namaze imate", "namaz"),
+        ],
+    ),
+    (
+        "product_pasteta",
+        [
+            ("imate jetrno pašteto", "pašt"),
+        ],
+    ),
+    (
+        "product_sirup",
+        [
+            ("ali prodajate sirup", "sirup"),
+        ],
+    ),
+    (
+        "product_caj",
+        [
+            ("kakšne čaje imate", "čaj"),
+        ],
+    ),
+    (
+        "product_mesnine",
+        [
+            ("imate suho salamo", "sal"),
+        ],
+    ),
+    (
+        "product_bundle",
+        [
+            ("kakšne darilne pakete imate", "paket"),
+        ],
+    ),
+    (
+        "product_general_link",
+        [
+            ("kje kupim vaše izdelke", "katalog"),
+        ],
+    ),
+    (
+        "info_menu_weekend",
+        [
+            ("kaj ponujate za vikend kosila", "Jedilnik"),
+        ],
+    ),
+    (
+        "menu_dinner",
+        [
+            ("kaj je za večerjo", "Jedilnik"),
+        ],
+    ),
+    (
+        "booking_room_then_info",
+        [
+            ("rad bi rezerviral sobo", "datum"),
+            ("ali imate wifi", "Wi"),
+        ],
+    ),
+    (
+        "booking_table_then_product",
+        [
+            ("rad bi rezerviral mizo", "datum"),
+            ("imate marmelado", "marmelad"),
+        ],
+    ),
+    (
+        "inquiry_catering",
+        [
+            ("potreboval bi catering za dogodek", "povpraševanje"),
+        ],
+    ),
+    (
+        "inquiry_bulk_order",
+        [
+            ("rad bi 30 marmelad", "povpraševanje"),
+        ],
+    ),
+    (
+        "general_fallback",
+        [
+            ("kaj mi priporočate", "Kako"),
+        ],
+    ),
 ]
 
-if len(CASES) < 30:
-    print("Need 30 scenarios, only have", len(CASES))
-    sys.exit(1)
 
-FAILED = []
+def run_scenario(name: str, turns: List[Tuple[str, str]], idx: int) -> List[str]:
+    failures = []
+    session_id = f"test_{idx}_{name}"
+    for msg, expected in turns:
+        resp = client.post("/chat", json={"message": msg, "session_id": session_id})
+        if resp.status_code != 200:
+            failures.append(f"{name}: HTTP {resp.status_code} on '{msg}'")
+            continue
+        reply = resp.json().get("reply", "")
+        if expected and expected.lower() not in reply.lower():
+            failures.append(f"{name}: expected '{expected}' in reply to '{msg}'\nReply: {reply}")
+    return failures
 
-for name, message, state, inquiry_state, expected_action, expected_primary in CASES:
-    decision = decide(message, state, inquiry_state)
-    if decision["action"] != expected_action:
-        FAILED.append((name, "action", expected_action, decision["action"]))
-    if expected_primary and decision["primary_intent"] != expected_primary:
-        FAILED.append((name, "primary", expected_primary, decision["primary_intent"]))
 
-if FAILED:
-    print("FAILED:")
-    for item in FAILED:
-        print(item)
-    sys.exit(1)
+def main() -> None:
+    all_failures: List[str] = []
+    for idx, (name, turns) in enumerate(SCENARIOS, start=1):
+        all_failures.extend(run_scenario(name, turns, idx))
 
-print("OK: all routing scenarios passed")
+    if all_failures:
+        print("\nFAILURES:")
+        for fail in all_failures:
+            print("-", fail)
+        raise SystemExit(1)
+
+    print("All scenarios passed.")
+
+
+if __name__ == "__main__":
+    main()
