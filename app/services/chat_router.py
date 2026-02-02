@@ -782,19 +782,8 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     if any(word in lowered for word in ["pozdravljeni", "živjo", "zivjo", "dober dan", "zdravo", "hej", "halo", "bok"]):
         return "greeting"
 
-    # Health symptoms → map to appropriate service (NOT LLM health advice)
-    symptom_words = ["boli", "bolečina", "bolecina", "boleče", "bolece", "peče", "pece", "srbi", "težave"]
-    if any(word in lowered for word in symptom_words):
-        # Map body part to service
-        if any(part in lowered for part in ["koleno", "noga", "noge", "hrbet", "hrbten", "rama", "ramo", "sklep", "mišic", "kolk"]):
-            return "info_ortopedija"
-        if any(part in lowered for part in ["koža", "koza", "pika", "izpuščaj", "izpuscaj", "rdečina", "akne", "luskavica"]):
-            return "info_dermatologija"
-        if any(part in lowered for part in ["oči", "oci", "vid", "vidim", "oko"]):
-            return "info_oftalmologija"
-        # Default to ortoped for general pain
-        return "info_ortopedija"
-
+    # Health symptoms → let RAG/knowledge base handle (has health info)
+    # Don't intercept - return "question" so it goes through RAG
     return "question"
 
 def extract_date_from_message(message: str) -> Optional[str]:
