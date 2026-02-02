@@ -14,7 +14,8 @@ class KnowledgeItem:
 class RAGEngine:
     def __init__(self, knowledge_path: Path | None = None) -> None:
         if knowledge_path is None:
-            knowledge_path = Path(__file__).with_name("knowledge.jsonl")
+            # Look for knowledge.jsonl in project root (2 dirs up from app/rag/)
+            knowledge_path = Path(__file__).resolve().parents[2] / "knowledge.jsonl"
 
         self.items: List[KnowledgeItem] = []
         if knowledge_path.exists():
@@ -27,9 +28,11 @@ class RAGEngine:
                         data = json.loads(line)
                     except json.JSONDecodeError:
                         continue
-                    url = data.get("url", "")
-                    title = data.get("title", "")
-                    content = data.get("content", "") or ""
+                    # Support both old format (url, title, content) and new format (text, metadata)
+                    metadata = data.get("metadata", {})
+                    url = data.get("url", "") or metadata.get("source", "")
+                    title = data.get("title", "") or metadata.get("title", "")
+                    content = data.get("content", "") or data.get("text", "") or ""
                     if not (url or title or content):
                         continue
                     self.items.append(KnowledgeItem(url=url, title=title, content=content))
@@ -62,7 +65,7 @@ class RAGEngine:
         if not results:
             return (
                 "Na to vprašanje trenutno nimam natančnega odgovora na podlagi podatkov, "
-                "ki jih imam. Predlagam, da nas kontaktirate na info@kovacnik.com ali po telefonu."
+                "ki jih imam. Predlagam, da nas kontaktirate na 01 234 56 78 ali info@zdravstveni-center.si."
             )
 
         best = results[0]
@@ -70,7 +73,7 @@ class RAGEngine:
         if not content:
             return (
                 "Na to vprašanje trenutno nimam natančnega odgovora na podlagi podatkov, "
-                "ki jih imam. Predlagam, da nas kontaktirate na info@kovacnik.com ali po telefonu."
+                "ki jih imam. Predlagam, da nas kontaktirate na 01 234 56 78 ali info@zdravstveni-center.si."
             )
 
         max_len = 800

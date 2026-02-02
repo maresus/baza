@@ -745,6 +745,20 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     """Rule-based fallback for intent classification"""
     lowered = message.lower()
 
+    # ===== HEALTH SYMPTOMS: Check FIRST before service keywords =====
+    # Detect pain/symptom patterns like "boli me X", "imam težave z X", "boli X"
+    symptom_patterns = ["boli me", "boli mi", "imam težave", "imam tezave", "me boli", "mi boli",
+                        "bolečine v", "bolecine v", "srbečica", "srbecica", "otekl", "izpuščaj"]
+    if any(pattern in lowered for pattern in symptom_patterns):
+        return "health_symptoms"
+
+    # Also check for standalone symptom keywords without booking intent
+    symptom_words = ["boli", "bolec", "boleč", "bolečin", "težav", "simptom"]
+    has_symptom = any(word in lowered for word in symptom_words)
+    has_booking = any(word in lowered for word in ["naroči", "termin", "rezerv", "želim naročiti"])
+    if has_symptom and not has_booking:
+        return "health_symptoms"
+
     # Appointment booking intents (with and without diacritics)
     if any(word in lowered for word in ["naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv", "želim", "zelim", "potrebujem"]):
         # Check which service
@@ -1714,6 +1728,10 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
 
     elif intent == "info_hours":
         response_text = INFO_RESPONSES["delovni_cas"]
+
+    elif intent == "health_symptoms":
+        # Use RAG engine which searches knowledge.jsonl (contains health advice)
+        response_text = rag_engine.answer(message)
 
     elif intent.startswith("info_"):
         service_key = intent.replace("info_", "")
