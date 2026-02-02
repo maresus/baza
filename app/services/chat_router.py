@@ -640,7 +640,21 @@ def _service_mentioned_in_message(message: str, service: str) -> bool:
 
 
 def classify_intent(message: str, history: list = None) -> str:
-    """Classify intent using LLM"""
+    """Classify intent - FAST rules first, LLM only for complex cases"""
+
+    # FAST PATH: Try rules-based classification first (no API call!)
+    rules_intent = classify_intent_rules(message, history)
+
+    # If rules found a clear intent, use it immediately
+    if rules_intent in ["greeting", "info_hours", "info_contact", "info_prices",
+                        "info_services", "health_symptoms", "check_availability"]:
+        return rules_intent
+
+    # If rules found a booking intent, use it
+    if rules_intent.startswith("book_") or rules_intent.startswith("info_"):
+        return rules_intent
+
+    # SLOW PATH: Only use LLM for ambiguous cases
     result = classify_intent_llm(message, history)
 
     intent = result.get("intent", "other")
@@ -648,7 +662,6 @@ def classify_intent(message: str, history: list = None) -> str:
 
     # Map to internal intent format
     if intent == "booking":
-        # KRITIČNO: Samo sprejmi storitev če je dejansko omenjena v sporočilu
         if service and _service_mentioned_in_message(message, service):
             return f"book_{service}"
         return "book_general"
@@ -669,7 +682,7 @@ def classify_intent(message: str, history: list = None) -> str:
     elif intent == "greeting":
         return "greeting"
     else:
-        return "question"  # Default to LLM for unknown
+        return "question"
 
 
 # Keep for backward compatibility - booking keywords
