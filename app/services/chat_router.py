@@ -238,6 +238,14 @@ Lahko vam pomagam z informacijami o naših storitvah, delovnem času, ali pa vas
 
 Z veseljem odgovorim na vprašanja o naših storitvah, cenah in razpoložljivih terminih.""",
 
+    "ekipa": """Naš zdravstveni center vodi strokovna ekipa zdravnikov in administracije.
+
+Za natančne informacije o vodstvu ali posameznih zdravnikih nas prosim kontaktirajte:
+- 📞 01 234 56 78
+- 📧 info@zdravstveni-center.si""",
+
+    "hvala": "Hvala za sporočilo! Če boste še kaj potrebovali, sem tukaj za vas. 😊",
+
     "narocanje": """**Naročanje poteka zelo enostavno - TUKAJ, z menoj!** 🎯
 
 ✅ **Kako se naročite:**
@@ -716,8 +724,9 @@ def classify_intent(message: str, history: list = None) -> str:
     rules_intent = classify_intent_rules(message, history)
 
     # If rules found a clear intent, use it immediately
-    if rules_intent in ["greeting", "info_hours", "info_contact", "info_prices",
-                        "info_services", "check_availability", "info_narocanje"]:
+    if rules_intent in ["greeting", "thanks", "info_hours", "info_contact", "info_prices",
+                        "info_services", "check_availability", "info_narocanje",
+                        "health_symptoms"]:
         return rules_intent
 
     # If rules found a booking intent, use it
@@ -758,7 +767,13 @@ def classify_intent(message: str, history: list = None) -> str:
 # Keep for backward compatibility - booking keywords
 def _has_booking_keywords(message: str) -> bool:
     lowered = message.lower()
-    return any(word in lowered for word in ["naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv"])
+    return any(word in lowered for word in [
+        "naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv",
+        "naročil", "naročila", "narocil", "narocila",
+        "rad bi", "rada bi", "bi rad", "bi rada",
+        "želel", "želela", "zelim", "želim",
+        "hočem", "hocem",
+    ])
 
 
 # Old rule-based classify_intent kept as fallback
@@ -770,12 +785,15 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     # Detect pain/symptom patterns like "boli me X", "imam težave z X", "boli X"
     symptom_patterns = ["boli me", "boli mi", "imam težave", "imam tezave", "me boli", "mi boli",
                         "bolečine v", "bolecine v", "srbečica", "srbecica", "otekl", "izpuščaj",
-                        "srbi", "srbi me", "srbeče", "srbeco"]
+                        "srbi", "srbi me", "srbeče", "srbeco", "znamenje", "kožno znamenje", "kozni madez",
+                        "kožni madež", "glavobol", "migrena", "omotica"]
     if any(pattern in lowered for pattern in symptom_patterns):
         return "health_symptoms"
 
     # Also check for standalone symptom keywords without booking intent
-    symptom_words = ["boli", "bolec", "boleč", "bolečin", "težav", "simptom", "srbi", "srbe", "izpuščaj", "izpuscaj"]
+    symptom_words = ["boli", "bolec", "boleč", "bolečin", "težav", "simptom", "srbi", "srbe", "srbeč", "srbec",
+                     "izpuščaj", "izpuscaj", "znamenje", "madež", "madez", "koža", "koza",
+                     "glavobol", "migrena", "omotica"]
     has_symptom = any(word in lowered for word in symptom_words)
     has_booking = any(word in lowered for word in ["naroči", "termin", "rezerv", "želim naročiti"])
     if has_symptom and not has_booking:
@@ -794,12 +812,20 @@ def classify_intent_rules(message: str, history: list = None) -> str:
 
     # Mixed intent: booking + price -> answer price info first
     has_price = any(word in lowered for word in ["cena", "cene", "cenik", "koliko", "stane"])
-    has_booking_kw = any(word in lowered for word in ["naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv", "želim", "zelim", "potrebujem"])
+    has_booking_kw = any(word in lowered for word in [
+        "naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv",
+        "želim", "zelim", "potrebujem", "rad bi", "rada bi", "bi rad", "bi rada",
+        "naročil", "naročila", "narocil", "narocila", "hočem", "hocem", "želel", "želela"
+    ])
     if has_price and has_booking_kw:
         return "info_prices"
 
     # Appointment booking intents (with and without diacritics)
-    if any(word in lowered for word in ["naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv", "želim", "zelim", "potrebujem"]):
+    if any(word in lowered for word in [
+        "naroči", "naročilo", "naroci", "narocilo", "termin", "rezerv",
+        "želim", "zelim", "potrebujem", "rad bi", "rada bi", "bi rad", "bi rada",
+        "naročil", "naročila", "narocil", "narocila", "hočem", "hocem", "želel", "želela"
+    ]):
         # Check which service
         for service_key, variations in SERVICE_NAME_MAP.items():
             if any(var in lowered for var in variations):
@@ -814,9 +840,13 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     if any(word in lowered for word in ["prost", "razpoložljiv", "razpolozljiv", "kdaj", "termin"]):
         return "check_availability"
 
-    # Service information
+    # Service information or booking (heuristic)
     for service_key in SERVICES.keys():
         if service_key in lowered or any(var in lowered for var in SERVICE_NAME_MAP.get(service_key, [])):
+            # If user likely wants to book (no info/price question), start booking
+            info_tokens = ["cena", "cene", "koliko", "stane", "opis", "kaj", "ponudba", "storitve", "kakšne", "kaksne"]
+            if "?" not in lowered and not any(tok in lowered for tok in info_tokens):
+                return f"book_{service_key}"
             return f"info_{service_key}"
 
     # General service list
@@ -827,9 +857,17 @@ def classify_intent_rules(message: str, history: list = None) -> str:
     if any(word in lowered for word in ["cena", "cene", "cenik", "koliko", "stane"]):
         return "info_prices"
 
+    # Team / leadership
+    if any(word in lowered for word in ["šef", "sef", "vodja", "vodstvo", "direktor", "kdo vodi", "kdo je glavni", "ekipa", "zdravniki", "kdo dela pri vas"]):
+        return "info_ekipa"
+
     # Contact / Location
     if any(word in lowered for word in ["kontakt", "telefon", "email", "naslov", "lokacija", "nahaja", "kje ste", "kje se", "naslovom", "pridi", "pridem", "parkir", "parking", "parkiri"]):
         return "info_contact"
+
+    # Thanks
+    if any(word in lowered for word in ["hvala", "najlepša hvala", "hvala lepa", "thanks", "thx"]):
+        return "thanks"
 
     # Greeting (with and without diacritics)
     if any(word in lowered for word in ["pozdravljeni", "živjo", "zivjo", "dober dan", "zdravo", "hej", "halo", "bok"]):
@@ -928,7 +966,19 @@ def is_likely_full_name(text: str) -> bool:
     if any(char.isdigit() for char in stripped):
         return False
     parts = [p for p in stripped.split() if p]
-    return len(parts) >= 2
+    if len(parts) >= 2:
+        return True
+    # Allow single-word names (e.g., "Miha") but avoid symptoms/services
+    single = parts[0].lower() if parts else ""
+    blocked_single = [
+        "koleno", "hrbet", "glava", "izpuščaj", "izpuscaj", "znamenje", "koža", "koza",
+        "bolečina", "bolečine", "bolecina", "bolecine", "srbi", "srbe", "srbeč", "srbec",
+        "dermatološki", "ortopedski", "okulistični", "okulisticni", "laser", "laserski",
+        "estetski", "kozmetični", "kozmeticni", "pregled", "termin",
+    ]
+    if single in blocked_single:
+        return False
+    return len(single) >= 3
 
 
 def _short_contact_info() -> str:
@@ -1573,7 +1623,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
     # If previous user message was a health symptom, treat short "da" as booking confirmation
     prev_user_msg = last_user_message_by_session.get(session_id, "").lower()
-    if is_affirmative(message) and any(kw in prev_user_msg for kw in ["boli", "bolec", "boleč", "bolečin", "izpuščaj", "simptom", "težav"]):
+    if is_affirmative(message) and any(kw in prev_user_msg for kw in ["boli", "bolec", "boleč", "bolečin", "izpuščaj", "izpuscaj", "simptom", "težav", "srbi", "znamenje", "koža", "koza"]):
         response_text = handle_appointment_booking(message, session_id)
         return ChatResponse(reply=response_text, session_id=session_id)
 
@@ -1587,8 +1637,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
     last_interaction = now
 
     # ===== ANTI-LOOP DETECTION =====
-    # Check for loop BEFORE adding message (to avoid comparing with itself)
-    if conversation_tracker.detect_loop(session_id, message):
+    # Skip loop detection for health symptoms (users often rephrase)
+    if classify_intent_rules(message, conversation_history) != "health_symptoms" and conversation_tracker.detect_loop(session_id, message):
         loop_count = conversation_tracker.get_loop_count(session_id)
         conversation_tracker.add_message(session_id, message)  # Track even if loop
 
@@ -1858,6 +1908,9 @@ Kateri datum vas zanima? (npr. 15.3.2026)""",
     if intent == "greeting":
         response_text = INFO_RESPONSES["pozdrav"]
 
+    elif intent == "thanks":
+        response_text = INFO_RESPONSES["hvala"]
+
     elif intent == "info_services":
         response_text = INFO_RESPONSES["storitve"]
 
@@ -1868,6 +1921,9 @@ Kateri datum vas zanima? (npr. 15.3.2026)""",
         response_text = INFO_RESPONSES["cene"]
         if _has_booking_keywords(message):
             response_text += "\n\nČe želite, lahko takoj začnemo z naročanjem – povejte, kateri pregled vas zanima."
+
+    elif intent == "info_ekipa":
+        response_text = INFO_RESPONSES["ekipa"]
 
     elif intent == "info_contact":
         response_text = INFO_RESPONSES["kontakt"]
@@ -1946,7 +2002,8 @@ Kateri datum vas zanima? (npr. 15.3.2026)""",
                     # Check if this looks like a health symptom query
                     health_keywords = ["boli", "bolec", "boleč", "bolečin", "težav", "simptom",
                                        "koleno", "hrbet", "rama", "noga", "roka", "vrat", "gleženj",
-                                       "koža", "izpuščaj", "srbečic", "oči", "vid", "glava"]
+                                       "koža", "izpuščaj", "srbeč", "srbec", "srbečic", "oči", "vid", "glava",
+                                       "glavobol", "migrena", "omotica"]
                     lowered_msg = message.lower()
                     is_health_query = any(kw in lowered_msg for kw in health_keywords)
 
