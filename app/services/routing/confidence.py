@@ -75,6 +75,8 @@ BOOKING_HINTS = {
 DERMATOLOGY_KEYWORDS = {
     "dermatolog",
     "dermato",
+    "dermatalog",
+    "dermatalogu",
     "koža",
     "koza",
     "kozo",      # sleng/typo: "s kozo"
@@ -94,6 +96,10 @@ DERMATOLOGY_KEYWORDS = {
     "znamenje",
     "bradavic",
     "glivic",
+    "skin",
+    "rash",
+    "mole",
+    "acne",
 }
 
 ORTHOPEDICS_KEYWORDS = {
@@ -102,6 +108,7 @@ ORTHOPEDICS_KEYWORDS = {
     "ortopd",   # typo
     "hrbet",
     "hrbten",
+    "hrbtom",
     "koleno",
     "rama",
     "ramo",
@@ -117,6 +124,10 @@ ORTHOPEDICS_KEYWORDS = {
     "zlom",
     "back",     # english
     "hurts",    # english
+    "knee",
+    "knees",
+    "shoulder",
+    "joint",
 }
 
 # Keywords that need word boundary matching (to avoid "kolk" in "kolko")
@@ -142,6 +153,11 @@ OPHTHALMOLOGY_KEYWORDS = {
     "slabše vid",
     "ocmi",     # typo za oči
     "oceh",     # typo
+    "eye",
+    "eyes",
+    "vision",
+    "eye check",
+    "eye exam",
 }
 
 # Keywords that need word boundary matching (to avoid "oci" in "naročilo")
@@ -149,6 +165,8 @@ OPHTHALMOLOGY_WORDS = {
     "oči",
     "oci",
     "vid",
+    "eye",
+    "eyes",
 }
 
 AESTHETIC_KEYWORDS = {
@@ -289,6 +307,7 @@ PRICE_KEYWORDS = {
     "price",       # english
     "prices",      # english
     "cost",        # english
+    "how much",    # english
 }
 
 # ============ GREETING/GOODBYE ============

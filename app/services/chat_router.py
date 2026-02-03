@@ -457,7 +457,7 @@ Storitve:
 
 🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
-    "cene": """Cene so odvisne od storitve.  
+    "cene": """Cena je odvisna od storitve.  
 Lahko povem točen razpon, če mi napišete, kateri pregled vas zanima.
 
 Primeri:
@@ -481,7 +481,7 @@ Plačilo poteka po opravljenem pregledu/posegu.""",
 
 Večina naših storitev je samoplačniških, vendar nekatere lahko krijete preko ZZZS napotnice.""",
 
-    "parkiranje": """🚗 **Parkiranje za paciente**:
+    "parkiranje": """🚗 **Parkiranje / parking za paciente**:
 
 ✅ Brezplačno parkiranje pred zdravstvenim centrom
 ✅ 50 parkirnih mest
@@ -515,12 +515,12 @@ INFO_RESPONSES_VARIANTS.update(
         ],
         "cene": [
             INFO_RESPONSES["cene"],
-            "Cena je odvisna od storitve. Napišite, kateri pregled vas zanima, pa povem konkreten razpon.",
-            "Za točen znesek potrebujem storitev (npr. dermatolog, ortoped, okulist). Katera vas zanima?",
+            "Cena je odvisna od storitve (npr. 25–150 €). Napišite, kateri pregled vas zanima, pa povem konkreten razpon.",
+            "Cena: za točen znesek potrebujem storitev (npr. dermatolog, ortoped, okulist; tipično 25–150 €). Katera vas zanima?",
         ],
         "delovni_cas": [
             INFO_RESPONSES["delovni_cas"],
-            "Delamo pon–pet 8:00–18:00, sob 9:00–13:00 (nujni primeri), ned/prazniki zaprto.",
+            "Delovni čas: pon–pet 8:00–18:00, sob 9:00–13:00 (nujni primeri), ned/prazniki zaprto.",
         ],
         "kontakt": [
             INFO_RESPONSES["kontakt"],
@@ -1027,7 +1027,8 @@ def _service_price_info(service_type: Optional[str]) -> str:
     info = get_service_info(service_type or "")
     if not info:
         return _get_info_response("cene")
-    return f"💰 {info['name']}: {info['price_range']} · {info['duration_minutes']} min"
+    label = service_type or ""
+    return f"💰 {label.capitalize()} – {info['name']}: Cena {info['price_range']} · {info['duration_minutes']} min"
 
 
 def _analyze_query_type(query: str) -> dict:
@@ -1406,11 +1407,16 @@ def handle_appointment_booking(message: str, session_id: str) -> str:
 
     # Če je service_type že nastavljen (iz classify_intent) ampak step je None -> preskoči na datum
     if state["service_type"] is not None and state["step"] is None:
-        service_info = get_service_info(state["service_type"])
-        # Če service_type ni veljaven, ponudi izbiro
-        if service_info is None:
-            state["service_type"] = None
-            return """Na kateri pregled se želite naročiti?
+        date_str = extract_date_from_message(message)
+        if date_str:
+            state["step"] = "date"
+            # continue to date handling below
+        else:
+            service_info = get_service_info(state["service_type"])
+            # Če service_type ni veljaven, ponudi izbiro
+            if service_info is None:
+                state["service_type"] = None
+                return """Na kateri pregled se želite naročiti?
 
 - Dermatološki pregled
 - Ortopedski pregled
@@ -1418,8 +1424,8 @@ def handle_appointment_booking(message: str, session_id: str) -> str:
 - Laserski poseg
 - Estetski poseg
 - Kozmetični salon"""
-        state["step"] = "date"
-        return f"""Super! 🩺 Naročilo na **{service_info['name']}**.
+            state["step"] = "date"
+            return f"""Super! 🩺 Naročilo na **{service_info['name']}**.
 
 📋 Trajanje: {service_info['duration_minutes']} minut
 💰 Cena: {service_info['price_range']}
@@ -1651,6 +1657,17 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
     """
     unified_state = get_unified_state(session_id)
     decision = unified_route(message, unified_state)
+    appointment_state = get_appointment_state(session_id)
+    suggested_service = unified_state.get("context", {}).get("suggested_service")
+
+    # If user provides a date after service info prompt, start booking immediately
+    date_str = extract_date_from_message(message)
+    if date_str and suggested_service and not is_in_flow(session_id):
+        appointment_state["service_type"] = suggested_service
+        appointment_state["step"] = None
+        start_flow(session_id, FlowType.APPOINTMENT, FlowStep.DATE)
+        unified_state["context"]["suggested_service"] = None
+        return handle_appointment_booking(message, session_id)
 
     # Log decision for debugging
     print(f"[UNIFIED] Intent: {decision.primary_intent.value}, Confidence: {decision.confidence:.2f}, Action: {decision.action.value}, Service: {decision.service_type}")
@@ -1666,6 +1683,14 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
                 return None  # Fall back to handle actual booking
         # Continue with next step
         return None  # Fall back to legacy for step handling
+
+    # If user confirms after service info (no flow yet), start booking
+    if decision.primary_intent == IntentType.AFFIRMATIVE and suggested_service and not is_in_flow(session_id):
+        appointment_state["service_type"] = suggested_service.lower()
+        appointment_state["step"] = None
+        start_flow(session_id, FlowType.APPOINTMENT, FlowStep.DATE)
+        unified_state["context"]["suggested_service"] = None
+        return handle_appointment_booking(message, session_id)
 
     if decision.primary_intent == IntentType.NEGATIVE and is_in_flow(session_id):
         reset_unified_state(session_id)
@@ -1696,7 +1721,11 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
             else:
                 answer = _get_info_response("kontakt")
         elif decision.primary_intent == IntentType.PRICE:
-            answer = _get_info_response("cene")
+            service_key = appointment_state.get("service_type") or decision.service_type or suggested_service
+            if service_key:
+                answer = _service_price_info(service_key.lower())
+            else:
+                answer = _get_info_response("cene")
         elif decision.primary_intent == IntentType.SERVICE_INFO:
             answer = _get_info_response("storitve")
         else:
@@ -1712,10 +1741,14 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
             service_type = decision.service_type
             if service_type:
                 set_appointment_field(session_id, "service_type", service_type)
+                appointment_state["service_type"] = service_type.lower()
+                appointment_state["step"] = None
                 start_flow(session_id, FlowType.APPOINTMENT, FlowStep.DATE)
                 return f"Odlično! Naročilo za {service_type.lower()}. Kateri datum vam ustreza? (npr. 15.2.2026)"
             else:
                 start_flow(session_id, FlowType.APPOINTMENT, FlowStep.SERVICE)
+                appointment_state["service_type"] = None
+                appointment_state["step"] = "select_service"
                 return "Na kateri pregled se želite naročiti?\n\n- Dermatolog\n- Ortoped\n- Okulist\n- Laserski poseg\n- Estetski poseg\n- Kozmetika"
         # Already in flow - fall back to legacy step handling
         return None
@@ -1731,6 +1764,10 @@ Za nujne primere nudimo prednostne termine. Želite, da preverim najhitrejši pr
     # Handle SERVICE_INFO (symptoms, service questions)
     if decision.primary_intent == IntentType.SERVICE_INFO:
         service = decision.service_type
+        if service:
+            unified_state.setdefault("context", {})["suggested_service"] = service
+            appointment_state["service_type"] = service.lower()
+            appointment_state["step"] = None
         if service == "DERMATOLOG":
             return """**Dermatologija** - pregledi kožnih težav
 
@@ -1816,6 +1853,10 @@ Ponujamo:
 
     # Handle PRICE
     if decision.primary_intent == IntentType.PRICE:
+        service = decision.service_type or suggested_service or appointment_state.get("service_type")
+        if service:
+            service_key = service.lower()
+            return _service_price_info(service_key)
         return _get_info_response("cene")
 
     # Handle INFO
@@ -1826,7 +1867,7 @@ Ponujamo:
         elif any(k in lowered for k in ["delovni", "ura", "odprt", "kdaj"]):
             return _get_info_response("delovni_cas")
         elif any(k in lowered for k in ["parking", "parkplac", "parkirišče"]):
-            return INFO_RESPONSES.get("parkiranje")
+            return _get_info_response("parkiranje")
         elif any(k in lowered for k in ["telefon", "email", "kontakt"]):
             return _get_info_response("kontakt")
         elif any(k in lowered for k in ["pridem", "pridemo", "pot"]):
@@ -1860,6 +1901,9 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 conversation_history = conversation_history[-20:]
             return ChatResponse(reply=unified_response, session_id=session_id)
         # If None returned, fall through to legacy system
+        if is_in_flow(session_id):
+            response_text = handle_appointment_booking(message, session_id)
+            return ChatResponse(reply=response_text, session_id=session_id)
 
     # ===== LEGACY ROUTING SYSTEM =====
     # If last bot asked to book after health advice, accept short "da"

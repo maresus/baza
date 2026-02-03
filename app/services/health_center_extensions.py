@@ -17,12 +17,14 @@ SERVICE_NAME_MAP = {
     "dermatolog": [
         "dermatolog", "dermatološki", "koža", "kozni", "kožne",
         "dermatovenerolog", "dermatovenerološki",
+        "dermatalog", "dermatalogu",
+        "skin", "rash", "mole", "acne",
     ],
-    "ortoped": ["ortoped", "ortopedski", "ortopedija", "koleno", "hrbtenica"],
-    "okulist": ["okulist", "okulistični", "oči", "očesni", "ocena vida", "oftalmolog"],
+    "ortoped": ["ortoped", "ortopedski", "ortopedija", "koleno", "hrbtenica", "knee", "back", "shoulder", "joint"],
+    "okulist": ["okulist", "okulistični", "oči", "očesni", "ocena vida", "oftalmolog", "eye", "eyes", "vision", "eye check", "eye exam"],
     "laserski_poseg": ["laser", "laserski", "žile", "žilice", "bradavice", "glivice", "mozolj", "mozolji"],
     "estetski_poseg": ["estetski", "botox", "botulinum", "filer", "filerji", "polnila", "radiofrekvenca", "prx"],
-    "kozmetika": ["kozmetika", "kozmetični", "nega obraza", "dermavita", "pedikura"],
+    "kozmetika": ["kozmetika", "kozmetični", "nega obraza", "dermavita", "pedikura", "facial", "cosmetic"],
 }
 
 # Tipi storitev in njihova trajanja (v minutah)
