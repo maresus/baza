@@ -78,6 +78,7 @@ DERMATOLOGY_KEYWORDS = {
     "koža",
     "koza",
     "kozo",      # sleng/typo: "s kozo"
+    "kožo",      # "s kožo"
     "kožn",
     "kozn",
     "akne",
@@ -85,7 +86,8 @@ DERMATOLOGY_KEYWORDS = {
     "psoriaza",
     "izpuščaj",
     "izpuscaj",
-    "tezave s koz", # typo: težave s kožo
+    "težave s kož",  # težave s kožo
+    "tezave s koz",  # typo: težave s kožo
     "madež",
     "madez",
     "melanom",
@@ -299,10 +301,14 @@ GREETING_KEYWORDS = {
     "dobro jutro",
     "dober dan",
     "hello",
-    "hi",
     "hej",
-    "ej",
     "pozdravljeni",
+}
+
+# Keywords that need word boundary matching (to avoid "ej" in "okej")
+GREETING_WORDS = {
+    "ej",   # needs boundary to not match "okej"
+    "hi",   # needs boundary to not match inside words
 }
 
 GOODBYE_KEYWORDS = {
@@ -389,7 +395,7 @@ def compute_confidence(message: str, intent: str) -> float:
     has_appointment_kw = any(k in text for k in APPOINTMENT_KEYWORDS)
     has_service_kw = any(k in text for k in SERVICE_KEYWORDS)
     has_booking_hint = any(k in text for k in BOOKING_HINTS)
-    has_greeting_kw = any(k in text for k in GREETING_KEYWORDS)
+    has_greeting_kw = any(k in text for k in GREETING_KEYWORDS) or _contains_word(text, GREETING_WORDS)
     has_price_kw = any(k in text for k in PRICE_KEYWORDS)
     has_inquiry_kw = any(k in text for k in SERVICE_INQUIRY_KEYWORDS)
     has_info_kw = any(k in text for k in INFO_KEYWORDS)

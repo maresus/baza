@@ -44,6 +44,7 @@ AFFIRMATIVE_WORDS = {
     "da", "ja", "ok", "okej", "okay", "seveda", "vredu", "lahko", "prosim", "grem", "gremo",
     "bom", "prišel", "prisla", "prsou", "pridem", "pridm", "yes", "yep", "sure", "cool",
     "tako", "je", "res", "v", "redu", "d", "a", "super", "odlično", "odlicno", "kul",
+    "please",  # english
 }
 
 NEGATIVE_WORDS = {
