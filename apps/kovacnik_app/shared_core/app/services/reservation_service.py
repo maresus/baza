@@ -564,7 +564,7 @@ class ReservationService:
             return False, "Uro prosim vpišite v obliki HH:MM (npr. 12:30)."
         hour, minute = map(int, normalized_time.split(":"))
         if hour < OPENING_START_HOUR or hour > OPENING_END_HOUR:
-            return False, "Kuhinja obratuje med 12:00 in 20:00. Prosimo izberite uro znotraj tega okna."
+            return False, "Kuhinja obratuje med 12:00 in 20:00, zadnji prihod na kosilo je ob 15:00. Prosimo izberite uro znotraj tega okna."
         if hour > LAST_LUNCH_ARRIVAL_HOUR or (hour == LAST_LUNCH_ARRIVAL_HOUR and minute > 0):
             return False, "Zadnji prihod na kosilo je ob 15:00. Prosimo izberite zgodnejšo uro."
         return True, ""

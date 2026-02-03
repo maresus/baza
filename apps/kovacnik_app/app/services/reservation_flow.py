@@ -49,7 +49,7 @@ def get_booking_continuation(step: str, state: dict) -> str:
     """Vrne navodilo za nadaljevanje glede na trenutni korak."""
     continuations = {
         "awaiting_date": "Za kateri **datum** bi rezervirali?",
-        "awaiting_nights": "Koliko **nočitev**?",
+        "awaiting_nights": "Koliko **nočitev (nočitv)**?",
         "awaiting_people": "Za koliko **oseb**?",
         "awaiting_kids": "Koliko je **otrok** in koliko so stari?",
         "awaiting_kids_info": "Koliko je **otrok** in koliko so stari?",
@@ -61,9 +61,9 @@ def get_booking_continuation(step: str, state: dict) -> str:
         "awaiting_dinner": "Želite **večerje**? (Da/Ne)",
         "awaiting_dinner_count": "Za koliko oseb želite **večerje**?",
         "awaiting_note": "Želite še kaj **sporočiti**? (ali 'ne')",
-        "awaiting_time": "Ob kateri **uri**?",
+        "awaiting_time": "Katera **ura** vam ustreza?",
         "awaiting_table_date": "Za kateri **datum** bi rezervirali mizo?",
-        "awaiting_table_time": "Ob kateri **uri** bi prišli?",
+        "awaiting_table_time": "Katera **ura** vam ustreza?",
         "awaiting_table_people": "Za koliko **oseb**?",
         "awaiting_table_location": "Katero **jedilnico** želite? (Pri peči / Pri vrtu)",
         "awaiting_table_event_type": "Kakšen je **tip dogodka**?",
@@ -83,7 +83,7 @@ def reservation_prompt_for_state(
         if step == "awaiting_table_date":
             return "Prosim za datum (sobota/nedelja) v obliki DD.MM ali DD.MM.YYYY."
         if step == "awaiting_table_time":
-            return "Ob kateri uri bi želeli mizo? (12:00–20:00, zadnji prihod na kosilo 15:00)"
+            return "Katera **ura** vam ustreza? (12:00–20:00, zadnji prihod na kosilo 15:00)"
         if step == "awaiting_table_people":
             return "Za koliko oseb pripravimo mizo?"
         if step == "awaiting_table_location":
@@ -92,7 +92,7 @@ def reservation_prompt_for_state(
         if step == "awaiting_room_date":
             return "Za kateri datum prihoda? (DD.MM ali DD.MM.YYYY)"
         if step == "awaiting_nights":
-            return "Koliko nočitev načrtujete? (min. 3 v jun/jul/avg, sicer 2)"
+            return "Koliko nočitev (nočitv) načrtujete? (min. 3 v jun/jul/avg, sicer 2)"
         if step == "awaiting_people":
             return "Za koliko oseb bi bilo bivanje (odrasli + otroci)?"
         if step == "awaiting_room_location":
@@ -156,19 +156,13 @@ def advance_after_room_people(reservation_state: dict[str, Optional[str | int]],
         reservation_state["nights"] or 0,
     )
     needed = reservation_state["rooms"] or 1
-    if free_rooms and len(free_rooms) > needed:
-        reservation_state["available_locations"] = free_rooms
-        reservation_state["step"] = "awaiting_room_location"
-        names = ", ".join(free_rooms)
-        return f"Proste imamo: {names}. Katero bi želeli (lahko tudi več, npr. 'ALJAZ in ANA')?"
-    # auto-assign
     if free_rooms:
         chosen = free_rooms[:needed]
         reservation_state["location"] = ", ".join(chosen)
     else:
         reservation_state["location"] = "Sobe (dodelimo ob potrditvi)"
     reservation_state["step"] = "awaiting_name"
-    return "Odlično. Kako se glasi ime in priimek nosilca rezervacije?"
+    return "Odlično. Kako se glasi ime in priimek nosilca rezervacije ter kontakt?"
 
 
 def proceed_after_table_people(reservation_state: dict[str, Optional[str | int]], reservation_service: Any) -> str:
@@ -190,7 +184,7 @@ def proceed_after_table_people(reservation_state: dict[str, Optional[str | int]]
     if location:
         reservation_state["location"] = location
         reservation_state["step"] = "awaiting_name"
-        return f"Lokacija: {location}. Odlično. Prosim še ime in priimek nosilca rezervacije."
+        return f"Lokacija: {location}. Odlično. Prosim še ime in priimek nosilca rezervacije ter kontakt."
 
     # če ni vnaprej dodelil, ponudimo izbiro med razpoložljivimi
     possible = []
@@ -204,7 +198,7 @@ def proceed_after_table_people(reservation_state: dict[str, Optional[str | int]]
     if len(possible) <= 1:
         reservation_state["location"] = possible[0] if possible else "Jedilnica (dodelimo ob prihodu)"
         reservation_state["step"] = "awaiting_name"
-        return "Odlično. Prosim še ime in priimek nosilca rezervacije."
+        return "Odlično. Prosim še ime in priimek nosilca rezervacije ter kontakt."
     reservation_state["available_locations"] = possible
     reservation_state["step"] = "awaiting_table_location"
     return "Imamo prosto v: " + " ali ".join(possible) + ". Kje bi želeli sedeti?"
@@ -251,12 +245,12 @@ def _handle_room_reservation_impl(
         nights_candidate = extract_nights(message)
         if not date_candidate:
             reservation_state["date"] = None
-            return "Z veseljem uredim sobo. 😊 Sporočite datum prihoda (DD.MM ali DD.MM.YYYY) in približno število nočitev?"
+            return "Z veseljem uredim sobo. 😊 Sporočite datum prihoda (DD.MM ali DD.MM.YYYY) in približno število nočitev (nočitv)?"
         if not nights_candidate:
             reservation_state["date"] = date_candidate
             reservation_state["nights"] = None
             reservation_state["step"] = "awaiting_nights"
-            return "Hvala! Koliko nočitev načrtujete?"
+            return "Hvala! Koliko nočitev (nočitv) načrtujete?"
         ok, error_message, error_type = validate_reservation_rules_fn(date_candidate, nights_candidate)
         if not ok:
             if error_type == "date":
@@ -264,7 +258,7 @@ def _handle_room_reservation_impl(
                 reservation_state["nights"] = None
                 return error_message + " Prosim pošljite nov datum prihoda (DD.MM ali DD.MM.YYYY)."
             reservation_state["nights"] = None
-            return error_message + " Prosim pošljite število nočitev."
+            return error_message + " Prosim pošljite število nočitev (nočitv)."
         reservation_state["date"] = date_candidate
         reservation_state["nights"] = nights_candidate
         reservation_state["step"] = "awaiting_people"
@@ -276,7 +270,7 @@ def _handle_room_reservation_impl(
     if step == "awaiting_nights":
         new_nights = extract_nights(message)
         if not new_nights:
-            return "Prosimo navedite število nočitev (npr. '2 nočitvi')."
+            return "Prosimo navedite število nočitev (nočitv) (npr. '2 nočitvi')."
         ok, error_message, _ = validate_reservation_rules_fn(reservation_state.get("date") or "", new_nights)
         if not ok:
             reservation_state["nights"] = None
@@ -583,7 +577,7 @@ def _handle_table_reservation_impl(
             return error_message + " Bi poslali datum sobote ali nedelje v obliki DD.MM ali DD.MM.YYYY?"
         reservation_state["date"] = proposed
         reservation_state["step"] = "awaiting_table_time"
-        return "Ob kateri uri bi želeli mizo? (12:00–20:00, zadnji prihod na kosilo 15:00)"
+        return "Katera **ura** vam ustreza? (12:00–20:00, zadnji prihod na kosilo 15:00)"
 
     if step == "awaiting_table_time":
         desired_time = extract_time(message) or message.strip()
@@ -605,8 +599,8 @@ def _handle_table_reservation_impl(
                 reservation_state["kids"] = parsed["kids"]
                 reservation_state["kids_ages"] = parsed["ages"]
                 if parsed["kids"] is None and parsed["adults"] is None:
-                    reservation_state["step"] = "awaiting_kids_info"
-                    return "Imate otroke? Koliko in koliko so stari?"
+                    reservation_state["kids"] = 0
+                    reservation_state["kids_ages"] = ""
                 if parsed["kids"] and not parsed["ages"]:
                     reservation_state["step"] = "awaiting_kids_ages"
                     return "Koliko so stari otroci?"
@@ -892,6 +886,9 @@ def handle_reservation_flow(
                 reservation_state["adults"] = prefilled_people["adults"]
                 reservation_state["kids"] = prefilled_people["kids"]
                 reservation_state["kids_ages"] = prefilled_people["ages"]
+                if reservation_state.get("kids") is None and reservation_state.get("adults") is None:
+                    reservation_state["kids"] = 0
+                    reservation_state["kids_ages"] = ""
             if prefilled_date:
                 reservation_state["date"] = prefilled_date
             reply_prefix = "Super, z veseljem uredim rezervacijo sobe. 😊"
@@ -905,7 +902,7 @@ def handle_reservation_flow(
                     reservation_state["nights"] = None
                     return _tr(
                         f"{error_message} Na voljo imamo najmanj 2 nočitvi (oz. 3 v poletnih mesecih). "
-                        "Mi pošljete nov datum prihoda (DD.MM ali DD.MM.YYYY) in število nočitev?"
+                        "Mi pošljete nov datum prihoda (DD.MM ali DD.MM.YYYY) in število nočitev (nočitv)?"
                     )
                 reservation_state["nights"] = prefilled_nights
             if not reservation_state.get("date"):
@@ -916,12 +913,12 @@ def handle_reservation_flow(
             if not reservation_state.get("nights"):
                 reservation_state["step"] = "awaiting_nights"
                 return _tr(
-                    f"{reply_prefix} Koliko nočitev načrtujete? (min. 3 v jun/jul/avg, sicer 2)"
+                    f"{reply_prefix} Koliko nočitev (nočitv) načrtujete? (min. 3 v jun/jul/avg, sicer 2)"
                 )
             if reservation_state.get("people"):
                 if reservation_state.get("kids") is None and reservation_state.get("adults") is None:
-                    reservation_state["step"] = "awaiting_kids_info"
-                    return _tr("Imate otroke? Koliko in koliko so stari?")
+                    reservation_state["kids"] = 0
+                    reservation_state["kids_ages"] = ""
                 if reservation_state.get("kids") and not reservation_state.get("kids_ages"):
                     reservation_state["step"] = "awaiting_kids_ages"
                     return _tr("Koliko so stari otroci?")
@@ -946,6 +943,9 @@ def handle_reservation_flow(
                 reservation_state["adults"] = prefilled_people["adults"]
                 reservation_state["kids"] = prefilled_people["kids"]
                 reservation_state["kids_ages"] = prefilled_people["ages"]
+                if reservation_state.get("kids") is None and reservation_state.get("adults") is None:
+                    reservation_state["kids"] = 0
+                    reservation_state["kids_ages"] = ""
 
             if not reservation_state.get("date"):
                 reservation_state["step"] = "awaiting_table_date"
@@ -965,15 +965,15 @@ def handle_reservation_flow(
 
             if not reservation_state.get("time"):
                 reservation_state["step"] = "awaiting_table_time"
-                return _tr("Ob kateri uri bi želeli mizo? (12:00–20:00, zadnji prihod na kosilo 15:00)")
+                return _tr("Katera **ura** vam ustreza? (12:00–20:00, zadnji prihod na kosilo 15:00)")
 
             if not reservation_state.get("people"):
                 reservation_state["step"] = "awaiting_table_people"
                 return _tr("Za koliko oseb pripravimo mizo?")
 
             if reservation_state.get("kids") is None and reservation_state.get("adults") is None:
-                reservation_state["step"] = "awaiting_kids_info"
-                return _tr("Imate otroke? Koliko in koliko so stari?")
+                reservation_state["kids"] = 0
+                reservation_state["kids_ages"] = ""
             if reservation_state.get("kids") and not reservation_state.get("kids_ages"):
                 reservation_state["step"] = "awaiting_kids_ages"
                 return _tr("Koliko so stari otroci?")

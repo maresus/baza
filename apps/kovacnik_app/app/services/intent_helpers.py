@@ -61,7 +61,7 @@ Vsaka soba ima:
 ✅ Igrače za otroke
 
 Zajtrk je vključen v ceno! 🥐""",
-    "cena_sobe": """**Cenik nastanitve:**
+    "cena_sobe": """**Cenik sobe / nastanitve (soba):**
 
 🛏️ **Nočitev z zajtrkom:** 50 €/osebo/noč (min. 2 noči)
 🍽️ **Večerja:** 25 €/osebo
@@ -73,7 +73,7 @@ Zajtrk je vključen v ceno! 🥐""",
 - Otroška posteljica: **brezplačno**
 - Doplačilo za enoposteljno: **+30%**""",
     "klima": """Da, vse naše sobe so **klimatizirane** in udobne tudi v poletni vročini.""",
-    "wifi": """Da, na voljo imamo **brezplačen Wi-Fi** v vseh sobah in skupnih prostorih.""",
+    "wifi": """Da, na voljo imamo **brezplačen Wi-Fi (wifi)** v vseh sobah in skupnih prostorih.""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
@@ -83,17 +83,25 @@ Zajtrk je vključen v ceno! 🥐""",
 Email: **info@kovacnik.com**""",
     "lokacija": """Nahajamo se na: **Planica 9, 2313 Fram** (Pohorska stran nad Framom). 
 Parking je brezplačen pri domačiji.""",
+    "navodila": """Do nas najlažje pridete z avtoceste A1 – **izvoz Fram**. 
+Pri semaforju v Framu proti cerkvi sv. Ane, skozi vas proti Kopivniku, nato desno (tabla Kmetija Kovačnik) in še ~10 minut vožnje.
+Naslov: **Planica 9, 2313 Fram**.""",
     "min_nocitve": """Minimalno bivanje je:
 - **3 nočitve** v juniju, juliju in avgustu
 - **2 nočitvi** v ostalih mesecih""",
     "kapaciteta_mize": """Jedilnica 'Pri peči' sprejme do 15 oseb, 'Pri vrtu' pa do 35 oseb.""",
     "alergije": """Seveda, prilagodimo jedi za alergije (gluten, laktoza) in posebne prehrane (vegan/vegetarijan).""",
     "vina": """Ponujamo izbor lokalnih vin. Če želite priporočilo, mi napišite kakšna vina imate radi.""",
+    "smucisce": """V bližini sta **Mariborsko Pohorje** in **Areh** (približno 25–35 min vožnje).""",
+    "areh": """**Areh** je od nas približno 30 minut vožnje skozi gozd proti Pohorju.""",
+    "terme": """V bližini priporočamo **Terme Zreče** in **Terme Ptuj** (približno 30–40 min vožnje).""",
     "turizem": """V okolici so odlične možnosti za izlete (Pohorje, slapovi, razgledišča). Če želite, lahko predlagam konkretne poti.""",
     "kolesa": """Izposoja koles je možna po dogovoru. Za več informacij nas kontaktirajte.""",
     "skalca": """Slap Skalca je prijeten izlet v bližini – priporočamo sprehod ob potočku.""",
     "darilni_boni": """Na voljo imamo darilne bone. Sporočite znesek in pripravimo bon za vas.""",
     "jedilnik": """Jedilnik se spreminja glede na sezono. Če želite, vam pošljemo aktualno vikend ponudbo.""",
+    "cena_kosilo": """Cena **kosilo** (vikend kosila) je **po dogovoru** glede na aktualno ponudbo. Če želite, vam pošljem trenutni jedilnik in okvirno ceno za ta vikend.""",
+    "rezervacija_postopek": """Rezervacija je preprosta: povejte **datum**, željeno **uro** in **število oseb** (za mizo) ali **datum**, **št. nočitev** in **osebe** (za sobo). Nato dodate kontakt in potrdite.""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
     "kmetija": """Domačija Kovačnik je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
     "gibanica": """Pohorska gibanica je naša specialiteta. Priporočam, da jo poskusite ob obisku!""",
@@ -121,6 +129,10 @@ if _topics_path.exists():
         _TOPIC_RESPONSES = {}
 
 PRODUCT_RESPONSES = {
+    "namaz": [
+        "Imamo več **domačih namazov** (bučni namaz, jetrna pašteta, čemažev pesto). Trgovina: https://kovacnik.com/katalog.",
+        "Na voljo so **namazi**: bučni namaz, jetrna pašteta in čemažev pesto. Trgovina: https://kovacnik.com/katalog.",
+    ],
     "marmelada": [
         "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kovacnik.com/katalog (sekcija Marmelade).",
         "Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: https://kovacnik.com/katalog.",
@@ -227,6 +239,10 @@ INFO_KEYWORDS = {
     "kje",
     "lokacija",
     "naslov",
+    "kako pridem",
+    "kako do vas",
+    "navodila",
+    "pot",
     "kosilo",
     "vikend kosilo",
     "vikend",
@@ -240,6 +256,13 @@ INFO_KEYWORDS = {
     "večerja",
     "otroci",
     "popust",
+    "smučišče",
+    "smucisce",
+    "areh",
+    "pohorje",
+    "terme",
+    "izlet",
+    "okolica",
 }
 
 PRODUCT_FOLLOWUP_PHRASES = {
@@ -298,10 +321,18 @@ def maybe_shorten_response(text: str) -> str:
 
 def detect_info_intent(message: str) -> Optional[str]:
     text = message.lower().strip()
+    if any(w in text for w in ["ponedeljk", "torek", "tork"]):
+        return "odpiralni_cas"
     if any(w in text for w in ["kdaj ste odprti", "odpiralni", "delovni čas", "kdaj odprete"]):
         return "odpiralni_cas"
+    if any(w in text for w in ["kdaj lahko pridemo", "kdaj lahko pridem", "kdaj je prihod", "kdaj je check in"]):
+        return "prijava_odjava"
+    if any(w in text for w in ["kako pridem", "kako do vas", "navodila", "pot do"]):
+        return "navodila"
     if "zajtrk" in text and "večerj" not in text:
         return "zajtrk"
+    if any(w in text for w in ["kako deluje rezervacija", "postopek rezervacije", "kako rezerviram", "kako rezervirati"]):
+        return "rezervacija_postopek"
     if any(w in text for w in ["koliko stane večerja", "cena večerje"]):
         return "vecerja"
     if any(
@@ -318,6 +349,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         ]
     ):
         return "cena_sobe"
+    if any(w in text for w in ["koliko stane kosilo", "cena kosila", "cena kosilo"]):
+        return "cena_kosilo"
     if any(w in text for w in ["koliko sob", "kakšne sobe", "koliko oseb v sobo", "kolko oseb v sobo", "kapaciteta sob"]):
         return "sobe"
     if "klim" in text:
@@ -348,6 +381,14 @@ def detect_info_intent(message: str) -> Optional[str]:
         ]
     ):
         return "lokacija"
+    if "areh" in text:
+        return "areh"
+    if "terme" in text:
+        return "terme"
+    if any(w in text for w in ["smučišče", "smucisce", "pohorje"]):
+        return "smucisce"
+    if any(w in text for w in ["izlet", "okolica"]):
+        return "turizem"
     if any(w in text for w in ["minimal", "najmanj noči", "najmanj nočitev", "min nočitev"]):
         return "min_nocitve"
     if any(w in text for w in ["koliko miz", "kapaciteta"]):
@@ -428,6 +469,8 @@ def detect_info_intent(message: str) -> Optional[str]:
 
 def detect_product_intent(message: str) -> Optional[str]:
     text = message.lower()
+    if any(w in text for w in ["pesto", "namaz", "paštet", "pastet", "čemaž", "cemaz"]):
+        return "namaz"
     if any(w in text for w in ["liker", "žgan", "zgan", "borovnič", "orehov", "alkohol"]):
         return "liker"
     if any(w in text for w in ["marmelad", "džem", "dzem", "jagod", "marelič"]):

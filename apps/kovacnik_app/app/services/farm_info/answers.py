@@ -77,7 +77,7 @@ def answer_farm_info(message: str) -> str:
             f"Kosila: {FARM_INFO['opening_hours']['restaurant']} | "
             f"Sobe: {FARM_INFO['opening_hours']['rooms']} | "
             f"Trgovina: {FARM_INFO['opening_hours']['shop']} | "
-            f"Zaprto: {FARM_INFO['opening_hours']['closed']}"
+            f"Zaprto: {FARM_INFO['opening_hours']['closed']} (ob ponedeljkih in torkih zaprto)"
         )
 
     # Parking
