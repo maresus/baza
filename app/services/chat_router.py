@@ -1927,6 +1927,14 @@ Za dodatno pomoč pokličite: 📞 01 234 56 78""",
         conversation_state[session_id]["awaiting_booking_confirmation"] = False
         response_text = handle_appointment_booking(message, session_id)
         return ChatResponse(reply=response_text, session_id=session_id)
+    # If bot just offered a date for a specific service, accept date directly
+    if extract_date_from_message(message) and ("Želite termin" in last_bot_msg or "Povejte mi datum" in last_bot_msg):
+        service_from_last = extract_service_type(last_bot_msg)
+        if service_from_last:
+            state["service_type"] = service_from_last
+            state["step"] = "date"
+            response_text = handle_appointment_booking(message, session_id)
+            return ChatResponse(reply=response_text, session_id=session_id)
     if "Želite, da vas naročim na pregled?" in last_bot_msg and is_affirmative(message):
         response_text = handle_appointment_booking(message, session_id)
         return ChatResponse(reply=response_text, session_id=session_id)
