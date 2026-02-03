@@ -81,6 +81,9 @@ Zajtrk je vključen v ceno! 🥐""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": """Kontakt: **02 601 54 00** / **031 330 113**
 Email: **info@kovacnik.com**""",
+    "gospodar": """Domačijo Kovačnik vodi gospodar Danilo skupaj z družino. Če želite, vam povem še kaj več o domačiji ali ponudbi.""",
+    "traktor": """Da, imamo traktorje in kmetijsko mehanizacijo za delo na kmetiji. Ogledi kmetije so možni ob obisku – vprašajte osebje na licu mesta.""",
+    "zadnji_prihod": "Zadnji prihod na kosilo je ob **15:00**.",
     "lokacija": """Nahajamo se na: **Planica 9, 2313 Fram** (Pohorska stran nad Framom). 
 Parking je brezplačen pri domačiji.""",
     "navodila": """Do nas najlažje pridete z avtoceste A1 – **izvoz Fram**. 
@@ -453,7 +456,13 @@ def detect_info_intent(message: str) -> Optional[str]:
     ):
         return "jedilnik"
     if any(w in text for w in ["zadnji prihod", "zadnji prihod na kosilo"]):
-        return "odpiralni_cas"
+        return "zadnji_prihod"
+    if any(w in text for w in ["zadnja ura", "do kdaj lahko pridemo", "do kdaj je prihod"]):
+        return "zadnji_prihod"
+    if any(w in text for w in ["gospodar", "lastnik", "kdo vodi", "kdo je sef", "kdo je šef"]):
+        return "gospodar"
+    if any(w in text for w in ["traktor", "traktorji", "mehanizacij"]):
+        return "traktor"
     if any(w in text for w in ["družin", "druzina", "druzino"]):
         return "druzina"
     if "kmetij" in text or "kmetijo" in text:
