@@ -10,9 +10,11 @@ def answer_farm_info(message: str) -> str:
     """Answer questions about the farm (location, contact, hours, etc.)."""
     lowered = message.lower()
 
-    # Zajčki / živali
+    # Zajčki / živali / psi
     if any(word in lowered for word in ["zajc", "zajček", "zajcka", "zajčki", "kunec", "zajce"]):
         return "Imamo prijazne zajčke, ki jih lahko obiskovalci božajo. Ob obisku povejte, pa vas usmerimo do njih."
+    if any(word in lowered for word in ["pes", "psa", "psi", "psov", "psom", "kuž", "kuz", "dog"]):
+        return "Hišni ljubljenčki / dog / psi so dobrodošli po predhodnem dogovoru. Na kmetiji imamo tudi druge živali."
 
     # Ogledi / ture
     if any(word in lowered for word in ["ogled", "tour", "voden", "vodenje", "guid", "sprehod po kmetiji"]):

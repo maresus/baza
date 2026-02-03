@@ -77,7 +77,8 @@ Zajtrk je vključen v ceno! 🥐""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
-    "zivali": """Na kmetiji imamo živali (tudi konje/ponije) in jih lahko ob obisku vidite. Hišni ljubljenčki so dobrodošli po predhodnem dogovoru. 🐾""",
+    "zivali": """Na kmetiji imamo živali (tudi konje/ponije) in jih lahko ob obisku vidite. Hišni ljubljenčki / dog / psi so dobrodošli po predhodnem dogovoru. 🐾""",
+    "dostava": """Izdelke lahko naročite tudi za dostavo. Spletna trgovina: https://kovacnik.com/katalog.""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": """Kontakt: **02 601 54 00** / **031 330 113**
 Email: **info@kovacnik.com**""",
@@ -360,14 +361,16 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "klima"
     if "wifi" in text or "wi-fi" in text or "internet" in text:
         return "wifi"
-    if any(w in text for w in ["prijava", "odjava", "check in", "check out"]):
+    if any(w in text for w in ["prijava", "odjava", "check in", "check out", "check-in", "check-out"]):
         return "prijava_odjava"
     if any(w in text for w in ["parkir", "parking"]):
         return "parking"
-    if re.search(r"(?<!\w)(pes|psa|psi|psov|kuž|kuz|dog)(?!\w)", text) or any(
+    if re.search(r"(?<!\w)(pes|psa|psi|psov|psom|kuž|kuz|dog)(?!\w)", text) or any(
         w in text for w in ["mačk", "žival", "ljubljenč", "konj", "konje", "konji", "poni", "poniji"]
     ):
         return "zivali"
+    if any(w in text for w in ["po pošti", "po posti", "dostava", "pošljete", "posljete", "pošiljate", "posiljate"]):
+        return "dostava"
     if any(w in text for w in ["plačilo", "kartic", "gotovina"]):
         return "placilo"
     if any(w in text for w in ["kontakt", "telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):

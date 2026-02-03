@@ -302,8 +302,9 @@ def _handle_room_reservation_impl(
         reservation_state["kids"] = parsed["kids"]
         reservation_state["kids_ages"] = parsed["ages"]
         if parsed["kids"] is None and parsed["adults"] is None:
-            reservation_state["step"] = "awaiting_kids_info"
-            return "Imate otroke? Koliko in koliko so stari?"
+            reservation_state["kids"] = 0
+            reservation_state["kids_ages"] = ""
+            return advance_after_room_people_fn(reservation_state, reservation_service)
         if parsed["kids"] and not parsed["ages"]:
             reservation_state["step"] = "awaiting_kids_ages"
             return "Koliko so stari otroci?"

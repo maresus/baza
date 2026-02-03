@@ -2342,6 +2342,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         inquiry_state = get_inquiry_state(session_id)
     needs_followup = False
     detected_lang = detect_language(payload.message)
+    # Ne preklapljaj jezika sredi rezervacije zaradi kratkih/numeričnih vnosov.
+    if state.get("step"):
+        alpha_count = sum(1 for ch in payload.message if ch.isalpha())
+        if alpha_count == 0 and state.get("language"):
+            detected_lang = state.get("language")
     # vedno osveži jezik seje, da se lahko sproti preklaplja
     state["language"] = detected_lang
     state["session_id"] = session_id
@@ -2521,11 +2526,32 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "reservation_context_start", followup_flag=False)
 
     if state.get("step") is not None:
-        if is_negative(payload.message):
+        cancel_words = ["prekli", "preklic", "stop", "konec"]
+        soft_no = payload.message.strip().lower() in {"ne", "no", "ne hvala", "no thanks"}
+        cancel_steps = {
+            "awaiting_room_date",
+            "awaiting_table_date",
+            "awaiting_table_time",
+            "awaiting_nights",
+            "awaiting_people",
+            "awaiting_confirmation",
+        }
+        if (
+            state.get("step") in cancel_steps
+            and (
+                any(word in payload.message.lower() for word in cancel_words)
+                or (is_negative(payload.message) and (not soft_no or state.get("step") == "awaiting_confirmation"))
+            )
+        ):
             reset_reservation_state(state)
             reply = "V redu, rezervacijo sem preklical. Kako vam lahko pomagam? (prekinil)"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_cancelled", followup_flag=False)
+        if is_affirmative(payload.message) and last_product_query:
+            reply = f"Super! Trgovina/katalog: {SHOP_URL}"
+            reply = handle_interrupt(reply, state.get("step"))
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_order_link", followup_flag=False)
         info_key = detect_info_intent(payload.message)
         if info_key:
             reply = get_info_response(info_key)
