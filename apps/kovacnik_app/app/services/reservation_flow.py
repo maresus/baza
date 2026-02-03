@@ -268,12 +268,21 @@ def _handle_room_reservation_impl(
         )
 
     if step == "awaiting_nights":
+        date_candidate = extract_date(message)
+        if date_candidate:
+            reservation_state["date"] = date_candidate
+            reservation_state["nights"] = None
+            return "Hvala! Koliko nočitev (nočitv) načrtujete?"
         new_nights = extract_nights(message)
         if not new_nights:
             return "Prosimo navedite število nočitev (nočitv) (npr. '2 nočitvi')."
-        ok, error_message, _ = validate_reservation_rules_fn(reservation_state.get("date") or "", new_nights)
+        ok, error_message, error_type = validate_reservation_rules_fn(reservation_state.get("date") or "", new_nights)
         if not ok:
             reservation_state["nights"] = None
+            if error_type == "date":
+                reservation_state["date"] = None
+                reservation_state["step"] = "awaiting_room_date"
+                return error_message + " Prosimo pošljite nov datum prihoda (DD.MM ali DD.MM.YYYY)."
             return error_message + " Poskusite z drugim številom nočitev."
         reservation_state["nights"] = new_nights
         if reservation_state.get("people"):
