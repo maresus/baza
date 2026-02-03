@@ -331,27 +331,11 @@ Zdraviliška ulica 12
 
 ℹ️ Za druga vprašanja: 01 234 56 78 ali info@zdravstveni-center.si""",
 
-    "storitve": """**Naše storitve** - na voljo za takojšnje naročanje:
+    "storitve": """Najpogostejše storitve:
+🔬 dermatolog, 🦴 ortoped, 👁️ okulist,
+⚡ laserski posegi, 💉 estetski posegi, 💆 kozmetika.
 
-🔬 **Dermatologija** (30 min, 25-150 €)
-Pregledi kožnih bolezni, laserski in estetski posegi
-
-🦴 **Ortopedija** (30 min, 40-80 €)
-Pregledi sklepov, hrbtenice, športne poškodbe
-
-👁️ **Oftalmologija** (30 min, 35-70 €)
-Očesni pregledi, predpis očal in kontaktnih leč
-
-⚡ **Laserski posegi** (30 min, 50-200 €)
-Odstranjevanje žilic, bradavic, zdravljenje glivic nohtov
-
-💉 **Estetski posegi** (30 min, 80-300 €)
-Botox, fillerji, biorevitalizacija kože
-
-💆 **Kozmetični salon** (60 min, 40-100 €)
-Profesionalna nega obraza, tretmaji kože
-
-🎯 **Naročite se TAKOJ** - samo povejte kateri pregled vas zanima in začnimo!""",
+Napišite, kaj vas zanima, pa povem podrobnosti ali vas naročim.""",
 
     "dermatolog": """**Dermatološki pregled**
 Trajanje: 30 minut
@@ -473,18 +457,15 @@ Storitve:
 
 🎯 **Naročite se ZDAJ** - povejte mi želeni datum!""",
 
-    "cene": """**Cenik storitev:**
+    "cene": """Cene so odvisne od storitve.  
+Lahko povem točen razpon, če mi napišete, kateri pregled vas zanima.
 
-🔬 Dermatološki pregled: 25-150 €
-🦴 Ortopedski pregled: 40-80 €
-👁️ Okulistični pregled: 35-70 €
-⚡ Laserski posegi: 50-200 €
-💉 Estetski posegi: 80-300 €
-💆 Kozmetični salon: 40-100 €
+Primeri:
+• Dermatolog: 25–150 €  
+• Ortoped: 40–80 €  
+• Okulist: 35–70 €
 
-Cene se razlikujejo glede na vrsto pregleda/posega.
-
-🎯 **Povejte mi kateri pregled vas zanima** in vas takoj naročim!""",
+Kateri pregled vas zanima?""",
 
     "placilo": """Načini plačila:
 - Gotovina
@@ -520,6 +501,40 @@ Preveril bom razpoložljivost.""",
 
 # Variante odgovorov
 INFO_RESPONSES_VARIANTS = {key: [value] for key, value in INFO_RESPONSES.items()}
+INFO_RESPONSES_VARIANTS.update(
+    {
+        "pozdrav": [
+            INFO_RESPONSES["pozdrav"],
+            "Pozdravljeni! 😊 Kako vam lahko pomagam danes?",
+            "Živjo! Sem digitalni pomočnik zdravstvenega centra. Kako lahko pomagam?",
+        ],
+        "storitve": [
+            INFO_RESPONSES["storitve"],
+            "Nudimo dermatologa, ortopeda, okulista ter estetske/laserske posege in kozmetiko. Kaj vas zanima?",
+            "Najpogosteje: dermatolog, ortoped, okulist, laser, estetika, kozmetika. Povejte, kaj iščete.",
+        ],
+        "cene": [
+            INFO_RESPONSES["cene"],
+            "Cena je odvisna od storitve. Napišite, kateri pregled vas zanima, pa povem konkreten razpon.",
+            "Za točen znesek potrebujem storitev (npr. dermatolog, ortoped, okulist). Katera vas zanima?",
+        ],
+        "delovni_cas": [
+            INFO_RESPONSES["delovni_cas"],
+            "Delamo pon–pet 8:00–18:00, sob 9:00–13:00 (nujni primeri), ned/prazniki zaprto.",
+        ],
+        "kontakt": [
+            INFO_RESPONSES["kontakt"],
+            "Naslov: Zdraviliška 12, Ljubljana. Tel: 01 234 56 78. Email: info@zdravstveni-center.si",
+        ],
+    }
+)
+
+
+def _get_info_response(key: str) -> str:
+    variants = INFO_RESPONSES_VARIANTS.get(key) or []
+    if variants:
+        return random.choice(variants)
+    return INFO_RESPONSES.get(key, "Kako vam lahko pomagam?")
 
 # Kritični ključi
 BOOKING_RELEVANT_KEYS = {"dermatolog", "ortoped", "okulist", "laserski_poseg", "estetski_poseg", "kozmetika", "storitve", "prosti_termini"}
@@ -1011,7 +1026,7 @@ def _short_contact_info() -> str:
 def _service_price_info(service_type: Optional[str]) -> str:
     info = get_service_info(service_type or "")
     if not info:
-        return INFO_RESPONSES["cene"]
+        return _get_info_response("cene")
     return f"💰 {info['name']}: {info['price_range']} · {info['duration_minutes']} min"
 
 
@@ -1658,11 +1673,11 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
 
     # Handle GREETING
     if decision.primary_intent == IntentType.GREETING:
-        return INFO_RESPONSES.get("pozdrav", "Pozdravljeni! Kako vam lahko pomagam?")
+        return _get_info_response("pozdrav")
 
     # Handle GOODBYE
     if decision.primary_intent == IntentType.GOODBYE:
-        return INFO_RESPONSES.get("hvala", "Hvala za sporočilo! Lep dan!")
+        return _get_info_response("hvala")
 
     # Handle SOFT_INTERRUPT during booking flow
     if decision.action == SwitchAction.SOFT_INTERRUPT and is_in_flow(session_id):
@@ -1673,17 +1688,17 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
             # Find appropriate info response
             lowered = message.lower()
             if any(k in lowered for k in ["lokacija", "naslov", "kje"]):
-                answer = INFO_RESPONSES.get("lokacija", INFO_RESPONSES.get("kontakt"))
+                answer = _get_info_response("lokacija")
             elif any(k in lowered for k in ["delovni", "ura", "odprt"]):
-                answer = INFO_RESPONSES.get("delovni_cas")
+                answer = _get_info_response("delovni_cas")
             elif any(k in lowered for k in ["parking"]):
-                answer = INFO_RESPONSES.get("parkiranje")
+                answer = _get_info_response("parkiranje")
             else:
-                answer = INFO_RESPONSES.get("kontakt")
+                answer = _get_info_response("kontakt")
         elif decision.primary_intent == IntentType.PRICE:
-            answer = INFO_RESPONSES.get("cene")
+            answer = _get_info_response("cene")
         elif decision.primary_intent == IntentType.SERVICE_INFO:
-            answer = INFO_RESPONSES.get("storitve")
+            answer = _get_info_response("storitve")
         else:
             answer = None
 
@@ -1797,27 +1812,27 @@ Ponujamo:
 🎯 Želite termin? Povejte mi datum!"""
         else:
             # General service info
-            return INFO_RESPONSES.get("storitve", "Ponujamo različne zdravstvene storitve. Kako vam lahko pomagam?")
+            return _get_info_response("storitve")
 
     # Handle PRICE
     if decision.primary_intent == IntentType.PRICE:
-        return INFO_RESPONSES.get("cene", INFO_RESPONSES.get("storitve"))
+        return _get_info_response("cene")
 
     # Handle INFO
     if decision.primary_intent == IntentType.INFO:
         lowered = message.lower()
         if any(k in lowered for k in ["lokacija", "naslov", "kje", "nahajate"]):
-            return INFO_RESPONSES.get("lokacija", INFO_RESPONSES.get("kontakt"))
+            return _get_info_response("lokacija")
         elif any(k in lowered for k in ["delovni", "ura", "odprt", "kdaj"]):
-            return INFO_RESPONSES.get("delovni_cas")
+            return _get_info_response("delovni_cas")
         elif any(k in lowered for k in ["parking", "parkplac", "parkirišče"]):
             return INFO_RESPONSES.get("parkiranje")
         elif any(k in lowered for k in ["telefon", "email", "kontakt"]):
-            return INFO_RESPONSES.get("kontakt")
+            return _get_info_response("kontakt")
         elif any(k in lowered for k in ["pridem", "pridemo", "pot"]):
             return INFO_RESPONSES.get("lokacija")
         else:
-            return INFO_RESPONSES.get("kontakt")
+            return _get_info_response("kontakt")
 
     # For other intents, fall back to legacy system
     return None
@@ -2076,15 +2091,15 @@ Kateri datum vas zanima? (npr. 15.3.2026)""",
             if intent == "info_services":
                 if state.get("service_type"):
                     info = get_service_info(state["service_type"])
-                    info_response = f"{info['name']}: {info['description']}" if info else INFO_RESPONSES["storitve"]
+                    info_response = f"{info['name']}: {info['description']}" if info else _get_info_response("storitve")
                 else:
-                    info_response = INFO_RESPONSES["storitve"]
+                    info_response = _get_info_response("storitve")
             elif intent == "info_prices":
                 info_response = _service_price_info(state.get("service_type"))
             elif intent == "info_contact":
                 info_response = _short_contact_info()
             elif intent == "info_hours":
-                info_response = INFO_RESPONSES["delovni_cas"]
+                info_response = _get_info_response("delovni_cas")
             elif intent == "question" and is_question_like:
                 info_response = (
                     "Za medicinska vprašanja (npr. bolečina) ne morem dati zanesljivega odgovora. "
@@ -2139,30 +2154,30 @@ Kateri datum vas zanima? (npr. 15.3.2026)""",
 
     # Handle different intents
     if intent == "greeting":
-        response_text = INFO_RESPONSES["pozdrav"]
+        response_text = _get_info_response("pozdrav")
 
     elif intent == "thanks":
-        response_text = INFO_RESPONSES["hvala"]
+        response_text = _get_info_response("hvala")
 
     elif intent == "info_services":
-        response_text = INFO_RESPONSES["storitve"]
+        response_text = _get_info_response("storitve")
 
     elif intent == "info_narocanje":
-        response_text = INFO_RESPONSES["narocanje"]
+        response_text = _get_info_response("narocanje")
 
     elif intent == "info_prices":
-        response_text = INFO_RESPONSES["cene"]
+        response_text = _get_info_response("cene")
         if _has_booking_keywords(message):
             response_text += "\n\nČe želite, lahko takoj začnemo z naročanjem – povejte, kateri pregled vas zanima."
 
     elif intent == "info_ekipa":
-        response_text = INFO_RESPONSES["ekipa"]
+        response_text = _get_info_response("ekipa")
 
     elif intent == "info_contact":
-        response_text = INFO_RESPONSES["kontakt"]
+        response_text = _get_info_response("kontakt")
 
     elif intent == "info_hours":
-        response_text = INFO_RESPONSES["delovni_cas"]
+        response_text = _get_info_response("delovni_cas")
 
     elif intent == "health_symptoms":
         # Use KB if possible; otherwise LLM health advice
@@ -2172,9 +2187,9 @@ Kateri datum vas zanima? (npr. 15.3.2026)""",
     elif intent.startswith("info_"):
         service_key = intent.replace("info_", "")
         if service_key in INFO_RESPONSES:
-            response_text = INFO_RESPONSES[service_key]
+            response_text = _get_info_response(service_key)
         else:
-            response_text = INFO_RESPONSES["storitve"]
+            response_text = _get_info_response("storitve")
 
     elif intent.startswith("book_"):
         # Start booking flow
