@@ -77,7 +77,7 @@ Zajtrk je vključen v ceno! 🥐""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
-    "zivali": """Hišni ljubljenčki so dobrodošli po predhodnem dogovoru. 🐾""",
+    "zivali": """Na kmetiji imamo živali (tudi konje/ponije) in jih lahko ob obisku vidite. Hišni ljubljenčki so dobrodošli po predhodnem dogovoru. 🐾""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": """Kontakt: **02 601 54 00** / **031 330 113**
 Email: **info@kovacnik.com**""",
@@ -365,7 +365,7 @@ def detect_info_intent(message: str) -> Optional[str]:
     if any(w in text for w in ["parkir", "parking"]):
         return "parking"
     if re.search(r"(?<!\w)(pes|psa|psi|psov|kuž|kuz|dog)(?!\w)", text) or any(
-        w in text for w in ["mačk", "žival", "ljubljenč"]
+        w in text for w in ["mačk", "žival", "ljubljenč", "konj", "konje", "konji", "poni", "poniji"]
     ):
         return "zivali"
     if any(w in text for w in ["plačilo", "kartic", "gotovina"]):
