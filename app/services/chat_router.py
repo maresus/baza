@@ -1713,6 +1713,112 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
 
 Za nujne primere nudimo prednostne termine. Želite, da preverim najhitrejši prosti termin?"""
 
+    # Handle SERVICE_INFO (symptoms, service questions)
+    if decision.primary_intent == IntentType.SERVICE_INFO:
+        service = decision.service_type
+        if service == "DERMATOLOG":
+            return """**Dermatologija** - pregledi kožnih težav
+
+Zdravimo:
+- Izpuščaje, akne, ekceme
+- Luskavico, psoriaze
+- Kožne spremembe, madeže
+- Glivične okužbe
+
+🔬 **Dermatološki pregled** (30 min, 25-150 €)
+
+🎯 Želite termin? Povejte mi datum!"""
+        elif service == "ORTOPED":
+            return """**Ortopedija** - pregledi gibalnega sistema
+
+Zdravimo:
+- Bolečine v hrbtu, kolenih, ramenih
+- Športne poškodbe
+- Težave s sklepi
+- Poškodbe mišic in vezi
+
+🦴 **Ortopedski pregled** (30 min, 40-80 €)
+
+🎯 Želite termin? Povejte mi datum!"""
+        elif service == "OKULIST":
+            return """**Oftalmologija** - pregledi oči
+
+Zdravimo:
+- Težave z vidom
+- Očesne bolezni
+- Predpis očal in kontaktnih leč
+
+👁️ **Očesni pregled** (30 min, 35-70 €)
+
+🎯 Želite termin? Povejte mi datum!"""
+        elif service == "ESTETSKI_POSEG":
+            return """**Estetski posegi**
+
+Ponujamo:
+- Botox
+- Fillerji
+- Biorevitalizacija kože
+
+💉 **Estetski poseg** (30 min, 80-300 €)
+
+🎯 Želite termin? Povejte mi datum!"""
+        elif service == "LASERSKI_POSEG":
+            return """**Laserski posegi**
+
+Ponujamo:
+- Odstranjevanje žilic
+- Odstranjevanje bradavic
+- Zdravljenje glivic nohtov
+
+⚡ **Laserski poseg** (30 min, 50-200 €)
+
+🎯 Želite termin? Povejte mi datum!"""
+        elif service == "FIZIOTERAPIJA":
+            return """**Fizioterapija**
+
+Ponujamo:
+- Rehabilitacija po poškodbah
+- Masaže
+- Razgibalne vaje
+
+💆 **Fizioterapija** (60 min, 40-80 €)
+
+🎯 Želite termin? Povejte mi datum!"""
+        elif service == "KOZMETIKA":
+            return """**Kozmetični salon**
+
+Ponujamo:
+- Profesionalna nega obraza
+- Tretmaji kože
+- Kozmetični posegi
+
+✨ **Kozmetični tretma** (60 min, 40-100 €)
+
+🎯 Želite termin? Povejte mi datum!"""
+        else:
+            # General service info
+            return INFO_RESPONSES.get("storitve", "Ponujamo različne zdravstvene storitve. Kako vam lahko pomagam?")
+
+    # Handle PRICE
+    if decision.primary_intent == IntentType.PRICE:
+        return INFO_RESPONSES.get("cene", INFO_RESPONSES.get("storitve"))
+
+    # Handle INFO
+    if decision.primary_intent == IntentType.INFO:
+        lowered = message.lower()
+        if any(k in lowered for k in ["lokacija", "naslov", "kje", "nahajate"]):
+            return INFO_RESPONSES.get("lokacija", INFO_RESPONSES.get("kontakt"))
+        elif any(k in lowered for k in ["delovni", "ura", "odprt", "kdaj"]):
+            return INFO_RESPONSES.get("delovni_cas")
+        elif any(k in lowered for k in ["parking", "parkplac", "parkirišče"]):
+            return INFO_RESPONSES.get("parkiranje")
+        elif any(k in lowered for k in ["telefon", "email", "kontakt"]):
+            return INFO_RESPONSES.get("kontakt")
+        elif any(k in lowered for k in ["pridem", "pridemo", "pot"]):
+            return INFO_RESPONSES.get("lokacija")
+        else:
+            return INFO_RESPONSES.get("kontakt")
+
     # For other intents, fall back to legacy system
     return None
 
