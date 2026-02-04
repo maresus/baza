@@ -1743,9 +1743,9 @@ def get_last_reservation_user_message() -> str:
 def set_reservation_type_from_text(state: dict, text: str) -> None:
     lowered = text.lower()
     if any(token in lowered for token in ["mizo", "miza", "table", "kosilo", "kosila", "lunch"]):
-        state["type"] = "table"
+        set_state_field(state, "type", "table")
     elif any(token in lowered for token in ["sobo", "soba", "preno", "room", "zimmer"]):
-        state["type"] = "room"
+        set_state_field(state, "type", "room")
 
 
 def last_bot_mentions_reservation(last_bot: str) -> bool:
@@ -1967,7 +1967,7 @@ def reset_reservation_state(state: dict[str, Optional[str | int]]) -> None:
 
 
 def start_inquiry_consent(state: dict[str, Optional[str]]) -> str:
-    state["step"] = "awaiting_consent"
+    set_state_field(state, "step", "awaiting_consent")
     return (
         "Žal nimam dovolj informacij. "
         "Lahko zabeležim povpraševanje in ga posredujem ekipi. "
@@ -1985,7 +1985,7 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
 
     if step == "awaiting_consent":
         if lowered in {"da", "ja", "seveda", "lahko", "ok"}:
-            state["step"] = "awaiting_details"
+            set_state_field(state, "step", "awaiting_details")
             return "Odlično. Prosim opišite, kaj točno želite (količina, izdelek, storitev)."
         if lowered in {"ne", "ne hvala", "ni treba"}:
             reset_inquiry_state(state)
@@ -1994,29 +1994,29 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
 
     if step == "awaiting_details":
         if text:
-            state["details"] = (state.get("details") or "")
+            set_state_field(state, "details", (state.get("details") or ""))
             if state["details"]:
                 state["details"] += "\n" + text
             else:
-                state["details"] = text
-        state["step"] = "awaiting_deadline"
+                set_state_field(state, "details", text)
+        set_state_field(state, "step", "awaiting_deadline")
         return "Hvala! Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
 
     if step == "awaiting_deadline":
         if any(word in lowered for word in ["ni", "ne vem", "kadar koli", "vseeno", "ni pomembno"]):
-            state["deadline"] = ""
+            set_state_field(state, "deadline", "")
         else:
-            state["deadline"] = text
-        state["step"] = "awaiting_contact"
+            set_state_field(state, "deadline", text)
+        set_state_field(state, "step", "awaiting_contact")
         return "Super. Prosim še kontakt (ime, telefon, email)."
 
     if step == "awaiting_contact":
-        state["contact_raw"] = text
+        set_state_field(state, "contact_raw", text)
         email = extract_email(text)
         phone = extract_phone(text)
-        state["contact_email"] = email or state.get("contact_email") or ""
-        state["contact_phone"] = phone or state.get("contact_phone") or ""
-        state["contact_name"] = state.get("contact_name") or ""
+        set_state_field(state, "contact_email", email or state.get("contact_email") or "")
+        set_state_field(state, "contact_phone", phone or state.get("contact_phone") or "")
+        set_state_field(state, "contact_name", state.get("contact_name") or "")
         if not state["contact_email"]:
             return "Za povratni kontakt prosim dodajte email."
 
@@ -2300,8 +2300,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     needs_followup = False
     detected_lang = detect_language(payload.message)
     # vedno osveži jezik seje, da se lahko sproti preklaplja
-    state["language"] = detected_lang
-    state["session_id"] = session_id
+    set_state_field(state, "language", detected_lang)
+    set_state_field(state, "session_id", session_id)
 
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
         nonlocal needs_followup
@@ -2582,18 +2582,18 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     if state.get("awaiting_continue"):
         if is_negative(payload.message):
             reset_reservation_state(state)
-            state["awaiting_continue"] = False
+            set_state_field(state, "awaiting_continue", False)
             reply = "V redu. Kako vam lahko pomagam?"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_interrupted", followup_flag=False)
         if is_affirmative(payload.message):
-            state["awaiting_continue"] = False
+            set_state_field(state, "awaiting_continue", False)
             continuation = get_booking_continuation(state.get("step"), state)
             reply = f"Nadaljujmo z rezervacijo:\n{continuation}"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_continue", followup_flag=False)
         # če ni jasnega da/ne, spusti skozi in očisti flag
-        state["awaiting_continue"] = False
+        set_state_field(state, "awaiting_continue", False)
 
     availability_followup = handle_availability_followup(
         payload.message,
@@ -2609,8 +2609,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     if USE_UNIFIED_ROUTER and state.get("step") is None and not inquiry_state.get("step"):
         if is_inquiry_trigger(payload.message):
-            inquiry_state["details"] = payload.message
-            inquiry_state["step"] = "awaiting_deadline"
+            set_state_field(inquiry_state, "details", payload.message)
+            set_state_field(inquiry_state, "step", "awaiting_deadline")
             reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_start", followup_flag=False)
@@ -2634,7 +2634,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "product_info", followup_flag=False)
         detected_type = parse_reservation_type(payload.message)
         if detected_type or is_reservation_related(payload.message):
-            state["type"] = detected_type or state.get("type") or ("room" if "soba" in payload.message.lower() else "table")
+            set_state_field(state, "type", detected_type or state.get("type") or ("room" if "soba" in payload.message.lower() else "table"))
             reply = handle_reservation_flow(payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_start", followup_flag=False)
@@ -2667,8 +2667,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 or any(tok in last_bot_lower for tok in ["povpraš", "ponudb", "teambuilding", "porok", "catering", "pogostitev"])
             )
             if inquiry_ctx:
-                inquiry_state["details"] = last_user_msg or payload.message
-                inquiry_state["step"] = "awaiting_deadline"
+                set_state_field(inquiry_state, "details", last_user_msg or payload.message)
+                set_state_field(inquiry_state, "step", "awaiting_deadline")
                 reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "inquiry_start", followup_flag=False)
@@ -2702,7 +2702,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         date_hit = extract_date(payload.message) or extract_date_range(payload.message)
         people_hit = parse_people_count(payload.message).get("total")
         if date_hit and people_hit and (has_room_context or has_table_context):
-            state["type"] = "room" if has_room_context else "table"
+            set_state_field(state, "type", "room" if has_room_context else "table")
             reply = handle_reservation_flow(payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_context_start", followup_flag=False)
@@ -2736,13 +2736,13 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 return finalize(reply, "goodbye_interrupt", followup_flag=False)
             if decision.primary_intent == "BOOKING_TABLE" and state.get("type") != "table":
                 reset_reservation_state(state)
-                state["type"] = "table"
+                set_state_field(state, "type", "table")
                 reply = handle_reservation_flow(payload.message, state)
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "reservation_table_switch", followup_flag=False)
             if decision.primary_intent == "BOOKING_ROOM" and state.get("type") != "room":
                 reset_reservation_state(state)
-                state["type"] = "room"
+                set_state_field(state, "type", "room")
                 reply = handle_reservation_flow(payload.message, state)
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "reservation_room_switch", followup_flag=False)
@@ -2752,8 +2752,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
                     reply = maybe_translate(reply, detected_lang)
                     return finalize(reply, "inquiry_disabled", followup_flag=False)
-                inquiry_state["details"] = payload.message
-                inquiry_state["step"] = "awaiting_deadline"
+                set_state_field(inquiry_state, "details", payload.message)
+                set_state_field(inquiry_state, "step", "awaiting_deadline")
                 reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "inquiry_start", followup_flag=False)
@@ -2881,18 +2881,18 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 reset_unified_state(unified_state)
 
             if decision.primary_intent == "BOOKING_TABLE":
-                state["type"] = "table"
+                set_state_field(state, "type", "table")
                 reply = handle_reservation_flow(payload.message, state)
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "reservation_table_start", followup_flag=False)
             if decision.primary_intent == "BOOKING_ROOM":
-                state["type"] = "room"
+                set_state_field(state, "type", "room")
                 reply = handle_reservation_flow(payload.message, state)
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "reservation_room_start", followup_flag=False)
             if decision.primary_intent == "INQUIRY":
-                inquiry_state["details"] = payload.message
-                inquiry_state["step"] = "awaiting_deadline"
+                set_state_field(inquiry_state, "details", payload.message)
+                set_state_field(inquiry_state, "step", "awaiting_deadline")
                 reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "inquiry_start", followup_flag=False)
@@ -2917,12 +2917,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
         # Unified-only fallback path: do not continue into legacy router stack.
         if decision.primary_intent == "BOOKING_TABLE":
-            state["type"] = "table"
+            set_state_field(state, "type", "table")
             reply = handle_reservation_flow(payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_table_start", followup_flag=False)
         if decision.primary_intent == "BOOKING_ROOM":
-            state["type"] = "room"
+            set_state_field(state, "type", "room")
             reply = handle_reservation_flow(payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_room_start", followup_flag=False)
@@ -2931,8 +2931,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "inquiry_disabled", followup_flag=False)
-            inquiry_state["details"] = payload.message
-            inquiry_state["step"] = "awaiting_deadline"
+            set_state_field(inquiry_state, "details", payload.message)
+            set_state_field(inquiry_state, "step", "awaiting_deadline")
             reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_start", followup_flag=False)
@@ -2987,8 +2987,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     if state.get("step") is None and is_inquiry_trigger(payload.message):
         if is_strong_inquiry_request(payload.message):
-            inquiry_state["details"] = payload.message.strip()
-            inquiry_state["step"] = "awaiting_deadline"
+            set_state_field(inquiry_state, "details", payload.message.strip())
+            set_state_field(inquiry_state, "step", "awaiting_deadline")
             reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_start", followup_flag=False)
@@ -3025,7 +3025,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             detected_type = parse_reservation_type(payload.message)
             if detected_type in {"room", "table"}:
                 reset_reservation_state(state)
-                state["type"] = detected_type
+                set_state_field(state, "type", detected_type)
                 reply = handle_reservation_flow(payload.message, state)
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "booking_intent", followup_flag=False)
@@ -3037,8 +3037,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             lowered_message = payload.message.lower()
             if is_inquiry_trigger(payload.message) and is_strong_inquiry_request(payload.message):
                 reset_reservation_state(state)
-                inquiry_state["details"] = payload.message.strip()
-                inquiry_state["step"] = "awaiting_deadline"
+                set_state_field(inquiry_state, "details", payload.message.strip())
+                set_state_field(inquiry_state, "step", "awaiting_deadline")
                 reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "inquiry_start", followup_flag=False)
@@ -3079,7 +3079,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         action = (intent_result or {}).get("action") or "NONE"
         if action in {"BOOKING_ROOM", "BOOKING_TABLE"}:
             reset_reservation_state(state)
-            state["type"] = "room" if action == "BOOKING_ROOM" else "table"
+            set_state_field(state, "type", "room" if action == "BOOKING_ROOM" else "table")
             reply = handle_reservation_flow(payload.message, state)
             return finalize(reply, action.lower(), followup_flag=False)
         info_key = detect_info_intent(payload.message)
@@ -3091,12 +3091,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if any(token in payload.message.lower() for token in ["rezerv", "book", "booking", "reserve", "reservation", "zimmer"]) or is_reservation_typo(payload.message):
             if "mizo" in payload.message.lower() or "table" in payload.message.lower():
                 reset_reservation_state(state)
-                state["type"] = "table"
+                set_state_field(state, "type", "table")
                 reply = handle_reservation_flow(payload.message, state)
                 return finalize(reply, "booking_table_fallback", followup_flag=False)
             if "sobo" in payload.message.lower() or "room" in payload.message.lower() or "nočitev" in payload.message.lower():
                 reset_reservation_state(state)
-                state["type"] = "room"
+                set_state_field(state, "type", "room")
                 reply = handle_reservation_flow(payload.message, state)
                 return finalize(reply, "booking_room_fallback", followup_flag=False)
         llm_reply = _llm_answer_full_kb(payload.message, detected_lang)
@@ -3285,26 +3285,26 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         # Če uporabnik želi drug tip kot trenutni, zamenjaj flow
         if wants_table and not wants_room and current_type != "table":
             reset_reservation_state(state)
-            state["type"] = "table"
+            set_state_field(state, "type", "table")
             reply = handle_reservation_flow(payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_switch_to_table", followup_flag=False)
         if wants_room and not wants_table and current_type != "room":
             reset_reservation_state(state)
-            state["type"] = "room"
+            set_state_field(state, "type", "room")
             reply = handle_reservation_flow(payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_switch_to_room", followup_flag=False)
 
     if router_intent == "booking_room" and state["step"] is None:
         reset_reservation_state(state)
-        state["type"] = "room"
+        set_state_field(state, "type", "room")
         reply = handle_reservation_flow(payload.message, state)
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "reservation_router_room", followup_flag=False)
     if router_intent == "booking_table" and state["step"] is None:
         reset_reservation_state(state)
-        state["type"] = "table"
+        set_state_field(state, "type", "table")
         reply = handle_reservation_flow(payload.message, state)
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "reservation_router_table", followup_flag=False)
@@ -3319,8 +3319,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     if state["step"] is not None:
         if is_inquiry_trigger(payload.message) and is_strong_inquiry_request(payload.message):
             reset_reservation_state(state)
-            inquiry_state["details"] = payload.message.strip()
-            inquiry_state["step"] = "awaiting_deadline"
+            set_state_field(inquiry_state, "details", payload.message.strip())
+            set_state_field(inquiry_state, "step", "awaiting_deadline")
             reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_start", followup_flag=False)
@@ -3352,7 +3352,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     f"Želiš nadaljevati rezervacijo? (da/ne)\n"
                     f"📝 Trenutno čakamo:\n{continuation}"
                 )
-                state["awaiting_continue"] = True
+                set_state_field(state, "awaiting_continue", True)
                 llm_reply = maybe_translate(llm_reply, detected_lang)
                 return finalize(llm_reply, "info_during_reservation", followup_flag=False)
         if is_product_query(payload.message):
@@ -3363,7 +3363,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             last_menu_query = False
             reply = maybe_translate(reply, detected_lang)
             reply = f"{reply}\n\nŽeliš nadaljevati rezervacijo? (da/ne)"
-            state["awaiting_continue"] = True
+            set_state_field(state, "awaiting_continue", True)
             return finalize(reply, "product_during_reservation", followup_flag=False)
         if is_info_query(payload.message):
             reply = answer_farm_info(payload.message)
@@ -3373,7 +3373,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             last_menu_query = False
             reply = maybe_translate(reply, detected_lang)
             reply = f"{reply}\n\nŽeliš nadaljevati rezervacijo? (da/ne)"
-            state["awaiting_continue"] = True
+            set_state_field(state, "awaiting_continue", True)
             return finalize(reply, "info_during_reservation", followup_flag=False)
 
         reply = handle_reservation_flow(payload.message, state)
