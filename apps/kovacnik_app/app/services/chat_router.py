@@ -2513,6 +2513,16 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "reservation_context_start", followup_flag=False)
 
     if state.get("step") is not None:
+        slot_input = False
+        msg = (payload.message or "").strip()
+        step = state.get("step")
+        if step == "awaiting_email" and re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", msg):
+            slot_input = True
+        elif step == "awaiting_phone" and len(re.sub(r"\D+", "", msg)) >= 7 and "?" not in msg:
+            slot_input = True
+        elif step == "awaiting_name" and "?" not in msg and len(msg.split()) >= 2:
+            slot_input = True
+
         if is_explicit_cancel_command(payload.message):
             reset_reservation_state(state)
             reply = "V redu, rezervacijo sem preklical. Kako vam lahko pomagam?"
@@ -2564,12 +2574,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "menu_interrupt", followup_flag=False)
         info_key = detect_info_intent(payload.message)
-        if info_key:
+        if info_key and not slot_input:
             reply = get_info_response(info_key)
             reply = handle_interrupt(reply, state.get("step"))
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info_interrupt", followup_flag=False)
-        if detect_product_intent(payload.message) or is_product_query(payload.message):
+        if (detect_product_intent(payload.message) or is_product_query(payload.message)) and not slot_input:
             key = detect_product_intent(payload.message)
             reply = get_product_response(key) if key else answer_product_question(payload.message)
             reply = handle_interrupt(reply, state.get("step"))
@@ -2594,7 +2604,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             ("?" in payload.message or is_info_only_question(payload.message) or is_info_query(payload.message))
             and not is_reservation_related(payload.message)
         )
-        if generic_info_question:
+        if generic_info_question and not slot_input:
             key = detect_info_intent(payload.message)
             info_reply = get_info_response(key) if key else answer_farm_info(payload.message)
             reply = handle_interrupt(info_reply, state.get("step"))

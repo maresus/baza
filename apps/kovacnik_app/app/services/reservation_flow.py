@@ -832,13 +832,6 @@ def handle_reservation_flow(
         "awaiting_table_people",
         "awaiting_table_location",
         "awaiting_table_event_type",
-        "awaiting_kids_info",
-        "awaiting_kids_ages",
-        "awaiting_name",
-        "awaiting_phone",
-        "awaiting_email",
-        "awaiting_note",
-        "awaiting_confirmation",
     }
     room_steps = {
         "awaiting_room_date",
@@ -848,10 +841,26 @@ def handle_reservation_flow(
         "awaiting_dinner",
         "awaiting_dinner_count",
     }
+    shared_steps = {
+        "awaiting_kids_info",
+        "awaiting_kids_ages",
+        "awaiting_name",
+        "awaiting_phone",
+        "awaiting_email",
+        "awaiting_note",
+        "awaiting_confirmation",
+    }
     if reservation_state.get("step") in table_steps:
         reservation_state["type"] = "table"
     elif reservation_state.get("step") in room_steps:
         reservation_state["type"] = "room"
+    elif reservation_state.get("step") in shared_steps and reservation_state.get("type") not in {"table", "room"}:
+        # Shared koraki (kontakt, otroci, potrditev) ne smejo prepisati tipa rezervacije.
+        # Če tip manjka (stara seja), ga inferiramo iz že zbranih podatkov.
+        if reservation_state.get("nights"):
+            reservation_state["type"] = "room"
+        elif reservation_state.get("time") or reservation_state.get("step") in {"awaiting_table_location", "awaiting_table_event_type"}:
+            reservation_state["type"] = "table"
     if reservation_state.get("language") is None:
         reservation_state["language"] = detect_language(message)
 
