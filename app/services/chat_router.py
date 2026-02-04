@@ -1277,7 +1277,8 @@ def generate_health_advice(symptom_description: str) -> str:
 
         system_prompt = """Si zdravstveni svetovalec. Daj SPLOŠNE nasvete (počitek, obkladki, razgibavanje) - NIKOLI diagnoz.
 
-Format: kratek, človeški odstavek + 2-3 kratki nasveti v alinejah + priporočilo specialista.
+Format: 1 kratek odstavek + 2 kratki alineji + priporočilo specialista.
+Največ 90 besed.
 Ne uporabljaj oštevilčenja (1/2/3).
 Zaključi z: "Želite, da vas naročim na pregled?"
 
@@ -1292,8 +1293,8 @@ Slovenščina, jedrnato."""
         response = llm_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            temperature=0.5,
-            max_tokens=250
+            temperature=0.3,
+            max_tokens=170
         )
         return response.choices[0].message.content.strip()
 
@@ -1312,13 +1313,32 @@ Nekaj splošnih nasvetov:
 Želite, da vas naročim na pregled?"""
 
 
-def answer_health_query(message: str) -> str:
+def _service_booking_label(service_key: Optional[str]) -> Optional[str]:
+    if not service_key:
+        return None
+    labels = {
+        "ORTOPED": "ortopedski pregled",
+        "DERMATOLOG": "dermatološki pregled",
+        "OKULIST": "okulistični pregled",
+        "LASERSKI_POSEG": "laserski poseg",
+        "ESTETSKI_POSEG": "estetski poseg",
+        "FIZIOTERAPIJA": "fizioterapija",
+        "KOZMETIKA": "kozmetični pregled",
+    }
+    return labels.get(service_key)
+
+
+def answer_health_query(message: str, preferred_service: Optional[str] = None) -> str:
     """
     Health advice strategy:
     - Always provide safe LLM advice + offer booking.
     """
     try:
-        return generate_health_advice(message)
+        advice = generate_health_advice(message)
+        label = _service_booking_label(preferred_service)
+        if label:
+            return f"Glede na opis bi bil najbolj smiseln **{label}**.\n\n{advice}"
+        return advice
     except Exception as e:
         print(f"[HEALTH_ADVICE] Fallback error: {e}")
         return generate_health_advice(message)
@@ -2268,7 +2288,10 @@ Kateri datum vas zanima? (npr. 15.3.2026)""",
 
     elif intent == "health_symptoms":
         # Use KB if possible; otherwise LLM health advice
-        response_text = answer_health_query(message)
+        detected_service = unified_detect_service(message)
+        if detected_service:
+            state["service_type"] = detected_service.lower()
+        response_text = answer_health_query(message, detected_service)
         state["awaiting_booking_confirmation"] = True
 
     elif intent.startswith("info_"):
