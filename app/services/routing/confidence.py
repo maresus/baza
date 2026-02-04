@@ -77,6 +77,7 @@ DERMATOLOGY_KEYWORDS = {
     "dermato",
     "dermatalog",
     "dermatalogu",
+    "dermatlog",  # typo
     "koža",
     "koza",
     "kozo",      # sleng/typo: "s kozo"
@@ -94,6 +95,7 @@ DERMATOLOGY_KEYWORDS = {
     "madez",
     "melanom",
     "znamenje",
+    "znamnje",   # typo
     "bradavic",
     "glivic",
     "skin",
@@ -142,6 +144,7 @@ OPHTHALMOLOGY_KEYWORDS = {
     "okulsit",  # typo
     "okulist",
     "oftalmolog",
+    "ocena vida",
     "očal",
     "ocal",
     "leče",
@@ -278,6 +281,10 @@ INFO_KEYWORDS = {
     "kako pridem",
     "kako pridm", # sleng
     "kako pridemo",
+    "kako se naročim",
+    "kako se narocim",
+    "naročanje",
+    "narocanje",
     "kje ste",
     "kje se nahajate",
     "kje se nhajaet",  # typo
@@ -421,6 +428,8 @@ def compute_confidence(message: str, intent: str) -> float:
 
     # Special check: "kako pridem" is INFO, not booking
     is_kako_pridem = "kako pridem" in text or "kako pridemo" in text
+    # Special check: "kako se naročim" is INFO, not booking
+    is_kako_narocim = "kako se naročim" in text or "kako se narocim" in text
 
     if intent == "GREETING":
         if not has_greeting_kw:
@@ -443,6 +452,9 @@ def compute_confidence(message: str, intent: str) -> float:
     if intent == "BOOKING_APPOINTMENT":
         # "Kako pridem" is INFO, not booking
         if is_kako_pridem:
+            return 0.0
+        # "Kako se naročim" is INFO, not booking
+        if is_kako_narocim:
             return 0.0
 
         # If asking about price, this is PRICE not booking

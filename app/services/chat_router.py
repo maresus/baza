@@ -1663,7 +1663,7 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
     # If user provides a date after service info prompt, start booking immediately
     date_str = extract_date_from_message(message)
     if date_str and suggested_service and not is_in_flow(session_id):
-        appointment_state["service_type"] = suggested_service
+        appointment_state["service_type"] = suggested_service.lower()
         appointment_state["step"] = None
         start_flow(session_id, FlowType.APPOINTMENT, FlowStep.DATE)
         unified_state["context"]["suggested_service"] = None
@@ -1718,6 +1718,8 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
                 answer = _get_info_response("delovni_cas")
             elif any(k in lowered for k in ["parking"]):
                 answer = _get_info_response("parkiranje")
+            elif any(k in lowered for k in ["kako se naročim", "kako se narocim", "naročanje", "narocanje", "naročim", "narocim"]):
+                answer = _get_info_response("narocanje")
             else:
                 answer = _get_info_response("kontakt")
         elif decision.primary_intent == IntentType.PRICE:
@@ -1868,6 +1870,8 @@ Ponujamo:
             return _get_info_response("delovni_cas")
         elif any(k in lowered for k in ["parking", "parkplac", "parkirišče"]):
             return _get_info_response("parkiranje")
+        elif any(k in lowered for k in ["kako se naročim", "kako se narocim", "naročanje", "narocanje", "naročim", "narocim"]):
+            return _get_info_response("narocanje")
         elif any(k in lowered for k in ["telefon", "email", "kontakt"]):
             return _get_info_response("kontakt")
         elif any(k in lowered for k in ["pridem", "pridemo", "pot"]):

@@ -59,6 +59,20 @@ uvicorn main:app --reload --port 8000
 
 Railway auto-deploy iz main branch.
 
+Pred deployem zaženi deploy gate:
+
+```bash
+./scripts/deploy_gate.sh
+```
+
+Skript preveri ključne routing smoke teste (vključno z 50 E2E scenariji) in faila, če karkoli pade.
+
+Za strožji pre-check (routing + API smoke):
+
+```bash
+./scripts/deploy_gate_full.sh
+```
+
 ## 📧 Email Potrdila
 
 Sistem avtomatsko pošilja email potrdila za:

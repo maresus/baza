@@ -17,7 +17,8 @@ SERVICE_NAME_MAP = {
     "dermatolog": [
         "dermatolog", "dermatološki", "koža", "kozni", "kožne",
         "dermatovenerolog", "dermatovenerološki",
-        "dermatalog", "dermatalogu",
+        "dermatalog", "dermatalogu", "dermatlog",
+        "znamenje", "znamnje",
         "skin", "rash", "mole", "acne",
     ],
     "ortoped": ["ortoped", "ortopedski", "ortopedija", "koleno", "hrbtenica", "knee", "back", "shoulder", "joint"],
