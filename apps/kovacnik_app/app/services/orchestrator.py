@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from app.services.session.state_writer import set_state_field
 from app.services.intent_helpers import (
     detect_info_intent,
     detect_product_intent,
@@ -49,8 +50,8 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
 
     # Pravilo 3: dogodki (poroka, teambuilding) -> povpraševanje
     if is_event_inquiry(message):
-        inquiry_state["details"] = message.strip()
-        inquiry_state["step"] = "awaiting_deadline"
+        set_state_field(inquiry_state, "details", message.strip())
+        set_state_field(inquiry_state, "step", "awaiting_deadline")
         return (
             "Za poroke/teambuilding po navadi ne nudimo klasičnega najema prostora, "
             "lahko pa pripravimo posebno ponudbo hrane ali pogostitve.\n\n"
@@ -78,8 +79,8 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
 
     # Pravilo 7: inquiry trigger (catering, ponudba, ...)
     if is_inquiry_trigger(message):
-        inquiry_state["details"] = message.strip()
-        inquiry_state["step"] = "awaiting_deadline"
+        set_state_field(inquiry_state, "details", message.strip())
+        set_state_field(inquiry_state, "step", "awaiting_deadline")
         return "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
 
     if is_purchase_intent(message):
