@@ -2344,6 +2344,19 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     if USE_UNIFIED_ROUTER:
         lowered = payload.message.lower().strip()
+        wine_followup_hint = (
+            re.search(r"\bkater[aeio]\b", lowered)
+            or "katera pa" in lowered
+            or "katere pa" in lowered
+            or "so to" in lowered
+            or "ta vina" in lowered
+        )
+        if last_wine_query and wine_followup_hint:
+            combined = f"{last_wine_query} {payload.message}"
+            reply = answer_wine_question(combined)
+            last_wine_query = combined
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "wine_followup_unified", followup_flag=False)
 
         if is_event_inquiry_request(payload.message) or (DISABLE_INQUIRY and is_inquiry_trigger(payload.message)):
             reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
@@ -2353,7 +2366,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if is_explicit_cancel_command(payload.message) or is_escape_command(payload.message):
             reset_reservation_state(state)
             reset_inquiry_state(inquiry_state)
-            reply = "V redu, prekinil sem trenutni postopek. Kako vam lahko pomagam?"
+            reply = "V redu, postopek sem prekinil (preklical). Kako vam lahko pomagam?"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "flow_cancel_unified", followup_flag=False)
 
@@ -2379,15 +2392,19 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             ):
                 if info_key == "vina":
                     answer = answer_wine_question(payload.message)
+                    last_wine_query = payload.message
                 elif info_key:
                     answer = get_info_response(info_key)
+                    last_info_query = payload.message
                 elif is_menu_query(payload.message):
                     answer = format_current_menu(
                         month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
                         force_full=is_full_menu_request(payload.message),
                     )
+                    last_menu_query = True
                 elif product_key or is_product_query(payload.message):
                     answer = get_product_response(product_key) if product_key else answer_product_question(payload.message)
+                    last_product_query = payload.message
                 else:
                     answer = semantic_info_answer(payload.message) or answer_tourist_question(payload.message) or "Trenutno nimam podatkov o tem."
 
@@ -2409,6 +2426,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "booking_start_unified", followup_flag=False)
 
+        # Follow-up context for tourist questions (e.g. "kako pridem tja?" after ski answer).
+        if last_info_query and any(tok in last_info_query.lower() for tok in ["smuči", "smuci", "areh", "pohorje"]) and any(
+            tok in lowered for tok in ["kako pridem", "kako do", "tja", "na areh", "do areh", "do pohorja"]
+        ):
+            reply = "Do Areha in Mariborskega Pohorja najlažje pridete z avtom; vožnja traja približno 25–35 minut."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "tourist_followup_unified", followup_flag=False)
+
         if is_bulk_order_request(payload.message) and (is_product_query(payload.message) or detect_product_intent(payload.message)):
             reply = f"Za večja naročila pišite na {INFO_EMAIL}."
             reply = maybe_translate(reply, detected_lang)
@@ -2417,10 +2442,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         info_key = detect_info_intent(payload.message)
         if info_key == "vina":
             reply = answer_wine_question(payload.message)
+            last_wine_query = payload.message
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "wine_unified", followup_flag=False)
         if info_key:
             reply = get_info_response(info_key)
+            last_info_query = payload.message
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info_unified", followup_flag=False)
 
@@ -2429,12 +2456,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
                 force_full=is_full_menu_request(payload.message),
             )
+            last_menu_query = True
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "menu_unified", followup_flag=False)
 
         product_key = detect_product_intent(payload.message)
         if product_key or is_product_query(payload.message):
             reply = get_product_response(product_key) if product_key else answer_product_question(payload.message)
+            last_product_query = payload.message
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_unified", followup_flag=False)
 
