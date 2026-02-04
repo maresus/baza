@@ -1088,8 +1088,9 @@ def detect_intent(message: str, state: dict[str, Optional[str | int]]) -> str:
         return "wine"
 
     # vino followup (če je bila prejšnja interakcija o vinih)
-    if last_wine_query and any(
-        phrase in lower_message for phrase in ["še", "še kakšn", "še kater", "kaj pa", "drug"]
+    if last_wine_query and (
+        any(phrase in lower_message for phrase in ["še", "še kakšn", "še kater", "kaj pa", "drug", "katera", "katere"])
+        or re.search(r"\bkater[aeio]\b", lower_message)
     ):
         return "wine_followup"
 
@@ -2284,23 +2285,27 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         return ChatResponse(reply=final_reply)
 
     def _sanitize_policy_response(text: str) -> str:
-        parts = re.split(r"(?<=[.!?])\s+", " ".join(text.split()))
-        filtered = []
-        for p in parts:
-            p_clean = p.strip()
-            if not p_clean:
-                continue
-            low = p_clean.lower()
+        # Remove shop/catalog lines and unsolicited prompts/questions
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        filtered_lines = []
+        for ln in lines:
+            low = ln.lower()
             if low.startswith("trgovina:"):
                 continue
-            if p_clean.endswith("?"):
+            if any(tok in low for tok in ["ali želite", "želite", "vam lahko", "če želite", "vas zanima", "če potrebujete", "kar povejte", "povejte,"]):
                 continue
-            if any(tok in low for tok in ["ali želite", "želite", "vam lahko", "če potrebujete", "kar vprašajte", "povejte"]):
+            if ln.endswith("?"):
                 continue
-            filtered.append(p_clean)
-        if not filtered:
+            filtered_lines.append(ln)
+        if not filtered_lines:
             return "Trenutno nimam podatkov o tem."
-        return " ".join(filtered[:4]).rstrip(".") + "."
+        merged = " ".join(filtered_lines)
+        # Limit to 4 sentences
+        parts = re.split(r"(?<=[.!?])\s+", merged)
+        parts = [p.strip() for p in parts if p.strip() and not p.strip().endswith("?")]
+        if len(parts) > 4:
+            parts = parts[:4]
+        return " ".join(parts).rstrip(".") + "."
 
     if is_switch_topic_command(payload.message):
         reset_reservation_state(state)
@@ -2317,7 +2322,24 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "info_during_reservation", followup_flag=False)
 
         if state.get("step") is None and not state.get("type"):
+            lowered_now = payload.message.lower()
+            wine_followup_hint = (
+                re.search(r"\bkater[aeio]\b", lowered_now)
+                or "katera pa" in lowered_now
+                or "katere pa" in lowered_now
+                or "so to" in lowered_now
+                or "ta vina" in lowered_now
+            )
             info_key = detect_info_intent(payload.message)
+            if info_key == "vina" or (last_wine_query and wine_followup_hint):
+                combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
+                wine_reply = answer_wine_question(combined)
+                last_wine_query = combined
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+                wine_reply = maybe_translate(wine_reply, detected_lang)
+                return finalize(wine_reply, "wine_strict", followup_flag=False)
             if info_key:
                 info_reply = get_info_response(info_key)
                 info_reply = maybe_translate(info_reply, detected_lang)
@@ -2830,6 +2852,25 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         last_menu_query = False
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "reservation")
+
+    wine_followup_message = payload.message.strip().lower()
+    wine_followup_hint = (
+        re.search(r"\bkater[aeio]\b", wine_followup_message)
+        or "katera pa" in wine_followup_message
+        or "katere pa" in wine_followup_message
+        or "so to" in wine_followup_message
+        or "ta vina" in wine_followup_message
+    )
+    info_key_now = detect_info_intent(payload.message)
+    if info_key_now == "vina" or (last_wine_query and wine_followup_hint):
+        combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
+        reply = answer_wine_question(combined)
+        last_wine_query = combined
+        last_product_query = None
+        last_info_query = None
+        last_menu_query = False
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "wine_followup")
 
     intent = detect_intent(payload.message, state)
 

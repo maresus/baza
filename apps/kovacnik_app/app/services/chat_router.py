@@ -1112,8 +1112,9 @@ def detect_intent(message: str, state: dict[str, Optional[str | int]]) -> str:
         return "wine"
 
     # vino followup (če je bila prejšnja interakcija o vinih)
-    if last_wine_query and any(
-        phrase in lower_message for phrase in ["še", "še kakšn", "še kater", "kaj pa", "drug"]
+    if last_wine_query and (
+        any(phrase in lower_message for phrase in ["še", "še kakšn", "še kater", "kaj pa", "drug", "katera", "katere"])
+        or re.search(r"\bkater[aeio]\b", lower_message)
     ):
         return "wine_followup"
 
@@ -2380,7 +2381,23 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_disabled", followup_flag=False)
         if state.get("step") is None and not state.get("type"):
+            wine_followup_hint = (
+                re.search(r"\bkater[aeio]\b", lowered)
+                or "katera pa" in lowered
+                or "katere pa" in lowered
+                or "so to" in lowered
+                or "ta vina" in lowered
+            )
             info_key = detect_info_intent(payload.message)
+            if info_key == "vina" or (last_wine_query and wine_followup_hint):
+                combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
+                wine_reply = answer_wine_question(combined)
+                last_wine_query = combined
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+                wine_reply = maybe_translate(wine_reply, detected_lang)
+                return finalize(wine_reply, "wine_strict", followup_flag=False)
             if info_key:
                 info_reply = get_info_response(info_key)
                 info_reply = maybe_translate(info_reply, detected_lang)
@@ -2429,6 +2446,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "inquiry_start", followup_flag=False)
         info_key = detect_info_intent(payload.message)
         if info_key:
+            if info_key == "vina":
+                reply = answer_wine_question(payload.message)
+                last_wine_query = payload.message
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "wine", followup_flag=False)
             reply = get_info_response(info_key)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info", followup_flag=False)
@@ -2575,7 +2600,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 return finalize(reply, "menu_interrupt", followup_flag=False)
         info_key = detect_info_intent(payload.message)
         if info_key and not slot_input:
-            reply = get_info_response(info_key)
+            if info_key == "vina":
+                reply = answer_wine_question(payload.message)
+                last_wine_query = payload.message
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+            else:
+                reply = get_info_response(info_key)
             reply = handle_interrupt(reply, state.get("step"))
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info_interrupt", followup_flag=False)
@@ -2606,7 +2638,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         )
         if generic_info_question and not slot_input:
             key = detect_info_intent(payload.message)
-            info_reply = get_info_response(key) if key else answer_farm_info(payload.message)
+            if key == "vina":
+                info_reply = answer_wine_question(payload.message)
+                last_wine_query = payload.message
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+            else:
+                info_reply = get_info_response(key) if key else answer_farm_info(payload.message)
             reply = handle_interrupt(info_reply, state.get("step"))
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info_interrupt", followup_flag=False)
@@ -2614,7 +2653,28 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "reservation_flow", followup_flag=False)
 
+    wine_followup_message = payload.message.strip().lower()
+    wine_followup_hint = (
+        re.search(r"\bkater[aeio]\b", wine_followup_message)
+        or "katera pa" in wine_followup_message
+        or "katere pa" in wine_followup_message
+        or "so to" in wine_followup_message
+        or "ta vina" in wine_followup_message
+    )
+    info_key_now = detect_info_intent(payload.message)
+    # Wine questions/followups have priority over generic info routing.
+    if info_key_now == "vina" or (last_wine_query and wine_followup_hint):
+        combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
+        reply = answer_wine_question(combined)
+        last_wine_query = combined
+        last_product_query = None
+        last_info_query = None
+        last_menu_query = False
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "wine_followup", followup_flag=False)
+
     if USE_UNIFIED_ROUTER:
+
         decision = decide_route(payload.message)
         if unified_state is not None:
             set_last_intent(unified_state, decision.primary_intent)
@@ -2713,6 +2773,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info", followup_flag=False)
         if decision.primary_intent == "WINE":
+            last_wine_query = payload.message
+            last_product_query = None
+            last_info_query = None
+            last_menu_query = False
             reply = answer_wine_question(payload.message)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "wine", followup_flag=False)

@@ -553,9 +553,9 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "skalca"
     if "darilni bon" in text or ("bon" in text and "daril" in text):
         return "darilni_boni"
-    if re.search(r"(?<!\\d)5\\s*-?\\s*hod", text):
+    if re.search(r"(?<!\d)5\s*-?\s*hod", text):
         return "tedenski_5hodni"
-    if re.search(r"(?<!\\d)6\\s*-?\\s*hod", text):
+    if re.search(r"(?<!\d)6\s*-?\s*hod", text):
         return "tedenski_6hodni"
     if any(w in text for w in ["čez teden", "cez teden", "med tednom", "tedenska ponudba", "degustacijski", "degustacija", "4-hodni", "5-hodni", "6-hodni", "7-hodni", "koliko hodov"]):
         return "tedenska_ponudba"
