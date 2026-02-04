@@ -78,6 +78,7 @@ from app.services.parsing import (
     extract_time,
     parse_people_count,
 )
+from app.services.session.state_writer import set_state_field
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -2375,7 +2376,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             switch_type = parse_reservation_type(payload.message)
             if switch_type in {"room", "table"} and switch_type != state.get("type"):
                 reset_reservation_state(state)
-                state["type"] = switch_type
+                set_state_field(state, "type", switch_type)
                 reply = handle_reservation_flow(payload.message, state)
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "booking_switch_unified", followup_flag=False)
@@ -2421,7 +2422,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reservation_type = parse_reservation_type(payload.message)
         if reservation_type in {"room", "table"} or is_reservation_related(payload.message):
             reset_reservation_state(state)
-            state["type"] = reservation_type or ("room" if "soba" in lowered or "noč" in lowered else "table")
+            set_state_field(state, "type", reservation_type or ("room" if "soba" in lowered or "noč" in lowered else "table"))
             reply = handle_reservation_flow(payload.message, state)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "booking_start_unified", followup_flag=False)
