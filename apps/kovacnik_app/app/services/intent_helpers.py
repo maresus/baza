@@ -81,7 +81,7 @@ Zajtrk je vključen v ceno! 🥐""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
-    "zivali": """Hišni ljubljenčki so dobrodošli po predhodnem dogovoru. 🐾""",
+    "zivali": """Hvala za vprašanje. Hišni ljubljenčki na naši domačiji niso dovoljeni. Na kmetiji pa lahko vidite naše domače živali ob ogledu.""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": """Kontakt: **02 601 54 00** / **031 330 113**
 Email: **info@kovacnik.com**""",
@@ -92,7 +92,7 @@ Parking je brezplačen pri domačiji.""",
 - **2 nočitvi** v ostalih mesecih""",
     "kapaciteta_mize": """Jedilnica 'Pri peči' sprejme do 15 oseb, 'Pri vrtu' pa do 35 oseb.""",
     "alergije": """Seveda, prilagodimo jedi za alergije (gluten, laktoza) in posebne prehrane (vegan/vegetarijan).""",
-    "vina": """Na voljo so lokalna vina s Pohorja.""",
+    "vina": """Ponujamo lokalna pohorska vina: bela, rdeča in penine. Izbor je sezonski in ga z veseljem predstavimo ob obisku.""",
     "turizem": """V okolici so odlične možnosti za izlete (Pohorje, slapovi, razgledišča).""",
     "smucisce": """Najbližja smučišča so Mariborsko Pohorje in Areh (približno 25–35 minut vožnje).""",
     "terme": """Najbližje terme so Terme Zreče in Terme Ptuj (približno 30–40 minut vožnje).""",
@@ -453,9 +453,11 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "kapaciteta_mize"
     if any(w in text for w in ["alergij", "gluten", "lakto", "vegan"]):
         return "alergije"
+    if text.strip() in {"katera", "katere", "katera vina", "katere vina"}:
+        return "vina"
     if any(w in text for w in ["vino", "vina", "vinsko", "vinska", "wine", "wein", "vinci"]):
         return "vina"
-    if any(w in text for w in ["smučišče", "smucisce", "smučanje", "smucanje", "ski"]):
+    if any(w in text for w in ["smučišče", "smucisce", "smučišč", "smucisc", "smučanje", "smucanje", "ski"]):
         return "smucisce"
     if any(w in text for w in ["terme", "termal", "spa", "wellness"]):
         return "terme"
