@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Kmetija Pod Goro – Pogovor</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap');
 
@@ -18,6 +18,7 @@
       --line: #dfe6d6;
       --shadow: 0 16px 36px rgba(22, 28, 18, 0.14);
       --radius: 22px;
+      --app-vh: 100vh;
     }
 
     * { box-sizing: border-box; }
@@ -315,6 +316,21 @@
     }
 
     @media (max-width: 640px) {
+      body {
+        min-height: var(--app-vh);
+      }
+
+      .shell {
+        margin: 0;
+        padding: 0;
+      }
+
+      .frame {
+        border-radius: 0;
+        min-height: var(--app-vh);
+        padding: calc(8px + env(safe-area-inset-top)) 10px 10px;
+      }
+
       .topbar {
         flex-direction: column;
         align-items: flex-start;
@@ -322,6 +338,50 @@
 
       .brand h1 {
         font-size: 1.25rem;
+      }
+
+      .intro {
+        margin-top: 12px;
+        padding: 12px;
+      }
+
+      .grid {
+        margin-top: 10px;
+        gap: 10px;
+      }
+
+      .messages {
+        max-height: 42vh;
+      }
+
+      .composer {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+        padding: 10px;
+        gap: 8px;
+        border-radius: 14px;
+        box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      .chips {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 2px;
+      }
+
+      .chip {
+        white-space: nowrap;
+      }
+
+      .composer textarea {
+        min-height: 52px;
+        max-height: 98px;
+      }
+
+      .btn {
+        padding: 9px 12px;
+        font-size: 0.84rem;
       }
     }
   </style>
@@ -372,6 +432,18 @@
   </div>
 
   <script>
+    function setAppVh() {
+      const vh = (window.visualViewport && window.visualViewport.height)
+        ? window.visualViewport.height
+        : window.innerHeight;
+      document.documentElement.style.setProperty("--app-vh", `${Math.round(vh)}px`);
+    }
+    setAppVh();
+    window.addEventListener("resize", setAppVh);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", setAppVh);
+    }
+
     const apiUrl = "/chat/stream";
     const sessionKey = "chat_session_id";
     let sessionId = localStorage.getItem(sessionKey);
@@ -384,6 +456,12 @@
     const inputEl = document.getElementById("input");
     const sendBtn = document.getElementById("sendBtn");
     const statusEl = document.getElementById("status");
+
+    inputEl.addEventListener("focus", () => {
+      setTimeout(() => {
+        inputEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }, 120);
+    });
 
     const ONE_HOUR = 3600 * 1000;
 
