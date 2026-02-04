@@ -54,7 +54,7 @@ def get_booking_continuation(step: str, state: dict) -> str:
         "awaiting_kids": "Koliko je **otrok** in koliko so stari?",
         "awaiting_kids_info": "Koliko je **otrok** in koliko so stari?",
         "awaiting_kids_ages": "Koliko so stari **otroci**?",
-        "awaiting_room_location": "Katero **sobo** želite? (ALJAŽ, JULIJA, ANA)",
+        "awaiting_room_location": "Katero **sobo** želite? (POD VRHOM, PRI POTOKU, PRI SADOVNJAKU)",
         "awaiting_name": "Vaše **ime in priimek**?",
         "awaiting_phone": "Vaša **telefonska številka**?",
         "awaiting_email": "Vaš **e-mail**?",
@@ -96,7 +96,7 @@ def reservation_prompt_for_state(
         if step == "awaiting_people":
             return "Za koliko oseb bi bilo bivanje (odrasli + otroci)?"
         if step == "awaiting_room_location":
-            return "Katero sobo želite (ALJAŽ, JULIJA, ANA)?"
+            return "Katero sobo želite (POD VRHOM, PRI POTOKU, PRI SADOVNJAKU)?"
     return (
         f"Sobe: {room_intro_text()}\n"
         f"Mize: {table_intro_text()}"
@@ -160,7 +160,7 @@ def advance_after_room_people(reservation_state: dict[str, Optional[str | int]],
         reservation_state["available_locations"] = free_rooms
         reservation_state["step"] = "awaiting_room_location"
         names = ", ".join(free_rooms)
-        return f"Proste imamo: {names}. Katero bi želeli (lahko tudi več, npr. 'ALJAZ in ANA')?"
+        return f"Proste imamo: {names}. Katero bi želeli (lahko tudi več, npr. 'POD VRHOM in PRI POTOKU')?"
     # auto-assign
     if free_rooms:
         chosen = free_rooms[:needed]

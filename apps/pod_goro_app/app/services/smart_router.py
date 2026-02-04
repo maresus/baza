@@ -64,7 +64,7 @@ Kontekst kmetije:
 - Lokacija: Gorska cesta 7, 2315 Zeleno Polje (Pohorje)
 - Telefon: 02 700 12 34, 031 777 888
 - Odprto: sobota/nedelja 12:00-20:00
-- Sobe: JULIJA, ANA (vse 2+2)
+- Sobe: POD VRHOM, PRI POTOKU, PRI SADOVNJAKU (vse 2+2)
 - Izdelki: čemažev pesto, marmelade, likerji, pohorska bunka
 - Živali: konja Malajka in Marsij, zajčki
 - Družina: gospodar Jure, babica Ivanka

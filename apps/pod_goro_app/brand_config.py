@@ -62,19 +62,24 @@ EXAMPLE_NAME = "Lara Novak"
 # =============================================================================
 
 ROOMS = {
-    "JULIJA": {
-        "name": "Soba JULIJA",
+    "POD_VRHOM": {
+        "name": "Soba POD VRHOM",
+        "description": "soba z balkonom",
+        "capacity": "2 odrasla + 2 otroka",
+    },
+    "PRI_POTOKU": {
+        "name": "Soba PRI POTOKU",
         "description": "družinska soba z balkonom",
         "capacity": "2 odrasla + 2 otroka",
     },
-    "ANA": {
-        "name": "Soba ANA",
+    "PRI_SADOVNJAKU": {
+        "name": "Soba PRI SADOVNJAKU",
         "description": "družinska soba z dvema spalnicama",
         "capacity": "2 odrasla + 2 otroka",
     },
 }
 
-ROOM_NAMES = list(ROOMS.keys())  # ['JULIJA', 'ANA']
+ROOM_NAMES = list(ROOMS.keys())  # ['POD_VRHOM', 'PRI_POTOKU', 'PRI_SADOVNJAKU']
 
 # =============================================================================
 # POZDRAVI IN SPOROČILA

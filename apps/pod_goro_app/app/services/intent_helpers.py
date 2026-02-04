@@ -52,9 +52,9 @@ Prilagodimo za vegetarijance, vegane in celiakijo! 🌿
 ⚠️ **Ob ponedeljkih in torkih večerje ne strežemo** – takrat priporočamo bližnji gostilni Zeleno Poljeski hram ali Karla.""",
     "sobe": """Imamo **3 sobe**, vse poimenovane po naših otrocih:
 
-🛏️ **ALJAŽ** – soba z balkonom (2+2)
-🛏️ **JULIJA** – družinska soba z balkonom (2 odrasla + 2 otroka)  
-🛏️ **ANA** – družinska soba z dvema spalnicama (2+2)
+🛏️ **POD VRHOM** – soba z balkonom (2+2)
+🛏️ **PRI POTOKU** – družinska soba z balkonom (2 odrasla + 2 otroka)  
+🛏️ **PRI SADOVNJAKU** – družinska soba z dvema spalnicama (2+2)
 
 Vsaka soba ima:
 ✅ Predprostor, spalnico, kopalnico s tušem

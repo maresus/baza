@@ -492,7 +492,7 @@ def test_email_templates():
         'nights': 3,
         'rooms': 1,
         'people': 4,
-        'location': 'Soba ALJAŽ',
+        'location': 'Soba POD VRHOM',
         'reservation_type': 'room',
         'source': 'chatbot',
         'note': 'Potrebujemo otroško posteljico',

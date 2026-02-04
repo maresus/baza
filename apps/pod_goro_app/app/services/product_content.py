@@ -4,8 +4,8 @@ from typing import Optional
 
 PRODUCT_RESPONSES = {
     "pesto": [
-        "Imamo **čemažev pesto** v 212 ml kozarčku (5,50 €). Najdete ga v spletni trgovini: https://kovacnik.com/katalog.",
-        "Čemažev pesto je na voljo (212 ml, 5,50 €). Naročilo: https://kovacnik.com/katalog.",
+        "Imamo **čemažev pesto** v 212 ml kozarčku (5,50 €). Najdete ga v spletni trgovini: https://kmetijapodgoro.si/katalog.",
+        "Čemažev pesto je na voljo (212 ml, 5,50 €). Naročilo: https://kmetijapodgoro.si/katalog.",
     ],
     "marmelada": [
         "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kmetijapodgoro.si/katalog (sekcija Marmelade).",

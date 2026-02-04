@@ -14,24 +14,30 @@ from app.models.reservation import ReservationRecord
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 ROOMS = [
-    {"id": "ALJAZ", "name": "Soba ALJAŽ - Soba z balkonom (2 + 2)", "capacity": 4},
+    {"id": "POD_VRHOM", "name": "Soba Pod vrhom - Soba z balkonom (2 + 2)", "capacity": 4},
     {
-        "id": "JULIJA",
-        "name": "Soba JULIJA - Družinska soba z balkonom (2 odrasla + 2 otroka)",
+        "id": "PRI_POTOKU",
+        "name": "Soba Pri potoku - Družinska soba z balkonom (2 odrasla + 2 otroka)",
         "capacity": 4,
     },
     {
-        "id": "ANA",
-        "name": "Soba ANA - Družinska soba z dvema spalnicama (2 odrasla + 2 otroka)",
+        "id": "PRI_SADOVNJAKU",
+        "name": "Soba Pri sadovnjaku - Družinska soba z dvema spalnicama (2 odrasla + 2 otroka)",
         "capacity": 4,
     },
 ]
 ROOM_NAME_MAP = {
-    "aljaž": "ALJAZ",
-    "aljaz": "ALJAZ",
-    "jULIJA".lower(): "JULIJA",
-    "julija": "JULIJA",
-    "ana": "ANA",
+    "pod vrhom": "POD_VRHOM",
+    "podvrhom": "POD_VRHOM",
+    "pri potoku": "PRI_POTOKU",
+    "pripotoku": "PRI_POTOKU",
+    "pri sadovnjaku": "PRI_SADOVNJAKU",
+    "prisadovnjaku": "PRI_SADOVNJAKU",
+    # backward compatibility aliases
+    "aljaž": "POD_VRHOM",
+    "aljaz": "POD_VRHOM",
+    "julija": "PRI_POTOKU",
+    "ana": "PRI_SADOVNJAKU",
 }
 
 DINING_ROOMS = [
