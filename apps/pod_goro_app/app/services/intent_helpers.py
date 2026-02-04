@@ -322,8 +322,9 @@ def get_info_response(key: str) -> str:
     if key in INFO_RESPONSES_VARIANTS:
         variants = INFO_RESPONSES_VARIANTS[key]
         chosen = min(variants, key=len) if SHORT_MODE else random.choice(variants)
-        if key in {"jedilnik", "menu_info", "menu_full"}:
-            return _apply_policy(chosen)
+        # Keep rich formatting for long structured answers.
+        if key in {"jedilnik", "menu_info", "menu_full", "sobe", "sobe_info"}:
+            return chosen
         return maybe_shorten_response(_apply_policy(chosen))
     return maybe_shorten_response(_apply_policy(INFO_RESPONSES.get(key, "Kako vam lahko pomagam?")))
 
