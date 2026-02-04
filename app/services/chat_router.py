@@ -1398,10 +1398,12 @@ def handle_appointment_booking(message: str, session_id: str) -> str:
     # Check for cancellation
     if any(word in lowered for word in ["prekliči", "prekini", "ne želim", "nazaj"]):
         reset_appointment_state(state)
+        reset_unified_state(session_id)
         conversation_tracker.reset_loop_count(session_id)  # Reset loop detection on cancel
         return "V redu, rezervacije ne bom nadaljeval. Kaj vas še zanima?"
     if is_negative(message):
         reset_appointment_state(state)
+        reset_unified_state(session_id)
         conversation_tracker.reset_loop_count(session_id)
         return "V redu, naročilo sem preklical. Če želite, lahko začnemo znova."
 
@@ -1618,6 +1620,7 @@ Ali so podatki pravilni? (DA / NE)"""
 
                 # Reset state
                 reset_appointment_state(state)
+                reset_unified_state(session_id)
 
                 return f"""✅ **Naročilo uspešno ustvarjeno!**
 
@@ -1638,6 +1641,7 @@ Napaka: {str(e)}"""
 
         elif any(word in lowered for word in ["ne", "no", "popravi"]):
             reset_appointment_state(state)
+            reset_unified_state(session_id)
             return "Podatki razveljavljeni. Začnimo znova - na kateri pregled se želite naročiti?"
 
         else:
@@ -1655,9 +1659,18 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
     Handle message using unified routing system.
     Returns response string, or None if should fall back to legacy system.
     """
-    unified_state = get_unified_state(session_id)
-    decision = unified_route(message, unified_state)
     appointment_state = get_appointment_state(session_id)
+    unified_state = get_unified_state(session_id)
+
+    # Keep unified state in sync with legacy appointment state.
+    if appointment_state.get("step"):
+        unified_state["flow"] = FlowType.APPOINTMENT.value
+        unified_state["step"] = appointment_state.get("step")
+    else:
+        unified_state["flow"] = FlowType.IDLE.value
+        unified_state["step"] = None
+
+    decision = unified_route(message, unified_state)
     suggested_service = unified_state.get("context", {}).get("suggested_service")
 
     # If user provides a date after service info prompt, start booking immediately
@@ -1706,7 +1719,25 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
 
     # Handle SOFT_INTERRUPT during booking flow
     if decision.action == SwitchAction.SOFT_INTERRUPT and is_in_flow(session_id):
-        step = get_current_step(session_id)
+        step = appointment_state.get("step") or get_current_step(session_id)
+
+        # If user is answering the expected booking step, do not interrupt.
+        if step == "date" and extract_date_from_message(message):
+            return None
+        if step == "time" and extract_time_from_message(message):
+            return None
+        if step == "select_service" and extract_service_type(message):
+            return None
+        if step == "name" and is_likely_full_name(message):
+            return None
+        if step == "phone":
+            phone_candidate = re.sub(r"[^\d+]", "", message)
+            if len(phone_candidate) >= 8:
+                return None
+        if step == "email" and ("@" in message and "." in message.split("@")[-1]):
+            return None
+        if step == "reason" and message.strip():
+            return None
 
         # Answer the interrupting question
         if decision.primary_intent == IntentType.INFO:

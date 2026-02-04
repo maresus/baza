@@ -12,11 +12,13 @@ from .unified_router import IntentType
 # Resume prompts for appointment flow steps
 RESUME_PROMPTS = {
     "service": "Kateri termin bi radi naročili?",
+    "select_service": "Na kateri pregled se želite naročiti?",
     "date": "Kateri datum vam ustreza?",
     "time": "Ob kateri uri bi želeli priti?",
     "name": "Potrebujem vaše ime in priimek.",
     "phone": "Potrebujem še vašo telefonsko številko.",
     "email": "Ali želite prejeti potrditev po e-pošti? Če da, mi prosim sporočite vaš email.",
+    "reason": "Kakšen je razlog vašega obiska?",
     "confirm": "Ali potrjujete termin?",
 }
 
