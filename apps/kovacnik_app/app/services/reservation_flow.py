@@ -601,20 +601,25 @@ def _handle_table_reservation_impl(
             return error_message + " Poskusiva z novim datumom (sobota/nedelja, DD.MM ali DD.MM.YYYY)."
         reservation_state["time"] = reservation_service._parse_time(desired_time)
         if not reservation_state.get("people"):
-            parsed = parse_people_count(message)
-            people = parsed["total"]
-            if people:
-                reservation_state["people"] = people
-                reservation_state["adults"] = parsed["adults"]
-                reservation_state["kids"] = parsed["kids"]
-                reservation_state["kids_ages"] = parsed["ages"]
-                if parsed["kids"] is None and parsed["adults"] is None:
-                    reservation_state["kids"] = 0
-                    reservation_state["kids_ages"] = ""
-                if parsed["kids"] and not parsed["ages"]:
-                    reservation_state["step"] = "awaiting_kids_ages"
-                    return "Koliko so stari otroci?"
-                return proceed_after_table_people(reservation_state, reservation_service)
+            # Stevilke v uri (npr. "12") ne smemo obravnavati kot stevilo oseb.
+            people_hint = bool(
+                re.search(r"(oseb|osebe|odrasl|otrok|\d+\s*\+\s*\d+)", message.lower())
+            )
+            if people_hint:
+                parsed = parse_people_count(message)
+                people = parsed["total"]
+                if people:
+                    reservation_state["people"] = people
+                    reservation_state["adults"] = parsed["adults"]
+                    reservation_state["kids"] = parsed["kids"]
+                    reservation_state["kids_ages"] = parsed["ages"]
+                    if parsed["kids"] is None and parsed["adults"] is None:
+                        reservation_state["kids"] = 0
+                        reservation_state["kids_ages"] = ""
+                    if parsed["kids"] and not parsed["ages"]:
+                        reservation_state["step"] = "awaiting_kids_ages"
+                        return "Koliko so stari otroci?"
+                    return proceed_after_table_people(reservation_state, reservation_service)
         reservation_state["step"] = "awaiting_table_people"
         return "Za koliko oseb pripravimo mizo?"
 

@@ -1142,6 +1142,20 @@ def handle_info_during_booking(message: str, session_state: dict) -> Optional[st
     """
     if not session_state or (session_state.get("step") is None and not session_state.get("type")):
         return None
+    step = session_state.get("step")
+    msg = (message or "").strip()
+    if step and str(step).startswith("awaiting_"):
+        if re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", msg):
+            return None
+        if len(re.sub(r"\D+", "", msg)) >= 7 and "?" not in msg:
+            return None
+    # Med vnosom kontaktnih podatkov ne smemo preusmeriti v info reply.
+    if step == "awaiting_email" and re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", msg):
+        return None
+    if step == "awaiting_phone" and len(re.sub(r"\D+", "", msg)) >= 7:
+        return None
+    if step == "awaiting_name" and "?" not in msg and len(msg.split()) >= 2:
+        return None
 
     info_key = detect_info_intent(message)
     if info_key:
