@@ -9,6 +9,10 @@ from typing import Optional
 from app.services.product_service import find_products
 
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
+STRICT_POLICY = os.getenv("STRICT_POLICY", "true").strip().lower() in {"1", "true", "yes", "on"}
+SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kovacnik.com").rstrip("/")
+INFO_EMAIL = os.getenv("INFO_EMAIL", "info@kovacnik.com")
+DISABLE_INQUIRY = os.getenv("DISABLE_INQUIRY", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 INFO_RESPONSES = {
     "pozdrav": """Pozdravljeni pri Domačiji Kovačnik! 😊
@@ -61,7 +65,7 @@ Vsaka soba ima:
 ✅ Igrače za otroke
 
 Zajtrk je vključen v ceno! 🥐""",
-    "cena_sobe": """**Cenik sobe / nastanitve (soba):**
+    "cena_sobe": """**Cenik nastanitve:**
 
 🛏️ **Nočitev z zajtrkom:** 50 €/osebo/noč (min. 2 noči)
 🍽️ **Večerja:** 25 €/osebo
@@ -73,44 +77,34 @@ Zajtrk je vključen v ceno! 🥐""",
 - Otroška posteljica: **brezplačno**
 - Doplačilo za enoposteljno: **+30%**""",
     "klima": """Da, vse naše sobe so **klimatizirane** in udobne tudi v poletni vročini.""",
-    "wifi": """Da, na voljo imamo **brezplačen Wi-Fi (wifi)** v vseh sobah in skupnih prostorih.""",
+    "wifi": """Da, na voljo imamo **brezplačen Wi-Fi** v vseh sobah in skupnih prostorih.""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
-    "zivali": """Na kmetiji imamo živali (tudi konje/ponije) in jih lahko ob obisku vidite. Hišni ljubljenčki / dog / psi so dobrodošli po predhodnem dogovoru. 🐾""",
-    "dostava": """Izdelke lahko naročite tudi za dostavo. Spletna trgovina: https://kovacnik.com/katalog.""",
+    "zivali": """Hišni ljubljenčki so dobrodošli po predhodnem dogovoru. 🐾""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": """Kontakt: **02 601 54 00** / **031 330 113**
 Email: **info@kovacnik.com**""",
-    "gospodar": """Domačijo Kovačnik vodi gospodar Danilo skupaj z družino. Če želite, vam povem še kaj več o domačiji ali ponudbi.""",
-    "traktor": """Da, imamo traktorje in kmetijsko mehanizacijo za delo na kmetiji. Ogledi kmetije so možni ob obisku – vprašajte osebje na licu mesta.""",
-    "zadnji_prihod": "Zadnji prihod na kosilo je ob **15:00**.",
     "lokacija": """Nahajamo se na: **Planica 9, 2313 Fram** (Pohorska stran nad Framom). 
 Parking je brezplačen pri domačiji.""",
-    "navodila": """Do nas najlažje pridete z avtoceste A1 – **izvoz Fram**. 
-Pri semaforju v Framu proti cerkvi sv. Ane, skozi vas proti Kopivniku, nato desno (tabla Kmetija Kovačnik) in še ~10 minut vožnje.
-Naslov: **Planica 9, 2313 Fram**.""",
     "min_nocitve": """Minimalno bivanje je:
 - **3 nočitve** v juniju, juliju in avgustu
 - **2 nočitvi** v ostalih mesecih""",
     "kapaciteta_mize": """Jedilnica 'Pri peči' sprejme do 15 oseb, 'Pri vrtu' pa do 35 oseb.""",
     "alergije": """Seveda, prilagodimo jedi za alergije (gluten, laktoza) in posebne prehrane (vegan/vegetarijan).""",
-    "vina": """Ponujamo izbor lokalnih vin. Če želite priporočilo, mi napišite kakšna vina imate radi.""",
-    "smucisce": """V bližini sta **Mariborsko Pohorje** in **Areh** (približno 25–35 min vožnje).""",
-    "areh": """**Areh** je od nas približno 30 minut vožnje skozi gozd proti Pohorju.""",
-    "terme": """V bližini priporočamo **Terme Zreče** in **Terme Ptuj** (približno 30–40 min vožnje).""",
-    "turizem": """V okolici so odlične možnosti za izlete (Pohorje, slapovi, razgledišča). Če želite, lahko predlagam konkretne poti.""",
+    "vina": """Na voljo so lokalna vina s Pohorja.""",
+    "turizem": """V okolici so odlične možnosti za izlete (Pohorje, slapovi, razgledišča).""",
+    "smucisce": """Najbližja smučišča so Mariborsko Pohorje in Areh (približno 25–35 minut vožnje).""",
+    "terme": """Najbližje terme so Terme Zreče in Terme Ptuj (približno 30–40 minut vožnje).""",
     "kolesa": """Izposoja koles je možna po dogovoru. Za več informacij nas kontaktirajte.""",
     "skalca": """Slap Skalca je prijeten izlet v bližini – priporočamo sprehod ob potočku.""",
     "darilni_boni": """Na voljo imamo darilne bone. Sporočite znesek in pripravimo bon za vas.""",
     "jedilnik": """Jedilnik se spreminja glede na sezono. Če želite, vam pošljemo aktualno vikend ponudbo.""",
-    "cena_kosilo": """Cena **kosilo** (vikend kosila) je **po dogovoru** glede na aktualno ponudbo. Če želite, vam pošljem trenutni jedilnik in okvirno ceno za ta vikend.""",
-    "rezervacija_postopek": """Rezervacija je preprosta: povejte **datum**, željeno **uro** in **število oseb** (za mizo) ali **datum**, **št. nočitev** in **osebe** (za sobo). Nato dodate kontakt in potrdite.""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
     "kmetija": """Domačija Kovačnik je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
     "gibanica": """Pohorska gibanica je naša specialiteta. Priporočam, da jo poskusite ob obisku!""",
-    "izdelki": """Imamo **domače izdelke**: marmelade, likerje/žganja, mesnine, čaje, sirupe in darilne pakete. Trgovina: https://kovacnik.com/katalog.""",
-    "priporocilo": """Kako vam lahko priporočam kaj primernega? Ste bolj za sladko ali slano?""",
+    "izdelki": """Imamo domače izdelke: marmelade, likerje/žganja, mesnine, čaje, sirupe in darilne pakete.""",
+    "priporocilo": """Trenutno nimam priporočil brez dodatnih informacij.""",
 }
 
 INFO_RESPONSES_VARIANTS = {key: [value] for key, value in INFO_RESPONSES.items()}
@@ -133,10 +127,6 @@ if _topics_path.exists():
         _TOPIC_RESPONSES = {}
 
 PRODUCT_RESPONSES = {
-    "namaz": [
-        "Imamo več **domačih namazov** (bučni namaz, jetrna pašteta, čemažev pesto). Trgovina: https://kovacnik.com/katalog.",
-        "Na voljo so **namazi**: bučni namaz, jetrna pašteta in čemažev pesto. Trgovina: https://kovacnik.com/katalog.",
-    ],
     "marmelada": [
         "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kovacnik.com/katalog (sekcija Marmelade).",
         "Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: https://kovacnik.com/katalog.",
@@ -243,10 +233,6 @@ INFO_KEYWORDS = {
     "kje",
     "lokacija",
     "naslov",
-    "kako pridem",
-    "kako do vas",
-    "navodila",
-    "pot",
     "kosilo",
     "vikend kosilo",
     "vikend",
@@ -260,13 +246,6 @@ INFO_KEYWORDS = {
     "večerja",
     "otroci",
     "popust",
-    "smučišče",
-    "smucisce",
-    "areh",
-    "pohorje",
-    "terme",
-    "izlet",
-    "okolica",
 }
 
 PRODUCT_FOLLOWUP_PHRASES = {
@@ -298,13 +277,15 @@ INFO_FOLLOWUP_PHRASES = {
 def get_info_response(key: str) -> str:
     if key.startswith("topic:"):
         topic_key = key.split(":", 1)[1]
+        if STRICT_POLICY and topic_key in INFO_RESPONSES:
+            return maybe_shorten_response(_apply_policy(INFO_RESPONSES[topic_key]))
         if topic_key in _TOPIC_RESPONSES:
-            return maybe_shorten_response(_TOPIC_RESPONSES[topic_key])
+            return maybe_shorten_response(_apply_policy(_TOPIC_RESPONSES[topic_key]))
     if key in INFO_RESPONSES_VARIANTS:
         variants = INFO_RESPONSES_VARIANTS[key]
         chosen = min(variants, key=len) if SHORT_MODE else random.choice(variants)
-        return maybe_shorten_response(chosen)
-    return maybe_shorten_response(INFO_RESPONSES.get(key, "Kako vam lahko pomagam?"))
+        return maybe_shorten_response(_apply_policy(chosen))
+    return maybe_shorten_response(_apply_policy(INFO_RESPONSES.get(key, "Kako vam lahko pomagam?")))
 
 
 def maybe_shorten_response(text: str) -> str:
@@ -323,21 +304,56 @@ def maybe_shorten_response(text: str) -> str:
     return clipped
 
 
+def _apply_policy(text: str) -> str:
+    """Apply strict policy: no questions, no unsolicited offers, keep short."""
+    if not STRICT_POLICY or not text:
+        return text
+    # Normalize whitespace
+    normalized = " ".join(text.replace("\n", " ").split())
+    normalized = re.sub(r"(?i)trgovina:\s*https?://\\S+", "", normalized).strip()
+    # Split into sentences
+    sentences = re.split(r"(?<=[.!?])\s+", normalized)
+    filtered = []
+    for s in sentences:
+        s_clean = s.strip()
+        if not s_clean:
+            continue
+        low = s_clean.lower()
+        # Remove questions or unsolicited offers
+        if s_clean.endswith("?"):
+            continue
+        if any(p in low for p in ["če želite", "vas zanima", "lahko vam", "priporočam", "predlagam", "sporočite", "povejte"]):
+            continue
+        filtered.append(s_clean)
+    # Keep max 4 sentences
+    if not filtered:
+        return normalized[:300].rstrip(".") + "."
+    return " ".join(filtered[:4])
+
+
+def _slugify(text: str) -> str:
+    slug = text.lower()
+    slug = slug.replace("č", "c").replace("š", "s").replace("ž", "z")
+    slug = re.sub(r"[^a-z0-9]+", "-", slug).strip("-")
+    return slug
+
+
+def _product_link_from_url(url: str, title: str | None) -> str:
+    if url and "/izdelek/" in url:
+        slug = url.split("/izdelek/")[1].split("/")[0]
+        return f"{SHOP_BASE_URL}/izdelek/{slug}/"
+    if title:
+        return f"{SHOP_BASE_URL}/izdelek/{_slugify(title)}/"
+    return f"{SHOP_BASE_URL}/izdelek/"
+
+
 def detect_info_intent(message: str) -> Optional[str]:
     text = message.lower().strip()
-    if any(w in text for w in ["ponedeljk", "torek", "tork"]):
-        return "odpiralni_cas"
     if any(w in text for w in ["kdaj ste odprti", "odpiralni", "delovni čas", "kdaj odprete"]):
         return "odpiralni_cas"
-    if any(w in text for w in ["kdaj lahko pridemo", "kdaj lahko pridem", "kdaj je prihod", "kdaj je check in"]):
-        return "prijava_odjava"
-    if any(w in text for w in ["kako pridem", "kako do vas", "navodila", "pot do"]):
-        return "navodila"
     if "zajtrk" in text and "večerj" not in text:
         return "zajtrk"
-    if any(w in text for w in ["kako deluje rezervacija", "postopek rezervacije", "kako rezerviram", "kako rezervirati"]):
-        return "rezervacija_postopek"
-    if any(w in text for w in ["koliko stane večerja", "cena večerje"]):
+    if any(w in text for w in ["koliko stane večerja", "cena večerje", "večerja", "vecerja", "večerjo"]):
         return "vecerja"
     if any(
         w in text
@@ -353,27 +369,25 @@ def detect_info_intent(message: str) -> Optional[str]:
         ]
     ):
         return "cena_sobe"
-    if any(w in text for w in ["koliko stane kosilo", "cena kosila", "cena kosilo"]):
-        return "cena_kosilo"
     if any(w in text for w in ["koliko sob", "kakšne sobe", "koliko oseb v sobo", "kolko oseb v sobo", "kapaciteta sob"]):
         return "sobe"
     if "klim" in text:
         return "klima"
     if "wifi" in text or "wi-fi" in text or "internet" in text:
         return "wifi"
-    if any(w in text for w in ["prijava", "odjava", "check in", "check out", "check-in", "check-out"]):
+    if any(w in text for w in ["prijava", "odjava", "check in", "check out"]):
         return "prijava_odjava"
     if any(w in text for w in ["parkir", "parking"]):
         return "parking"
-    if re.search(r"(?<!\w)(pes|psa|psi|psov|psom|kuž|kuz|dog)(?!\w)", text) or any(
-        w in text for w in ["mačk", "žival", "ljubljenč", "konj", "konje", "konji", "poni", "poniji"]
+    if re.search(r"(?<!\w)(pes|psa|psi|psov|kuž|kuz|dog)(?!\w)", text) or any(
+        w in text for w in ["mačk", "žival", "ljubljenč"]
     ):
         return "zivali"
-    if any(w in text for w in ["po pošti", "po posti", "dostava", "pošljete", "posljete", "pošiljate", "posiljate"]):
-        return "dostava"
     if any(w in text for w in ["plačilo", "kartic", "gotovina"]):
         return "placilo"
     if any(w in text for w in ["kontakt", "telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):
+        return "kontakt"
+    if any(w in text for w in ["email", "e-mail", "epošta", "e-pošta", "mail"]):
         return "kontakt"
     if any(
         w in text
@@ -384,17 +398,11 @@ def detect_info_intent(message: str) -> Optional[str]:
             "lokacija",
             "kje ste doma",
             "kje ste locirani",
+            "kako pridem",
+            "navodila za pot",
         ]
     ):
         return "lokacija"
-    if "areh" in text:
-        return "areh"
-    if "terme" in text:
-        return "terme"
-    if any(w in text for w in ["smučišče", "smucisce", "pohorje"]):
-        return "smucisce"
-    if any(w in text for w in ["izlet", "okolica"]):
-        return "turizem"
     if any(w in text for w in ["minimal", "najmanj noči", "najmanj nočitev", "min nočitev"]):
         return "min_nocitve"
     if any(w in text for w in ["koliko miz", "kapaciteta"]):
@@ -403,6 +411,10 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "alergije"
     if any(w in text for w in ["vino", "vina", "vinsko", "vinska", "wine", "wein", "vinci"]):
         return "vina"
+    if any(w in text for w in ["smučišče", "smucisce", "smučanje", "smucanje", "ski"]):
+        return "smucisce"
+    if any(w in text for w in ["terme", "termal", "spa", "wellness"]):
+        return "terme"
     if any(
         w in text
         for w in [
@@ -459,21 +471,17 @@ def detect_info_intent(message: str) -> Optional[str]:
     ):
         return "jedilnik"
     if any(w in text for w in ["zadnji prihod", "zadnji prihod na kosilo"]):
-        return "zadnji_prihod"
-    if any(w in text for w in ["zadnja ura", "do kdaj lahko pridemo", "do kdaj je prihod"]):
-        return "zadnji_prihod"
-    if any(w in text for w in ["gospodar", "lastnik", "kdo vodi", "kdo je sef", "kdo je šef"]):
-        return "gospodar"
-    if any(w in text for w in ["traktor", "traktorji", "mehanizacij"]):
-        return "traktor"
+        return "odpiralni_cas"
     if any(w in text for w in ["družin", "druzina", "druzino"]):
         return "druzina"
     if "kmetij" in text or "kmetijo" in text:
         return "kmetija"
-    if "gibanica" in text:
-        return "gibanica"
+    if "gibanic" in text:
+        if any(tok in text for tok in ["kaj je", "pohorska gibanica", "kaj pomeni"]) and "imate" not in text:
+            return "gibanica"
+        return None
     if any(w in text for w in ["izdelk", "trgovin", "katalog", "prodajate"]):
-        return "izdelki"
+        return None
     if "priporoč" in text or "priporoc" in text:
         return "priporocilo"
     return None
@@ -481,16 +489,18 @@ def detect_info_intent(message: str) -> Optional[str]:
 
 def detect_product_intent(message: str) -> Optional[str]:
     text = message.lower()
-    if any(w in text for w in ["pesto", "namaz", "paštet", "pastet", "čemaž", "cemaz"]):
-        return "namaz"
     if any(w in text for w in ["liker", "žgan", "zgan", "borovnič", "orehov", "alkohol"]):
         return "liker"
     if any(w in text for w in ["marmelad", "džem", "dzem", "jagod", "marelič"]):
         return "marmelada"
-    if "gibanica" in text:
+    if "gibanic" in text:
         return "gibanica_narocilo"
     if any(w in text for w in ["bunka", "bunko", "bunke"]):
         return "bunka"
+    if any(w in text for w in ["paštet", "pastet", "namaz", "pesto"]):
+        return "namaz"
+    if any(w in text for w in ["salam", "klobas", "mesnin"]):
+        return "mesn"
     if any(w in text for w in ["čaj", "caj"]):
         return "caj"
     if any(w in text for w in ["sirup", "sok"]):
@@ -501,9 +511,10 @@ def detect_product_intent(message: str) -> Optional[str]:
 
 
 def get_product_response(key: str) -> str:
-    if key in PRODUCT_RESPONSES:
-        return random.choice(PRODUCT_RESPONSES[key])
-    return PRODUCT_RESPONSES["izdelki_splosno"][0]
+    if key == "gibanica_narocilo":
+        return f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
+    # Use KB-driven product answer to return price + direct link
+    return answer_product_question(key or "")
 
 
 def is_food_question_without_booking_intent(message: str) -> bool:
@@ -580,6 +591,8 @@ def is_ambiguous_reservation_request(message: str) -> bool:
 
 
 def is_ambiguous_inquiry_request(message: str) -> bool:
+    if DISABLE_INQUIRY:
+        return False
     lowered = message.lower()
     if any(w in lowered for w in ["večerj", "vecerj"]):
         return False
@@ -593,6 +606,8 @@ def is_ambiguous_inquiry_request(message: str) -> bool:
 
 
 def is_inquiry_trigger(message: str) -> bool:
+    if DISABLE_INQUIRY:
+        return False
     lowered = message.lower()
     if any(w in lowered for w in ["večerj", "vecerj"]):
         return False
@@ -722,14 +737,14 @@ def detect_router_intent(message: str, state: dict[str, Optional[str | int]]) ->
 def format_products(query: str) -> str:
     products = find_products(query)
     if not products:
-        return "Trenutno nimam podatkov o izdelkih. Trgovina: https://kovacnik.com/katalog."
+        return f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
 
     product_lines = [
         f"- {product.name}: {product.price:.2f} EUR, {product.weight:.2f} kg"
         for product in products
     ]
-    header = "Na voljo imamo naslednje izdelke:\n"
-    return header + "\n".join(product_lines) + "\n\nTrgovina: https://kovacnik.com/katalog"
+    header = "Na voljo imamo naslednje izdelke: "
+    return _apply_policy(header + " ".join(product_lines) + ".")
 
 
 def answer_product_question(message: str) -> str:
@@ -809,42 +824,47 @@ def answer_product_question(message: str) -> str:
             break
 
     if not unique:
-        if category == "marmelad":
-            return (
-                "Imamo več domačih marmelad (npr. božična, jagodna, borovničeva). "
-                "Celoten izbor si lahko ogledate v spletni trgovini: https://kovacnik.com/katalog."
-            )
-        if category == "liker":
-            return "Na voljo je domač borovničev liker (13 €) ter nekaj drugih domačih likerjev. Trgovina: https://kovacnik.com/katalog."
-        return (
-            "Trenutno v bazi ne najdem konkretnih izdelkov za to vprašanje. "
-            "Predlagam, da pobrskaš po spletni trgovini: https://kovacnik.com/katalog."
-        )
+        # For general product queries, return a few top items
+        if category is None:
+            fallback = []
+            for c in KNOWLEDGE_CHUNKS:
+                if "/izdelek/" in (c.url or ""):
+                    fallback.append(c)
+                if len(fallback) >= 3:
+                    break
+            if fallback:
+                sentences = []
+                for c in fallback:
+                    text = c.paragraph.strip() if c.paragraph else ""
+                    price = ""
+                    price_match = re.match(r'^(\d+[,\.]\d+\s*€)', text)
+                    if price_match:
+                        price = price_match.group(1)
+                    title = c.title or "Izdelek"
+                    link = _product_link_from_url(c.url, title)
+                    if price:
+                        sentences.append(f"{title} ({price}). Najdete ga tukaj: {link}.")
+                    else:
+                        sentences.append(f"{title}. Najdete ga tukaj: {link}.")
+                return " ".join(sentences)
+        return f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
 
-    lines = ["Na voljo imamo:"]
-    for c in unique:
+    # Return up to 3 items, short and direct
+    sentences: list[str] = []
+    for c in unique[:3]:
         text = c.paragraph.strip() if c.paragraph else ""
         price = ""
         price_match = re.match(r'^(\d+[,\.]\d+\s*€)', text)
         if price_match:
             price = price_match.group(1)
-            text = text[len(price_match.group(0)) :].strip()
-        for marker in [" Kategorija:", " V naši ponudbi", " Šifra:"]:
-            idx = text.find(marker)
-            if idx > 10:
-                text = text[:idx]
-        if len(text) > 100:
-            text = text[:100] + "..."
-
         title = c.title or "Izdelek"
+        link = _product_link_from_url(c.url, title)
         if price:
-            lines.append(f"• **{title}** ({price}) - {text}")
+            sentences.append(f"{title} ({price}). Najdete ga tukaj: {link}.")
         else:
-            lines.append(f"• **{title}** - {text}")
-        lines.append(f"  👉 {c.url}")
+            sentences.append(f"{title}. Najdete ga tukaj: {link}.")
 
-    lines.append("\nTrgovina: https://kovacnik.com/katalog")
-    return "\n".join(lines)
+    return " ".join(sentences)
 
 
 def is_product_query(message: str) -> bool:
