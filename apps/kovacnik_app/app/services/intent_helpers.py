@@ -147,6 +147,51 @@ Na voljo so degustacijski meniji:
 - 6-hodni degustacijski meni
 
 Tedenski meniji so na predhodno rezervacijo in se prilagodijo sezoni.""",
+    "tedenski_5hodni": """KULINARICNO DOZIVETJE
+SREDA - PETEK
+Penina Doppler, Diona 2017, zelo suho, 100 % chardonnay
+Pozdrav iz kuhinje
+***
+Freser, sauvignon, suho, 2024
+Kiblflajs s prelivom, zelenjava s Kovacnikovega vrta, zorjen Freserjev sir, hisni kruh z drozmi
+***
+Juha s kislim zeljem in krvavico
+***
+Freser, renski rizling, suho, 2019
+Ricotka pirine kase z jurcki in zelenjavo
+***
+Sumenjak, Alter, suho, 2021
+Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Barbare
+***
+Greif, rumeni muskat, polsladko, 2024
+Pohorska gibanica babice Angelce ali domac jabolcni strudl ali pita sezone, hisni sladoled
+
+CENA PO ODRASLI OSEBI: 43 EUR
+Cena vinske spremljave: 20 EUR za 5 kozarcev""",
+    "tedenski_6hodni": """KULINARICNO DOZIVETJE
+SREDA - PETEK
+Penina Doppler, Diona 2017, zelo suho, 100 % chardonnay
+Pozdrav iz kuhinje
+***
+Freser, sauvignon, suho, 2024
+Kiblflajs s prelivom, zelenjava s Kovacnikovega vrta, zorjen Freserjev sir, hisni kruh z drozmi
+***
+Juha s kislim zeljem in krvavico
+***
+Freser, renski rizling, suho, 2019
+Ricotka pirine kase z jurcki in zelenjavo
+***
+Sumenjak, Alter, suho, 2021
+Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Barbare
+***
+Greif, modra frankinja, suho, 2020
+Strukelj s skuto nase krave Miske, goveje meso iz Kovacnikove proste reje, rdeca pesa, rabarbara, naravna omaka
+***
+Greif, rumeni muskat, polsladko, 2024
+Pohorska gibanica babice Angelce ali domac jabolcni strudl ali pita sezone, hisni sladoled
+
+CENA PO ODRASLI OSEBI: 53 EUR
+Cena vinske spremljave: 25 EUR za 6 kozarcev""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
     "gospodar": """Gospodar kmetije je Danilo.""",
     "kmetija": """Domačija Kovačnik je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
@@ -333,7 +378,16 @@ def get_info_response(key: str) -> str:
         variants = INFO_RESPONSES_VARIANTS[key]
         chosen = min(variants, key=len) if SHORT_MODE else random.choice(variants)
         # Keep rich formatting for long structured answers.
-        if key in {"jedilnik", "menu_info", "menu_full", "sobe", "sobe_info", "tedenska_ponudba"}:
+        if key in {
+            "jedilnik",
+            "menu_info",
+            "menu_full",
+            "sobe",
+            "sobe_info",
+            "tedenska_ponudba",
+            "tedenski_5hodni",
+            "tedenski_6hodni",
+        }:
             return chosen
         return maybe_shorten_response(_apply_policy(chosen))
     return maybe_shorten_response(_apply_policy(INFO_RESPONSES.get(key, "Kako vam lahko pomagam?")))
@@ -499,6 +553,10 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "skalca"
     if "darilni bon" in text or ("bon" in text and "daril" in text):
         return "darilni_boni"
+    if re.search(r"(?<!\\d)5\\s*-?\\s*hod", text):
+        return "tedenski_5hodni"
+    if re.search(r"(?<!\\d)6\\s*-?\\s*hod", text):
+        return "tedenski_6hodni"
     if any(w in text for w in ["čez teden", "cez teden", "med tednom", "tedenska ponudba", "degustacijski", "degustacija", "4-hodni", "5-hodni", "6-hodni", "7-hodni", "koliko hodov"]):
         return "tedenska_ponudba"
     if ("vikend" in text or "ponudba" in text) and any(
