@@ -2521,6 +2521,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "fallback_unified", followup_flag=False)
 
+    # Hard safety gate: with unified router enabled we must never execute legacy paths below.
+    if USE_UNIFIED_ROUTER:
+        reply = "Trenutno nimam podatkov o tem."
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "unified_hard_gate", followup_flag=False)
+
     # Strict policy: route special-event inquiries directly to email
     if STRICT_POLICY:
         lowered = payload.message.lower()
@@ -3690,6 +3696,13 @@ def chat_stream(payload: ChatRequestWithSession):
         )
     except Exception:
         pass
+
+    if USE_UNIFIED_ROUTER:
+        response = chat_endpoint(payload)
+        return StreamingResponse(
+            _stream_text_chunks(response.reply),
+            media_type="text/plain",
+        )
 
     def stream_and_log(reply_chunks):
         collected: list[str] = []
