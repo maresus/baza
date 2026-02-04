@@ -123,13 +123,13 @@ def build_scenarios(
                     ("raje bi sobo", "datum"),
                 ],
             ),
-            (
-                "booking_cancel",
-                [
-                    ("rad bi rezerviral mizo", "datum"),
-                    ("ne, pustimo", "prekin"),
-                ],
-            ),
+                (
+                    "booking_cancel",
+                    [
+                        ("rad bi rezerviral mizo", "datum"),
+                        ("ne, pustimo", "preklical"),
+                    ],
+                ),
             (
                 "booking_info_last_arrival",
                 [

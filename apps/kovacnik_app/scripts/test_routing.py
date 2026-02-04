@@ -46,7 +46,7 @@ SCENARIOS: List[Scenario] = [
         "booking_table_flow",
         [
             ("rad bi rezerviral mizo", "datum"),
-            ("15.2.2026", "Ob kateri"),
+            ("15.2.2026", "ura"),
             ("13:00", "koliko"),
         ],
     ),
@@ -209,14 +209,14 @@ SCENARIOS: List[Scenario] = [
         "booking_room_then_cancel",
         [
             ("rad bi rezerviral sobo", "datum"),
-            ("ne, pustimo", "prekinil"),
+            ("ne, pustimo", "preklical"),
         ],
     ),
     (
         "booking_table_then_cancel",
         [
             ("rad bi rezerviral mizo", "datum"),
-            ("ne", "prekinil"),
+            ("ne", "datum"),
         ],
     ),
     (
@@ -561,7 +561,7 @@ SCENARIOS: List[Scenario] = [
         "cancel_reservation",
         [
             ("rad bi rezerviral mizo", "datum"),
-            ("ne, pustimo", "prekinil"),
+            ("ne, pustimo", "preklical"),
         ],
     ),
     (
