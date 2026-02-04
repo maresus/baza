@@ -3,6 +3,7 @@ import random
 import json
 import os
 import logging
+import difflib
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Any, Optional, Tuple
@@ -88,6 +89,12 @@ DISABLE_INQUIRY = os.getenv("DISABLE_INQUIRY", "true").strip().lower() in {"1", 
 SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kmetijapodgoro.si").rstrip("/")
 INFO_EMAIL = os.getenv("INFO_EMAIL", "info@kmetijapodgoro.si")
 _router_logger = logging.getLogger("router_v2")
+
+
+def handle_interrupt(answer: str, _current_step: Optional[str]) -> str:
+    """Interrupt nikoli ne sili uporabnika v nadaljevanje flowa."""
+    return answer
+
 
 # ========== CENTRALIZIRANI INFO ODGOVORI (brez LLM!) ==========
 BOOKING_RELEVANT_KEYS = {"sobe", "vecerja", "cena_sobe", "min_nocitve", "kapaciteta_mize"}
@@ -1191,6 +1198,17 @@ def is_explicit_cancel_command(message: str) -> bool:
     if lowered in {"stop", "konec", "prekini", "cancel", "quit", "exit"}:
         return True
     return any(token in lowered for token in {"pustimo", "pozabi", "ne rabim", "ni treba", "prekin"})
+
+
+def is_event_inquiry_request(message: str) -> bool:
+    lowered = message.lower()
+    if re.search(r"(team\w*build|teamb\w*|porok\w*|cater\w*|pogost\w*|dogod\w*)", lowered):
+        return True
+    words = re.findall(r"[a-zA-ZčšžČŠŽ]+", lowered)
+    for word in words:
+        if difflib.SequenceMatcher(None, word, "teambuilding").ratio() >= 0.65:
+            return True
+    return False
 
 
 def is_product_followup(message: str) -> bool:
@@ -2301,7 +2319,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     if STRICT_POLICY:
         lowered = payload.message.lower()
-        if any(tok in lowered for tok in ["teambuilding", "poroka", "porok", "catering", "pogostitev", "dogodek"]):
+        if is_event_inquiry_request(payload.message):
             reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_disabled", followup_flag=False)
@@ -2315,7 +2333,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = f"Za večja naročila pišite na {INFO_EMAIL}."
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "bulk_order_email", followup_flag=False)
-        if DISABLE_INQUIRY and is_inquiry_trigger(payload.message):
+        if DISABLE_INQUIRY and (is_inquiry_trigger(payload.message) or is_event_inquiry_request(payload.message)):
             reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_disabled", followup_flag=False)
@@ -2722,7 +2740,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, f"reservation_{switch_type}_switch", followup_flag=False)
 
-        if is_inquiry_trigger(payload.message) and is_strong_inquiry_request(payload.message):
+        if is_event_inquiry_request(payload.message) or (is_inquiry_trigger(payload.message) and is_strong_inquiry_request(payload.message)):
             reset_reservation_state(state)
             if DISABLE_INQUIRY:
                 reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
@@ -2742,6 +2760,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             prompt = reservation_prompt_for_state(state)
             reply = maybe_translate(prompt, detected_lang)
             return finalize(reply, "reservation_continue", followup_flag=False)
+        if is_greeting(payload.message):
+            reply = handle_interrupt(get_greeting_response(), state.get("step"))
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "greeting_interrupt", followup_flag=False)
+        if is_goodbye(payload.message):
+            reply = handle_interrupt(get_goodbye_response(), state.get("step"))
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "goodbye_interrupt", followup_flag=False)
         lowered_message = payload.message.lower()
         question_like = (
             "?" in payload.message
@@ -2750,15 +2776,18 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             or any(word in lowered_message for word in ["gospodar", "družin", "lastnik", "kmetij"])
         )
         if question_like:
-            if USE_FULL_KB_LLM:
-                llm_reply = _llm_answer_full_kb(payload.message, detected_lang)
+            info_key = detect_info_intent(payload.message)
+            if info_key:
+                info_reply = get_info_response(info_key)
+            elif USE_FULL_KB_LLM:
+                info_reply = _llm_answer_full_kb(payload.message, detected_lang)
             else:
-                llm_reply = _llm_answer(payload.message, conversation_history)
-            if llm_reply:
+                info_reply = _llm_answer(payload.message, conversation_history)
+            if info_reply:
                 continuation = get_booking_continuation(state.get("step"), state)
-                llm_reply = f"{llm_reply}\n\n---\n\n📝 Nadaljujemo z rezervacijo:\n{continuation}"
-                llm_reply = maybe_translate(llm_reply, detected_lang)
-                return finalize(llm_reply, "info_during_reservation", followup_flag=False)
+                info_reply = f"{info_reply}\n\n---\n\n📝 Nadaljujemo z rezervacijo:\n{continuation}"
+                info_reply = maybe_translate(info_reply, detected_lang)
+                return finalize(info_reply, "info_during_reservation", followup_flag=False)
         if is_product_query(payload.message):
             reply = answer_product_question(payload.message)
             last_product_query = payload.message

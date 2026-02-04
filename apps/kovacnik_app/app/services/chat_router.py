@@ -3,6 +3,7 @@ import random
 import json
 import os
 import logging
+import difflib
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Any, Optional, Tuple
@@ -1221,6 +1222,17 @@ def is_explicit_cancel_command(message: str) -> bool:
     return any(token in lowered for token in {"pustimo", "pozabi", "ne rabim", "ni treba", "prekin"})
 
 
+def is_event_inquiry_request(message: str) -> bool:
+    lowered = message.lower()
+    if re.search(r"(team\w*build|teamb\w*|porok\w*|cater\w*|pogost\w*|dogod\w*)", lowered):
+        return True
+    words = re.findall(r"[a-zA-ZčšžČŠŽ]+", lowered)
+    for word in words:
+        if difflib.SequenceMatcher(None, word, "teambuilding").ratio() >= 0.65:
+            return True
+    return False
+
+
 def is_product_followup(message: str) -> bool:
     lowered = message.lower()
     if not last_product_query:
@@ -2328,7 +2340,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     # Strict policy: route special-event inquiries directly to email
     if STRICT_POLICY:
         lowered = payload.message.lower()
-        if any(tok in lowered for tok in ["teambuilding", "poroka", "porok", "catering", "pogostitev", "dogodek"]):
+        if is_event_inquiry_request(payload.message):
             reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_disabled", followup_flag=False)
@@ -2344,7 +2356,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "bulk_order_email", followup_flag=False)
         if DISABLE_INQUIRY and (
             is_inquiry_trigger(payload.message)
-            or any(tok in lowered for tok in ["teambuilding", "poroka", "catering", "pogostitev"])
+            or is_event_inquiry_request(payload.message)
         ):
             reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
             reply = maybe_translate(reply, detected_lang)
@@ -2491,6 +2503,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
         if USE_UNIFIED_ROUTER:
             decision = decide_route(payload.message)
+            if decision.primary_intent == "GREETING":
+                reply = handle_interrupt(get_greeting_response(), state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "greeting_interrupt", followup_flag=False)
+            if decision.primary_intent == "GOODBYE":
+                reply = handle_interrupt(get_goodbye_response(), state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "goodbye_interrupt", followup_flag=False)
             if decision.primary_intent == "BOOKING_TABLE" and state.get("type") != "table":
                 reset_reservation_state(state)
                 state["type"] = "table"
@@ -2552,6 +2572,16 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     reply = handle_interrupt(product_reply, state.get("step"))
                     reply = maybe_translate(reply, detected_lang)
                     return finalize(reply, "product_interrupt", followup_flag=False)
+        generic_info_question = (
+            ("?" in payload.message or is_info_only_question(payload.message) or is_info_query(payload.message))
+            and not is_reservation_related(payload.message)
+        )
+        if generic_info_question:
+            key = detect_info_intent(payload.message)
+            info_reply = get_info_response(key) if key else answer_farm_info(payload.message)
+            reply = handle_interrupt(info_reply, state.get("step"))
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info_interrupt", followup_flag=False)
         reply = handle_reservation_flow(payload.message, state)
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "reservation_flow", followup_flag=False)

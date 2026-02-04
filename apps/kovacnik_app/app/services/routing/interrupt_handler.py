@@ -6,7 +6,7 @@ from app.services.reservation_flow import get_booking_continuation
 
 
 def handle_interrupt(answer: str, current_step: Optional[str]) -> str:
-    continuation = get_booking_continuation(current_step or "", {})
-    if continuation:
-        return f"{answer}\n\n---\n{continuation}"
+    # Ne silimo uporabnika v "nadaljevanje"; interrupt naj odgovori in zakljuci.
+    # get_booking_continuation obdrzimo le za kompatibilnost/diagnostiko.
+    _ = get_booking_continuation(current_step or "", {})
     return answer

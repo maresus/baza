@@ -100,6 +100,7 @@ Email: **info@kmetijapodgoro.si**""",
     "darilni_boni": """Na voljo imamo darilne bone. Sporočite znesek in pripravimo bon za vas.""",
     "jedilnik": """Jedilnik se spreminja glede na sezono. Če želite, vam pošljemo aktualno vikend ponudbo.""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
+    "gospodar": """Gospodar kmetije je Jure.""",
     "kmetija": """Kmetija Pod Goro je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
     "gibanica": """Pohorska gibanica je naša specialiteta.""",
     "izdelki": """V ponudbi imamo marmelade, likerje, mesnine, čaje, sirupe in darilne pakete.""",
@@ -372,8 +373,10 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "prijava_odjava"
     if "parkir" in text or "parking" in text:
         return "parking"
-    if re.search(r"\b(pes|psa|psi|psov|mačk|mack|žival|ljubljenč|kuž|kuz|dog)\b", text):
+    if re.search(r"\b(pes|psa|psi|psov|mačk|mack|žival|ljubljenč|kuž|kuz|dog|konj|poni)\b", text):
         return "zivali"
+    if any(w in text for w in ["gospodar", "gosp", "lastnik", "kdo vodi", "vodi kmetijo", "vodi domačijo"]):
+        return "gospodar"
     if any(w in text for w in ["plačilo", "kartic", "gotovina"]):
         return "placilo"
     if any(w in text for w in ["telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):
@@ -475,6 +478,12 @@ def detect_info_intent(message: str) -> Optional[str]:
 
 def detect_product_intent(message: str) -> Optional[str]:
     text = message.lower()
+    if "čemažev pesto" in text or "cemazev pesto" in text:
+        return "cemazev_pesto"
+    if "bučni namaz" in text or "bucni namaz" in text:
+        return "bucni_namaz"
+    if "jetrna paštet" in text or "jetrna pastet" in text:
+        return "jetrna_pastetka"
     if any(w in text for w in ["liker", "žgan", "zgan", "borovnič", "orehov", "alkohol"]):
         return "liker"
     if any(w in text for w in ["marmelad", "džem", "dzem", "jagod", "marelič"]):
@@ -501,7 +510,12 @@ def detect_product_intent(message: str) -> Optional[str]:
 def get_product_response(key: str) -> str:
     if key == "gibanica_narocilo":
         return f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
-    return answer_product_question(key or "")
+    key_map = {
+        "cemazev_pesto": "čemažev pesto",
+        "bucni_namaz": "bučni namaz",
+        "jetrna_pastetka": "jetrna paštetka",
+    }
+    return answer_product_question(key_map.get(key, key or ""))
 
 
 def is_food_question_without_booking_intent(message: str) -> bool:
@@ -869,6 +883,28 @@ def answer_product_question(message: str) -> str:
 
 
 def _strict_product_answer(lowered: str, chunks) -> str:
+    exact_slug_hints = {
+        "cemazev-pesto": ["čemažev pesto", "cemazev pesto", "cemazev_pesto"],
+        "bucni-namaz": ["bučni namaz", "bucni namaz", "bucni_namaz"],
+        "jetrna-pastetka": ["jetrna paštet", "jetrna pastet", "jetrna_pastetka"],
+    }
+    for slug_hint, aliases in exact_slug_hints.items():
+        if any(alias in lowered for alias in aliases):
+            for c in chunks:
+                url_lower = (c.url or "").lower()
+                if "/izdelek/" not in url_lower or slug_hint not in url_lower:
+                    continue
+                text = c.paragraph.strip() if c.paragraph else ""
+                price = ""
+                price_match = re.match(r'^(\d+[,\.]\d+\s*€)', text)
+                if price_match:
+                    price = price_match.group(1)
+                title = c.title or "Izdelek"
+                link = _product_link_from_url(c.url, title)
+                if price:
+                    return f"{title} ({price}). Najdete ga tukaj: {link}."
+                return f"{title}. Najdete ga tukaj: {link}."
+
     category = None
     if "marmelad" in lowered or "džem" in lowered or "dzem" in lowered:
         category = "marmelad"

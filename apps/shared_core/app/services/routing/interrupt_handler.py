@@ -11,6 +11,6 @@ def build_resume_prompt(get_booking_continuation, state: Dict[str, Any]) -> Opti
 
 
 def build_interrupt_response(answer: str, resume_prompt: Optional[str]) -> str:
-    if resume_prompt:
-        return f"{answer}\n\n---\n\n📝 **Nadaljujemo z rezervacijo:**\n{resume_prompt}"
+    # Namen interrupta je odgovoriti na novo vprasanje brez vsiljevanja nadaljevanja.
+    _ = resume_prompt
     return answer
