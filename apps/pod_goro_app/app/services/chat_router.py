@@ -82,6 +82,9 @@ from app.services.parsing import (
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
 USE_FULL_KB_LLM = False
+USE_UNIFIED_ROUTER = os.getenv("USE_UNIFIED_ROUTER", "true").strip().lower() in {"1", "true", "yes", "on"}
+if USE_UNIFIED_ROUTER:
+    USE_ROUTER_V2 = False
 INQUIRY_RECIPIENT = os.getenv("INQUIRY_RECIPIENT", "satlermarko@gmail.com")
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
 STRICT_POLICY = os.getenv("STRICT_POLICY", "true").strip().lower() in {"1", "true", "yes", "on"}
@@ -2339,6 +2342,115 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "greeting", followup_flag=False)
 
+    if USE_UNIFIED_ROUTER:
+        lowered = payload.message.lower().strip()
+
+        if is_event_inquiry_request(payload.message) or (DISABLE_INQUIRY and is_inquiry_trigger(payload.message)):
+            reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "inquiry_disabled_unified", followup_flag=False)
+
+        if is_explicit_cancel_command(payload.message) or is_escape_command(payload.message):
+            reset_reservation_state(state)
+            reset_inquiry_state(inquiry_state)
+            reply = "V redu, prekinil sem trenutni postopek. Kako vam lahko pomagam?"
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "flow_cancel_unified", followup_flag=False)
+
+        # Active booking flow: only this branch can advance/update booking state.
+        if state.get("step") is not None:
+            switch_type = parse_reservation_type(payload.message)
+            if switch_type in {"room", "table"} and switch_type != state.get("type"):
+                reset_reservation_state(state)
+                state["type"] = switch_type
+                reply = handle_reservation_flow(payload.message, state)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "booking_switch_unified", followup_flag=False)
+
+            # Soft interrupt inside booking: answer info/product and continue same step.
+            info_key = detect_info_intent(payload.message)
+            product_key = detect_product_intent(payload.message)
+            if (
+                info_key
+                or product_key
+                or is_menu_query(payload.message)
+                or is_product_query(payload.message)
+                or is_info_query(payload.message)
+            ):
+                if info_key == "vina":
+                    answer = answer_wine_question(payload.message)
+                elif info_key:
+                    answer = get_info_response(info_key)
+                elif is_menu_query(payload.message):
+                    answer = format_current_menu(
+                        month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
+                        force_full=is_full_menu_request(payload.message),
+                    )
+                elif product_key or is_product_query(payload.message):
+                    answer = get_product_response(product_key) if product_key else answer_product_question(payload.message)
+                else:
+                    answer = semantic_info_answer(payload.message) or answer_tourist_question(payload.message) or "Trenutno nimam podatkov o tem."
+
+                cont = reservation_prompt_for_state(state, room_intro_text, table_intro_text)
+                reply = f"{answer}\n\n---\n\n{cont}"
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "booking_interrupt_unified", followup_flag=False)
+
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "booking_continue_unified", followup_flag=False)
+
+        # No active booking: deterministic entry routing.
+        reservation_type = parse_reservation_type(payload.message)
+        if reservation_type in {"room", "table"} or is_reservation_related(payload.message):
+            reset_reservation_state(state)
+            state["type"] = reservation_type or ("room" if "soba" in lowered or "noč" in lowered else "table")
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "booking_start_unified", followup_flag=False)
+
+        if is_bulk_order_request(payload.message) and (is_product_query(payload.message) or detect_product_intent(payload.message)):
+            reply = f"Za večja naročila pišite na {INFO_EMAIL}."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "bulk_order_email_unified", followup_flag=False)
+
+        info_key = detect_info_intent(payload.message)
+        if info_key == "vina":
+            reply = answer_wine_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "wine_unified", followup_flag=False)
+        if info_key:
+            reply = get_info_response(info_key)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info_unified", followup_flag=False)
+
+        if is_menu_query(payload.message):
+            reply = format_current_menu(
+                month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
+                force_full=is_full_menu_request(payload.message),
+            )
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "menu_unified", followup_flag=False)
+
+        product_key = detect_product_intent(payload.message)
+        if product_key or is_product_query(payload.message):
+            reply = get_product_response(product_key) if product_key else answer_product_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_unified", followup_flag=False)
+
+        semantic_reply = semantic_info_answer(payload.message)
+        if semantic_reply:
+            semantic_reply = maybe_translate(semantic_reply, detected_lang)
+            return finalize(semantic_reply, "info_semantic_unified", followup_flag=False)
+        tourist_reply = answer_tourist_question(payload.message)
+        if tourist_reply:
+            tourist_reply = maybe_translate(tourist_reply, detected_lang)
+            return finalize(tourist_reply, "tourist_unified", followup_flag=False)
+
+        reply = "Trenutno nimam podatkov o tem."
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "fallback_unified", followup_flag=False)
+
     if STRICT_POLICY:
         info_during = handle_info_during_booking(payload.message, state)
         if info_during:
@@ -2354,8 +2466,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 or "so to" in lowered_now
                 or "ta vina" in lowered_now
             )
+            wine_context = any(tok in lowered_now for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"])
             info_key = detect_info_intent(payload.message)
-            if info_key == "vina" or (last_wine_query and wine_followup_hint):
+            if info_key == "vina" or (last_wine_query and wine_followup_hint and wine_context):
                 combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
                 wine_reply = answer_wine_question(combined)
                 last_wine_query = combined
@@ -2734,6 +2847,53 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = random.choice(UNKNOWN_RESPONSES)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info_unknown", followup_flag=False)
+    if USE_UNIFIED_ROUTER and not USE_ROUTER_V2:
+        # Hard gate: pri vklopljenem unified routerju tukaj ustavimo vse legacy poti spodaj.
+        # Če smo še v aktivnem flowu, vedno nadaljuj samo skozi reservation flow.
+        if state.get("step") is not None:
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_unified_terminal", followup_flag=False)
+
+        # V idle načinu daj prednost deterministicnim handlerjem.
+        info_key = detect_info_intent(payload.message)
+        if info_key:
+            if info_key == "vina":
+                reply = answer_wine_question(payload.message)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "wine_unified_terminal", followup_flag=False)
+            reply = get_info_response(info_key)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info_unified_terminal", followup_flag=False)
+
+        if is_menu_query(payload.message):
+            reply = format_current_menu(
+                month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
+                force_full=is_full_menu_request(payload.message),
+            )
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "menu_unified_terminal", followup_flag=False)
+
+        product_key = detect_product_intent(payload.message)
+        if product_key or is_product_query(payload.message):
+            reply = get_product_response(product_key) if product_key else answer_product_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_unified_terminal", followup_flag=False)
+
+        # Za info vprašanja brez aktivnega flowa daj prednost semantičnemu/turističnemu odgovoru.
+        semantic_reply = semantic_info_answer(payload.message)
+        if semantic_reply:
+            semantic_reply = maybe_translate(semantic_reply, detected_lang)
+            return finalize(semantic_reply, "info_semantic_unified_terminal", followup_flag=False)
+        tourist_reply = answer_tourist_question(payload.message)
+        if tourist_reply:
+            tourist_reply = maybe_translate(tourist_reply, detected_lang)
+            return finalize(tourist_reply, "tourist_info_unified_terminal", followup_flag=False)
+
+        reply = "Trenutno nimam podatkov o tem."
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "unified_terminal_fallback", followup_flag=False)
+
     # Info ali produkt med aktivno rezervacijo: odgovor + nadaljevanje
     info_during = handle_info_during_booking(payload.message, state)
     if info_during:
@@ -2821,7 +2981,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_cancel", followup_flag=False)
         if payload.message.strip().lower() == "nadaljuj":
-            prompt = reservation_prompt_for_state(state)
+            prompt = reservation_prompt_for_state(state, room_intro_text, table_intro_text)
             reply = maybe_translate(prompt, detected_lang)
             return finalize(reply, "reservation_continue", followup_flag=False)
         if is_greeting(payload.message):
@@ -2889,8 +3049,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         or "so to" in wine_followup_message
         or "ta vina" in wine_followup_message
     )
+    wine_context_now = any(
+        tok in wine_followup_message
+        for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"]
+    )
     info_key_now = detect_info_intent(payload.message)
-    if info_key_now == "vina" or (last_wine_query and wine_followup_hint):
+    if info_key_now == "vina" or (last_wine_query and wine_followup_hint and wine_context_now):
         combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
         reply = answer_wine_question(combined)
         last_wine_query = combined

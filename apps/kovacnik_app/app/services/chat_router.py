@@ -2289,7 +2289,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reset_conversation_context(session_id)
     last_interaction = now
     unified_state = None
-    if USE_UNIFIED_ROUTER:
+    if USE_UNIFIED_ROUTER and not USE_ROUTER_V2:
         unified_state = get_unified_state(session_id)
         state = ensure_flow_data(unified_state, "reservation", _blank_reservation_state())
         inquiry_state = ensure_flow_data(unified_state, "inquiry", _blank_inquiry_state())
@@ -2414,8 +2414,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 or "so to" in lowered
                 or "ta vina" in lowered
             )
+            wine_context = any(tok in lowered for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"])
             info_key = detect_info_intent(payload.message)
-            if info_key == "vina" or (last_wine_query and wine_followup_hint):
+            if info_key == "vina" or (last_wine_query and wine_followup_hint and wine_context):
                 combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
                 wine_reply = answer_wine_question(combined)
                 last_wine_query = combined
@@ -2691,9 +2692,13 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         or "so to" in wine_followup_message
         or "ta vina" in wine_followup_message
     )
+    wine_context_now = any(
+        tok in wine_followup_message
+        for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"]
+    )
     info_key_now = detect_info_intent(payload.message)
     # Wine questions/followups have priority over generic info routing.
-    if info_key_now == "vina" or (last_wine_query and wine_followup_hint):
+    if info_key_now == "vina" or (last_wine_query and wine_followup_hint and wine_context_now):
         combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
         reply = answer_wine_question(combined)
         last_wine_query = combined
@@ -3049,6 +3054,53 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = random.choice(UNKNOWN_RESPONSES)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info_unknown", followup_flag=False)
+    if USE_UNIFIED_ROUTER:
+        # Hard gate: pri vklopljenem unified routerju tukaj ustavimo vse legacy poti spodaj.
+        # Če smo še v aktivnem flowu, vedno nadaljuj samo skozi reservation flow.
+        if state.get("step") is not None:
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_unified_terminal", followup_flag=False)
+
+        # V idle načinu daj prednost deterministicnim handlerjem.
+        info_key = detect_info_intent(payload.message)
+        if info_key:
+            if info_key == "vina":
+                reply = answer_wine_question(payload.message)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "wine_unified_terminal", followup_flag=False)
+            reply = get_info_response(info_key)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info_unified_terminal", followup_flag=False)
+
+        if is_menu_query(payload.message):
+            reply = format_current_menu(
+                month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
+                force_full=is_full_menu_request(payload.message),
+            )
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "menu_unified_terminal", followup_flag=False)
+
+        product_key = detect_product_intent(payload.message)
+        if product_key or is_product_query(payload.message):
+            reply = get_product_response(product_key) if product_key else answer_product_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_unified_terminal", followup_flag=False)
+
+        # Za info vprašanja brez aktivnega flowa daj prednost semantičnemu/turističnemu odgovoru.
+        semantic_reply = semantic_info_answer(payload.message)
+        if semantic_reply:
+            semantic_reply = maybe_translate(semantic_reply, detected_lang)
+            return finalize(semantic_reply, "info_semantic_unified_terminal", followup_flag=False)
+        tourist_reply = answer_tourist_question(payload.message)
+        if tourist_reply:
+            tourist_reply = maybe_translate(tourist_reply, detected_lang)
+            return finalize(tourist_reply, "tourist_info_unified_terminal", followup_flag=False)
+
+        reply = "Trenutno nimam podatkov o tem."
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "unified_terminal_fallback", followup_flag=False)
+
     # Info ali produkt med aktivno rezervacijo: odgovor + nadaljevanje
     info_during = handle_info_during_booking(payload.message, state)
     if info_during:
