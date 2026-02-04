@@ -2264,6 +2264,9 @@ def ensure_single_greeting(message: str, reply: str) -> str:
 def build_effective_query(message: str) -> str:
     global last_info_query
     normalized = message.strip().lower()
+    # Če ima trenutno sporočilo že jasen intent, ga ne lepimo na prejšnjo temo.
+    if detect_info_intent(message) or detect_product_intent(message):
+        return message
     short_follow = (
         len(normalized) < 12
         or normalized in INFO_FOLLOWUP_PHRASES

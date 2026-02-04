@@ -522,7 +522,10 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "vina"
     if any(w in text for w in ["vino", "vina", "vinsko", "vinska", "wine", "wein", "vinci"]):
         return "vina"
-    if any(w in text for w in ["smučišče", "smucisce", "smučišč", "smucisc", "smučanje", "smucanje", "ski"]):
+    if (
+        any(w in text for w in ["smučišče", "smucisce", "smučišč", "smucisc", "smučanje", "smucanje"])
+        or re.search(r"\bski\b", text)
+    ):
         return "smucisce"
     if any(w in text for w in ["terme", "termal", "spa", "wellness"]):
         return "terme"
@@ -559,7 +562,7 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "tedenski_5hodni"
     if re.search(r"(?<!\d)6\s*-?\s*hod", text):
         return "tedenski_6hodni"
-    if any(w in text for w in ["čez teden", "cez teden", "med tednom", "tedenska ponudba", "degustacijski", "degustacija", "4-hodni", "5-hodni", "6-hodni", "7-hodni", "koliko hodov"]):
+    if any(w in text for w in ["čez teden", "cez teden", "med tednom", "tedenska ponudba", "tedenski meni", "tedenski", "degustacijski", "degustacija", "4-hodni", "5-hodni", "6-hodni", "7-hodni", "koliko hodov"]):
         return "tedenska_ponudba"
     if ("vikend" in text or "ponudba" in text) and any(
         w in text for w in ["vikend", "ponudba", "kosilo", "meni", "menu", "jedil"]
