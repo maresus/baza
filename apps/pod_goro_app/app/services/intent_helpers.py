@@ -138,6 +138,14 @@ CENA po ODRASLI osebi: 36 EUR
 Otroci (4 - 12 let): - 50 %
 
 Prosimo, najavite morebitna odstopanja od klasicnega mesnega jedilnika (vegi, vegansko, brez glutena, mleka, jajc).""",
+    "tedenska_ponudba": """CEZ TEDEN (SREDA-PETEK)
+
+Na voljo so degustacijski meniji:
+- 4-hodni degustacijski meni
+- 5-hodni degustacijski meni
+- 6-hodni degustacijski meni
+
+Tedenski meniji so na predhodno rezervacijo in se prilagodijo sezoni.""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
     "gospodar": """Gospodar kmetije je Jure.""",
     "kmetija": """Kmetija Pod Goro je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
@@ -323,7 +331,7 @@ def get_info_response(key: str) -> str:
         variants = INFO_RESPONSES_VARIANTS[key]
         chosen = min(variants, key=len) if SHORT_MODE else random.choice(variants)
         # Keep rich formatting for long structured answers.
-        if key in {"jedilnik", "menu_info", "menu_full", "sobe", "sobe_info"}:
+        if key in {"jedilnik", "menu_info", "menu_full", "sobe", "sobe_info", "tedenska_ponudba"}:
             return chosen
         return maybe_shorten_response(_apply_policy(chosen))
     return maybe_shorten_response(_apply_policy(INFO_RESPONSES.get(key, "Kako vam lahko pomagam?")))
@@ -482,6 +490,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "skalca"
     if "darilni bon" in text or ("bon" in text and "daril" in text):
         return "darilni_boni"
+    if any(w in text for w in ["čez teden", "cez teden", "med tednom", "tedenska ponudba", "degustacijski", "degustacija", "4-hodni", "5-hodni", "6-hodni", "7-hodni", "koliko hodov"]):
+        return "tedenska_ponudba"
     if ("vikend" in text or "ponudba" in text) and any(
         w in text for w in ["vikend", "ponudba", "kosilo", "meni", "menu", "jedil"]
     ):
