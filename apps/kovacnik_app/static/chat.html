@@ -24,6 +24,13 @@
       box-sizing: border-box;
     }
 
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
     body {
       margin: 0;
       font-family: 'Work Sans', system-ui, -apple-system, sans-serif;
@@ -71,6 +78,7 @@
     .frame {
       background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
       border: 1px solid var(--line);
+      min-width: 0;
       border-radius: 28px;
       box-shadow: var(--shadow);
       padding: 20px 22px 18px;
@@ -128,6 +136,7 @@
       align-items: center;
       flex-wrap: wrap;
       justify-content: flex-end;
+      min-width: 0;
     }
 
     .presence {
@@ -150,6 +159,7 @@
       cursor: pointer;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
       box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      white-space: nowrap;
     }
 
     .btn:disabled {
@@ -318,6 +328,11 @@
     }
 
     @media (max-width: 640px) {
+      .top-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
       .topbar {
         flex-direction: column;
         align-items: flex-start;
