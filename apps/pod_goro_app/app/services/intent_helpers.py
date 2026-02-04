@@ -98,7 +98,46 @@ Email: **info@kmetijapodgoro.si**""",
     "kolesa": """Izposoja koles je možna po dogovoru. Za več informacij nas kontaktirajte.""",
     "skalca": """Slap Skalca je prijeten izlet v bližini – priporočamo sprehod ob potočku.""",
     "darilni_boni": """Na voljo imamo darilne bone. Sporočite znesek in pripravimo bon za vas.""",
-    "jedilnik": """Na vikend kosilih običajno pripravljamo domačo juho, mesno glavno jed s prilogo, sezonski namaz in sladico. Jedilnik se spreminja glede na sezono in razpoložljive domače sestavine.""",
+    "jedilnik": """MAREC, APRIL, MAJ
+
+Pohorska bunka in zorjen Freserjev sir
+Hisna suha salama
+Pastetka iz domacih jetrc
+Zaseka
+Bucni namaz
+Hisni kruhek
+
+***
+
+Goveja zupca z rezanci in jetrnimi rolicami
+Koprivna juhica s cemazem in sirne lizike
+
+***
+
+Meso servirano na plosci
+
+Socna pecenka iz domacega pujskovega hrbta
+Hrustljavi piscanec s kmetije Pesek
+Piscancje kroglice z zelisci
+Mlado goveje meso iz Kovacnikove proste reje in jabolka z rdecim vinom
+
+Priloge servirane loceno od mesa
+
+Stukelj s skuto nase krave Miske
+Ricota s pirino kaso, jurcki in zelenjava
+Prazen krompir iz sporheta na drva
+Mini pita s porom
+Ocvrte hruske "Debeluske" z zdrobom
+Pomladna solatka iz vrta gospodinje Barbare
+
+***
+
+Pohorska gibanica babice Angelce s skuto
+
+CENA po ODRASLI osebi: 36 EUR
+Otroci (4 - 12 let): - 50 %
+
+Prosimo, najavite morebitna odstopanja od klasicnega mesnega jedilnika (vegi, vegansko, brez glutena, mleka, jajc).""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
     "gospodar": """Gospodar kmetije je Jure.""",
     "kmetija": """Kmetija Pod Goro je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
@@ -283,6 +322,8 @@ def get_info_response(key: str) -> str:
     if key in INFO_RESPONSES_VARIANTS:
         variants = INFO_RESPONSES_VARIANTS[key]
         chosen = min(variants, key=len) if SHORT_MODE else random.choice(variants)
+        if key in {"jedilnik", "menu_info", "menu_full"}:
+            return _apply_policy(chosen)
         return maybe_shorten_response(_apply_policy(chosen))
     return maybe_shorten_response(_apply_policy(INFO_RESPONSES.get(key, "Kako vam lahko pomagam?")))
 
