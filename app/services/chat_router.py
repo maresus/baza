@@ -1741,6 +1741,11 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
     if decision.action == SwitchAction.SOFT_INTERRUPT and is_in_flow(session_id):
         step = appointment_state.get("step") or get_current_step(session_id)
 
+        # If flow expects date but service is missing, use detected service first.
+        if step == "date" and not appointment_state.get("service_type") and decision.service_type:
+            appointment_state["service_type"] = decision.service_type.lower()
+            return handle_appointment_booking(message, session_id)
+
         # If user is answering the expected booking step, do not interrupt.
         if step == "date" and extract_date_from_message(message):
             return None
@@ -1780,7 +1785,18 @@ def handle_unified_routing(message: str, session_id: str) -> str | None:
             else:
                 answer = _get_info_response("cene")
         elif decision.primary_intent == IntentType.SERVICE_INFO:
-            answer = _get_info_response("storitve")
+            service_hint = decision.service_type or appointment_state.get("service_type") or suggested_service
+            if service_hint:
+                service_info = get_service_info(str(service_hint).lower())
+                if service_info:
+                    answer = (
+                        f"Za to je najprimernejši **{service_info['name']}** "
+                        f"({service_info['duration_minutes']} min, {service_info['price_range']})."
+                    )
+                else:
+                    answer = _get_info_response("storitve")
+            else:
+                answer = _get_info_response("storitve")
         else:
             answer = None
 
