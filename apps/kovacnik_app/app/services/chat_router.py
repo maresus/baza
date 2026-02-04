@@ -2307,7 +2307,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         final_reply = reply_text
         # Apply strict policy for info/product responses (no offers, no questions, short)
         if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]):
-            final_reply = _sanitize_policy_response(final_reply)
+            # Pozdrava ne saniramo, sicer lahko pade na napačen fallback.
+            if "pozdrav" not in intent_value and "greeting" not in intent_value:
+                final_reply = _sanitize_policy_response(final_reply)
         flag = followup_flag or needs_followup or is_unknown_response(final_reply)
         if flag:
             final_reply = get_unknown_response(detected_lang)
@@ -2326,6 +2328,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         return ChatResponse(reply=final_reply)
 
     def _sanitize_policy_response(text: str) -> str:
+        def _finish(sentence_text: str) -> str:
+            trimmed = sentence_text.strip()
+            if not trimmed:
+                return "Kako vam lahko pomagam."
+            if trimmed[-1] in ".!?":
+                return trimmed
+            return trimmed + "."
+
         # Remove shop/catalog lines and unsolicited prompts/questions
         lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
         filtered_lines = []
@@ -2333,20 +2343,27 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             low = ln.lower()
             if low.startswith("trgovina:"):
                 continue
-            if any(tok in low for tok in ["ali želite", "želite", "vam lahko", "če želite", "vas zanima", "če potrebujete", "kar povejte", "povejte,"]):
+            if any(tok in low for tok in ["ali želite", "če želite", "vas zanima", "če potrebujete", "kar povejte", "povejte,"]):
                 continue
             if ln.endswith("?"):
                 continue
             filtered_lines.append(ln)
         if not filtered_lines:
-            return "Trenutno nimam podatkov o tem."
+            merged_orig = " ".join(lines).strip()
+            if not merged_orig:
+                return "Kako vam lahko pomagam."
+            parts_orig = [p.strip() for p in re.split(r"(?<=[.!?])\s+", merged_orig) if p.strip()]
+            parts_orig = [p for p in parts_orig if not p.endswith("?")]
+            if not parts_orig:
+                return _finish(merged_orig)
+            return _finish(" ".join(parts_orig[:4]))
         merged = " ".join(filtered_lines)
         # Limit to 4 sentences
         parts = re.split(r"(?<=[.!?])\s+", merged)
         parts = [p.strip() for p in parts if p.strip() and not p.strip().endswith("?")]
         if len(parts) > 4:
             parts = parts[:4]
-        return " ".join(parts).rstrip(".") + "."
+        return _finish(" ".join(parts))
 
     if is_switch_topic_command(payload.message):
         reset_reservation_state(state)
@@ -2355,6 +2372,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = "Seveda — zamenjamo temo. Kako vam lahko pomagam?"
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "switch_topic", followup_flag=False)
+
+    # Pozdrav obravnavaj takoj, preden info policy začne rezati vprašalne dele.
+    if is_greeting(payload.message):
+        reply = get_greeting_response()
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "greeting", followup_flag=False)
 
     # Strict policy: route special-event inquiries directly to email
     if STRICT_POLICY:
@@ -2399,6 +2422,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 wine_reply = maybe_translate(wine_reply, detected_lang)
                 return finalize(wine_reply, "wine_strict", followup_flag=False)
             if info_key:
+                if info_key == "pozdrav":
+                    greeting_reply = get_greeting_response()
+                    greeting_reply = maybe_translate(greeting_reply, detected_lang)
+                    return finalize(greeting_reply, "greeting_strict", followup_flag=False)
                 info_reply = get_info_response(info_key)
                 info_reply = maybe_translate(info_reply, detected_lang)
                 return finalize(info_reply, "info_strict", followup_flag=False)

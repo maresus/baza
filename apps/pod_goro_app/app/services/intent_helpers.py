@@ -447,6 +447,8 @@ def _product_link_from_url(url: str, title: str | None) -> str:
 
 def detect_info_intent(message: str) -> Optional[str]:
     text = message.lower().strip()
+    if text in {"zdravo", "živjo", "hej", "hello", "dober dan", "pozdrav", "pozdravljeni"}:
+        return "pozdrav"
     if any(w in text for w in ["kdaj ste odprti", "odpiralni", "delovni čas", "kdaj odprete", "zadnji prihod"]):
         return "odpiralni_cas"
     if "zajtrk" in text and "večerj" not in text:
