@@ -89,7 +89,10 @@ Zajtrk je vključen v ceno! 🥐""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
-    "zivali": """Hvala za vprašanje. Hišni ljubljenčki na naši domačiji niso dovoljeni. Na kmetiji pa lahko vidite naše domače živali ob ogledu.""",
+    "zivali": """Ob 40‑glavi goveji čredi imamo na kmetiji še svinje, račke in kokoši.
+
+Najmlajši uživajo ob naših živalih: konjička Malajko in Marsi, pujska Pepa ter ovna Čarlija. Imamo tudi psičko Luno in mucke.""",
+    "pets_policy": """Hišni ljubljenčki na naši domačiji niso dovoljeni.""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": f"""Kontakt: **{FARM_INFO['phone']}** / **{FARM_INFO['mobile']}**
 Email: **{FARM_INFO['email']}**""",
@@ -510,8 +513,10 @@ def detect_info_intent(message: str) -> Optional[str]:
     if any(w in text for w in ["parkir", "parking"]):
         return "parking"
     if re.search(r"(?<!\w)(pes|psa|psi|psov|kuž|kuz|dog)(?!\w)", text) or any(
-        w in text for w in ["mačk", "žival", "ljubljenč", "konj", "poni"]
+        w in text for w in ["mačk", "ljubljenč", "hišni ljubljen"]
     ):
+        return "pets_policy"
+    if any(w in text for w in ["žival", "konj", "poni"]):
         return "zivali"
     if any(w in text for w in ["gospodar", "gosp", "lastnik", "kdo vodi", "vodi kmetijo", "vodi domačijo"]):
         return "gospodar"

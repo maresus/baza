@@ -89,7 +89,8 @@ Zajtrk je vključen v ceno! 🥐""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
-    "zivali": """Hvala za vprašanje. Hišni ljubljenčki na naši kmetiji niso dovoljeni. Na posestvu pa lahko vidite naše domače živali ob ogledu.""",
+    "zivali": """Na kmetiji imamo domače živali, ki jih lahko ob obisku tudi vidite.""",
+    "pets_policy": """Hišni ljubljenčki na naši domačiji niso dovoljeni.""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": f"""Kontakt: **{FARM_INFO['phone']}** / **{FARM_INFO['mobile']}**
 Email: **{FARM_INFO['email']}**""",
@@ -502,7 +503,9 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "prijava_odjava"
     if "parkir" in text or "parking" in text:
         return "parking"
-    if re.search(r"\b(pes|psa|psi|psov|mačk|mack|žival|ljubljenč|kuž|kuz|dog|konj|poni)\b", text):
+    if re.search(r"\b(pes|psa|psi|psov|kuž|kuz|dog|mačk|mack|ljubljenč|hišni ljubljen)\b", text):
+        return "pets_policy"
+    if re.search(r"\b(žival|konj|poni)\b", text):
         return "zivali"
     if any(w in text for w in ["gospodar", "gosp", "lastnik", "kdo vodi", "vodi kmetijo", "vodi domačijo"]):
         return "gospodar"
