@@ -25,6 +25,7 @@ INFO_RESPONSES = {
     "pozdrav": f"""Pozdravljeni pri {BRAND_NAME}! 😊
 
 Lahko pomagam z vprašanji o sobah, kosilih, izletih ali domačih izdelkih.""",
+    "smalltalk": "Hvala, dobro.",
     "kdo_si": f"""Sem vaš digitalni pomočnik {BRAND_NAME}.
 
 Z veseljem odgovorim na vprašanja o nastanitvi, kosilih, izletih ali izdelkih.""",
@@ -456,6 +457,8 @@ def detect_info_intent(message: str) -> Optional[str]:
     text = message.lower().strip()
     if text in {"zdravo", "živjo", "hej", "hello", "dober dan", "pozdrav", "pozdravljeni"}:
         return "pozdrav"
+    if any(w in text for w in ["kako ste", "kako si", "kako gre", "kako vam gre", "kako vam grejo stvari"]):
+        return "smalltalk"
     if any(
         w in text
         for w in [
@@ -519,6 +522,9 @@ def detect_info_intent(message: str) -> Optional[str]:
             "kje ste doma",
             "kje ste locirani",
             "kako pridem",
+            "kako pridem do vas",
+            "kako pridem do domačije",
+            "kako pridem do kmetije",
             "navodila za pot",
         ]
     ):
