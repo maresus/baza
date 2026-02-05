@@ -1,3 +1,5 @@
+import os
+
 from shared_core.app.brand.schema import BrandConfig
 
 FARM_INFO = {
@@ -37,6 +39,36 @@ FARM_INFO = {
         "Degustacija domačih izdelkov",
     ],
 }
+
+# =============================================================================
+# BRAND KONSTANTE (za uporabo v logiki)
+# =============================================================================
+
+BRAND_NAME = FARM_INFO["name"]
+BRAND_SHORT = "Kmetija Pod Goro"
+
+SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kmetijapodgoro.si").rstrip("/")
+SHOP_URL = os.getenv("SHOP_URL", f"{SHOP_BASE_URL}/katalog")
+INFO_EMAIL = os.getenv("INFO_EMAIL", FARM_INFO["email"])
+
+EXAMPLE_NAME = "Nika Kmetija Pod Goro"
+
+FAMILY = {
+    "owner": "Jure",
+    "grandmother": "Meta",
+    "members": ["Jure", "Meta"],
+    "partner": None,
+    "horses": ["Marsij"],
+    "cow": "Miška",
+}
+
+ROOMS = {
+    "POD_VRHOM": {"name": "Soba POD VRHOM", "capacity": "2+2"},
+    "PRI_POTOKU": {"name": "Soba PRI POTOKU", "capacity": "2+2"},
+    "PRI_SADOVNJAKU": {"name": "Soba PRI SADOVNJAKU", "capacity": "2+2"},
+}
+ROOM_NAMES = list(ROOMS.keys())
+ROOM_DISPLAY_NAMES = [room["name"].replace("Soba ", "") for room in ROOMS.values()]
 
 GREETINGS = [
     "Pozdravljeni! Kako vam lahko pomagam?",

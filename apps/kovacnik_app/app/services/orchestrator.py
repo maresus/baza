@@ -9,6 +9,7 @@ from app.services.intent_helpers import (
     is_inquiry_trigger,
     is_reservation_related,
 )
+from app.brand.config import BRAND_NAME, SHOP_URL
 
 
 def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> str:
@@ -66,7 +67,7 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         ctx["last_info_query"] = None
         ctx["last_menu_query"] = False
         reply = get_product_response(product_key)
-        return f"{reply}\n\nIzdelke Domačije Kovačnik najdete tukaj: {SHOP_URL}"
+        return f"{reply}\n\nIzdelke {BRAND_NAME} najdete tukaj: {SHOP_URL}"
 
     # Pravilo 5: info intent
     info_key = detect_info_intent(message)

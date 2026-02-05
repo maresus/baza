@@ -15,6 +15,9 @@ from app.services.parsing import (
     parse_kids_response,
     parse_people_count,
 )
+from app.brand.config import EXAMPLE_NAME, ROOM_DISPLAY_NAMES
+
+ROOMS_INLINE = ", ".join(ROOM_DISPLAY_NAMES)
 
 
 def _blank_reservation_state_fallback() -> dict[str, Optional[str | int]]:
@@ -55,7 +58,7 @@ def get_booking_continuation(step: str, state: dict) -> str:
         "awaiting_kids": "Koliko je **otrok** in koliko so stari?",
         "awaiting_kids_info": "Koliko je **otrok** in koliko so stari?",
         "awaiting_kids_ages": "Koliko so stari **otroci**?",
-        "awaiting_room_location": "Katero **sobo** želite? (POD VRHOM, PRI POTOKU, PRI SADOVNJAKU)",
+        "awaiting_room_location": f"Katero **sobo** želite? ({ROOMS_INLINE})",
         "awaiting_name": "Vaše **ime in priimek**?",
         "awaiting_phone": "Vaša **telefonska številka**?",
         "awaiting_email": "Vaš **e-mail**?",
@@ -97,7 +100,7 @@ def reservation_prompt_for_state(
         if step == "awaiting_people":
             return "Za koliko oseb bi bilo bivanje (odrasli + otroci)?"
         if step == "awaiting_room_location":
-            return "Katero sobo želite (POD VRHOM, PRI POTOKU, PRI SADOVNJAKU)?"
+            return f"Katero sobo želite ({ROOMS_INLINE})?"
     return (
         f"Sobe: {room_intro_text()}\n"
         f"Mize: {table_intro_text()}"
@@ -379,7 +382,7 @@ def _handle_room_reservation_impl(
     if step == "awaiting_name":
         full_name = message.strip()
         if len(full_name.split()) < 2:
-            return "Prosim napišite ime in priimek (npr. 'Nika Kmetija Pod Goro')."
+            return f"Prosim napišite ime in priimek (npr. '{EXAMPLE_NAME}')."
         set_state_field(reservation_state, "name", full_name)
         set_state_field(reservation_state, "step", "awaiting_phone")
         return "Hvala! Zdaj prosim še telefonsko številko."
@@ -766,7 +769,7 @@ def _handle_table_reservation_impl(
     if step == "awaiting_name":
         full_name = message.strip()
         if len(full_name.split()) < 2:
-            return "Prosim napišite ime in priimek (npr. 'Nika Kmetija Pod Goro')."
+            return f"Prosim napišite ime in priimek (npr. '{EXAMPLE_NAME}')."
         set_state_field(reservation_state, "name", full_name)
         set_state_field(reservation_state, "step", "awaiting_phone")
         return "Hvala! Zdaj prosim še telefonsko številko."

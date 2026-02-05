@@ -6,19 +6,26 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from app.brand.config import (
+    BRAND_NAME,
+    BRAND_SHORT,
+    FARM_INFO,
+    INFO_EMAIL,
+    SHOP_BASE_URL,
+    SHOP_URL,
+)
+
 from app.services.product_service import find_products
 
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
 STRICT_POLICY = os.getenv("STRICT_POLICY", "true").strip().lower() in {"1", "true", "yes", "on"}
-SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kovacnik.com").rstrip("/")
-INFO_EMAIL = os.getenv("INFO_EMAIL", "info@kovacnik.com")
 DISABLE_INQUIRY = os.getenv("DISABLE_INQUIRY", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 INFO_RESPONSES = {
-    "pozdrav": """Pozdravljeni pri Domačiji Kovačnik! 😊
+    "pozdrav": f"""Pozdravljeni pri {BRAND_NAME}! 😊
 
 Lahko pomagam z vprašanji o sobah, kosilih, izletih ali domačih izdelkih.""",
-    "kdo_si": """Sem vaš digitalni pomočnik Domačije Kovačnik.
+    "kdo_si": f"""Sem vaš digitalni pomočnik {BRAND_NAME}.
 
 Z veseljem odgovorim na vprašanja o nastanitvi, kosilih, izletih ali izdelkih.""",
     "odpiralni_cas": """Odprti smo ob **sobotah in nedeljah med 12:00 in 20:00**.
@@ -83,9 +90,9 @@ Zajtrk je vključen v ceno! 🥐""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
     "zivali": """Hvala za vprašanje. Hišni ljubljenčki na naši domačiji niso dovoljeni. Na kmetiji pa lahko vidite naše domače živali ob ogledu.""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
-    "kontakt": """Kontakt: **02 601 54 00** / **031 330 113**
-Email: **info@kovacnik.com**""",
-    "lokacija": """Nahajamo se na: **Planica 9, 2313 Fram** (Pohorska stran nad Framom). 
+    "kontakt": f"""Kontakt: **{FARM_INFO['phone']}** / **{FARM_INFO['mobile']}**
+Email: **{FARM_INFO['email']}**""",
+    "lokacija": f"""Nahajamo se na: **{FARM_INFO['address']}** ({FARM_INFO['location_description']}). 
 Parking je brezplačen pri domačiji.""",
     "min_nocitve": """Minimalno bivanje je:
 - **3 nočitve** v juniju, juliju in avgustu

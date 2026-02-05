@@ -65,6 +65,17 @@ from app.services.intent_helpers import (
     is_reservation_typo,
     is_strong_inquiry_request,
 )
+from app.brand.config import (
+    BRAND_NAME,
+    BRAND_SHORT,
+    FARM_INFO,
+    GREETINGS as BRAND_GREETINGS,
+    INFO_EMAIL,
+    SHOP_BASE_URL,
+    SHOP_URL,
+    THANKS_RESPONSES as BRAND_THANKS,
+    UNKNOWN_RESPONSES as BRAND_UNKNOWN,
+)
 from app.services.availability_flow import (
     get_availability_state,
     handle_availability_followup,
@@ -171,7 +182,7 @@ except Exception as exc:
 
 def _llm_system_prompt_full_kb(language: str = "si") -> str:
     common = (
-        "Ti si asistent Domačije Kovačnik. Upoštevaj te potrjene podatke kot glavne:\n"
+        f"Ti si asistent Domačije {BRAND_SHORT}. Upoštevaj te potrjene podatke kot glavne:\n"
         "- Gospodar kmetije: Danilo\n"
         "- Družina: Babica Angelca, Danilo, Barbara, Aljaž (partnerka Kaja), Julija, Ana\n"
         "- Konjička: Malajka in Marsij\n\n"
@@ -200,12 +211,12 @@ def _llm_system_prompt_full_kb(language: str = "si") -> str:
     )
     if language == "en":
         return (
-            "You are the assistant for Domačija Kovačnik. Respond in English.\n"
+            f"You are the assistant for {BRAND_NAME}. Respond in English.\n"
             + common
         )
     if language == "de":
         return (
-            "Du bist der Assistent für Domačija Kovačnik. Antworte auf Deutsch.\n"
+            f"Du bist der Assistent für {BRAND_NAME}. Antworte auf Deutsch.\n"
             + common
         )
     return (
@@ -475,70 +486,14 @@ GOODBYE_KEYWORDS = {
     "vse dobro",
     "lahko noč",
 }
-GREETINGS = [
-    "Pozdravljeni! 😊 Kako vam lahko pomagam?",
-    "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
-    "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    "Pozdravljeni pri Kovačniku! 🏔️ Kaj vas zanima?",
-]
-THANKS_RESPONSES = [
-    "Ni za kaj! Če boste imeli še kakšno vprašanje, sem tu. 😊",
-    "Z veseljem! Lep pozdrav s Pohorja! 🏔️",
-    "Ni problema! Vesela sem, če sem vam lahko pomagala.",
-    "Hvala vam! Se vidimo pri nas! 😊",
-]
-UNKNOWN_RESPONSES = [
-    "Tega žal ne vem.",
-    "Za to nimam podatka.",
-    "Nimam informacije o tem.",
-]
+GREETINGS = BRAND_GREETINGS
+THANKS_RESPONSES = BRAND_THANKS
+UNKNOWN_RESPONSES = BRAND_UNKNOWN
 
 reservation_service = ReservationService()
 
 # Spletna trgovina (policy)
 STRICT_POLICY = os.getenv("STRICT_POLICY", "true").strip().lower() in {"1", "true", "yes", "on"}
-SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kovacnik.com").rstrip("/")
-SHOP_URL = os.getenv("SHOP_URL", f"{SHOP_BASE_URL}/katalog")
-INFO_EMAIL = os.getenv("INFO_EMAIL", "info@kovacnik.com")
-
-# Osnovni podatki o kmetiji
-FARM_INFO = {
-    "name": "Turistična kmetija Kovačnik",
-    "address": "Planica 9, 2313 Fram",
-    "phone": "02 601 54 00",
-    "mobile": "031 330 113",
-    "email": "info@kovacnik.com",
-    "website": "www.kovacnik.com",
-    "location_description": "Na pohorski strani, nad Framom, približno 15 min iz doline",
-    "parking": "Brezplačen parking ob hiši za 10+ avtomobilov",
-    "directions": {
-        "from_maribor": (
-            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Ane, "
-            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Kovačnik) "
-            "in nadaljujete še približno 10 minut. Od cerkve v Framu do kmetije je slabih 15 minut."
-        ),
-        "coordinates": "46.5234, 15.6123",
-    },
-    "opening_hours": {
-        "restaurant": "Sobota in nedelja 12:00-20:00 (zadnji prihod na kosilo 15:00)",
-        "rooms": "Sobe: prijava 14:00, odjava 10:00 (pon/torki kuhinja zaprta)",
-        "shop": "Po dogovoru ali spletna trgovina 24/7",
-        "closed": "Ponedeljek in torek (kuhinja zaprta, večerje za nočitvene goste po dogovoru)",
-    },
-    "facilities": [
-        "Brezplačen WiFi",
-        "Klimatizirane sobe",
-        "Brezplačen parking",
-        "Vrt s pogledom na Pohorje",
-        "Otroško igrišče",
-    ],
-    "activities": [
-        "Sprehodi po Pohorju",
-        "Kolesarjenje (izposoja koles možna)",
-        "Ogled kmetije in živali",
-        "Degustacija domačih izdelkov",
-    ],
-}
 
 LOCATION_KEYWORDS = {
     "kje",
@@ -2045,7 +2000,7 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
         )
         send_custom_message(
             INQUIRY_RECIPIENT,
-            "Novo povpraševanje – Kovačnik",
+            f"Novo povpraševanje – {BRAND_SHORT}",
             summary,
         )
         reset_inquiry_state(state)
@@ -2080,7 +2035,7 @@ def reset_conversation_context(session_id: Optional[str] = None) -> None:
 
 
 def generate_confirmation_email(state: dict[str, Optional[str | int]]) -> str:
-    subject = "Zadeva: Rezervacija – Domačija Kovačnik"
+    subject = f"Zadeva: Rezervacija – {BRAND_NAME}"
     name = state.get("name") or "spoštovani"
     lines = [f"Pozdravljeni {name}!"]
 

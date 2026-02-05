@@ -1,6 +1,9 @@
 import random
 import re
 
+from app.brand.config import GREETINGS as BRAND_GREETINGS
+from app.brand.config import THANKS_RESPONSES as BRAND_THANKS
+
 GREETING_KEYWORDS = {"živjo", "zdravo", "hej", "hello", "dober dan", "pozdravljeni"}
 GOODBYE_KEYWORDS = {
     "hvala",
@@ -21,18 +24,8 @@ GOODBYE_KEYWORDS = {
     "vse dobro",
     "lahko noč",
 }
-GREETINGS = [
-    "Pozdravljeni! 😊 Kako vam lahko pomagam?",
-    "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
-    "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    "Pozdravljeni pri Kmetiji Pod Goro! 🏔️ Kaj vas zanima?",
-]
-THANKS_RESPONSES = [
-    "Ni za kaj! Če boste imeli še kakšno vprašanje, sem tu. 😊",
-    "Z veseljem! Lep pozdrav s Pohorja! 🏔️",
-    "Ni problema! Vesela sem, če sem vam lahko pomagala.",
-    "Hvala vam! Se vidimo pri nas! 😊",
-]
+GREETINGS = BRAND_GREETINGS
+THANKS_RESPONSES = BRAND_THANKS
 
 
 def is_greeting(message: str) -> bool:

@@ -1,33 +1,35 @@
 import random
 from typing import Optional
 
+from app.brand.config import INFO_EMAIL, SHOP_URL
+
 
 PRODUCT_RESPONSES = {
     "pesto": [
-        "Imamo **čemažev pesto** v 212 ml kozarčku (5,50 €). Najdete ga v spletni trgovini: https://kovacnik.com/katalog.",
-        "Čemažev pesto je na voljo (212 ml, 5,50 €). Naročilo: https://kovacnik.com/katalog.",
+        f"Imamo **čemažev pesto** v 212 ml kozarčku (5,50 €). Najdete ga v spletni trgovini: {SHOP_URL}.",
+        f"Čemažev pesto je na voljo (212 ml, 5,50 €). Naročilo: {SHOP_URL}.",
     ],
     "marmelada": [
-        "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kovacnik.com/katalog (sekcija Marmelade).",
-        "Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: https://kovacnik.com/katalog.",
+        f"Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: {SHOP_URL} (sekcija Marmelade).",
+        f"Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: {SHOP_URL}.",
     ],
     "liker": [
-        "Imamo **domače likerje**: borovničev, žajbljev, aronija, smrekovi vršički (3 cl/5 cl) in za domov 350 ml (13–15 €), tepkovec 15 €.\n\nKupite ob obisku ali naročite: https://kovacnik.com/katalog (sekcija Likerji in žganje).",
-        "Naši **domači likerji** (žajbelj, smrekovi vršički, aronija, borovničevec) in žganja (tepkovec, tavžentroža). Cene za 350 ml od 13 €.\n\nNa voljo v spletni trgovini: https://kovacnik.com/katalog ali ob obisku.",
+        f"Imamo **domače likerje**: borovničev, žajbljev, aronija, smrekovi vršički (3 cl/5 cl) in za domov 350 ml (13–15 €), tepkovec 15 €.\n\nKupite ob obisku ali naročite: {SHOP_URL} (sekcija Likerji in žganje).",
+        f"Naši **domači likerji** (žajbelj, smrekovi vršički, aronija, borovničevec) in žganja (tepkovec, tavžentroža). Cene za 350 ml od 13 €.\n\nNa voljo v spletni trgovini: {SHOP_URL} ali ob obisku.",
     ],
     "bunka": [
-        "Imamo **pohorsko bunko** (18–21 €) ter druge mesnine.\n\nNa voljo ob obisku ali v spletni trgovini: https://kovacnik.com/katalog (sekcija Mesnine).",
-        "Pohorska bunka je na voljo (18–21 €), skupaj s suho klobaso in salamo.\n\nNaročilo: https://kovacnik.com/katalog.",
+        f"Imamo **pohorsko bunko** (18–21 €) ter druge mesnine.\n\nNa voljo ob obisku ali v spletni trgovini: {SHOP_URL} (sekcija Mesnine).",
+        f"Pohorska bunka je na voljo (18–21 €), skupaj s suho klobaso in salamo.\n\nNaročilo: {SHOP_URL}.",
     ],
     "izdelki_splosno": [
-        "Prodajamo **domače izdelke** (marmelade, likerji/žganja, mesnine, čaji, sirupi, paketi) ob obisku ali v spletni trgovini: https://kovacnik.com/katalog.",
-        "Na voljo so **marmelade, likerji/žganja, mesnine, čaji, sirupi, darilni paketi**. Naročite na spletu (https://kovacnik.com/katalog) ali kupite ob obisku.",
+        f"Prodajamo **domače izdelke** (marmelade, likerji/žganja, mesnine, čaji, sirupi, paketi) ob obisku ali v spletni trgovini: {SHOP_URL}.",
+        f"Na voljo so **marmelade, likerji/žganja, mesnine, čaji, sirupi, darilni paketi**. Naročite na spletu ({SHOP_URL}) ali kupite ob obisku.",
     ],
     "gibanica_narocilo": """Za naročilo gibanice za domov:
 - Pohorska gibanica s skuto: 40 € za 10 kosov
 - Pohorska gibanica z orehi: 45 € za 10 kosov
 
-Napišite, koliko kosov in za kateri datum želite prevzem. Ob večjih količinah (npr. 40 kosov) potrebujemo predhodni dogovor. Naročilo: info@kovacnik.com""",
+Napišite, koliko kosov in za kateri datum želite prevzem. Ob večjih količinah (npr. 40 kosov) potrebujemo predhodni dogovor. Naročilo: {INFO_EMAIL}""",
 }
 
 PRODUCT_STEMS = {
