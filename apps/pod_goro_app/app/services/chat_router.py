@@ -2840,7 +2840,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = random.choice(UNKNOWN_RESPONSES)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "info_unknown", followup_flag=False)
-    if USE_UNIFIED_ROUTER and not USE_ROUTER_V2:
+    if USE_UNIFIED_ROUTER:
         # Hard gate: pri vklopljenem unified routerju tukaj ustavimo vse legacy poti spodaj.
         # Če smo še v aktivnem flowu, vedno nadaljuj samo skozi reservation flow.
         if state.get("step") is not None:

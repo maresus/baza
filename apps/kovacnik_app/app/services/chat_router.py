@@ -2245,7 +2245,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reset_conversation_context(session_id)
     last_interaction = now
     unified_state = None
-    if USE_UNIFIED_ROUTER and not USE_ROUTER_V2:
+    if USE_UNIFIED_ROUTER:
         unified_state = get_unified_state(session_id)
         state = ensure_flow_data(unified_state, "reservation", _blank_reservation_state())
         inquiry_state = ensure_flow_data(unified_state, "inquiry", _blank_inquiry_state())
