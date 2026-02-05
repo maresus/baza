@@ -465,6 +465,7 @@ def _product_link_from_url(url: str, title: str | None) -> str:
 
 def detect_info_intent(message: str) -> Optional[str]:
     text = message.lower().strip()
+    text = text.replace("‑", "-").replace("–", "-").replace("—", "-")
     if text in {"zdravo", "živjo", "hej", "hello", "dober dan", "pozdrav", "pozdravljeni"}:
         return "pozdrav"
     if any(w in text for w in ["kako ste", "kako si", "kako gre", "kako vam gre", "kako vam grejo stvari"]):
