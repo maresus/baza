@@ -527,6 +527,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "kontakt"
     if any(w in text for w in ["email", "e-mail", "epošta", "e-pošta", "mail"]):
         return "kontakt"
+    if re.search(r"kako\\s+.*pridem", text):
+        return "lokacija"
     if any(
         w in text
         for w in [
