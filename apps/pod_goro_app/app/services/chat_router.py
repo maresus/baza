@@ -2362,7 +2362,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     answer = get_product_response(product_key) if product_key else answer_product_question(payload.message)
                     last_product_query = payload.message
                 else:
-                    answer = semantic_info_answer(payload.message) or answer_tourist_question(payload.message) or "Trenutno nimam podatkov o tem."
+                    answer = "Trenutno nimam podatkov o tem."
 
                 cont = reservation_prompt_for_state(state, room_intro_text, table_intro_text)
                 reply = f"{answer}\n\n---\n\n{cont}"
@@ -2422,15 +2422,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             last_product_query = payload.message
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_unified", followup_flag=False)
-
-        semantic_reply = semantic_info_answer(payload.message)
-        if semantic_reply:
-            semantic_reply = maybe_translate(semantic_reply, detected_lang)
-            return finalize(semantic_reply, "info_semantic_unified", followup_flag=False)
-        tourist_reply = answer_tourist_question(payload.message)
-        if tourist_reply:
-            tourist_reply = maybe_translate(tourist_reply, detected_lang)
-            return finalize(tourist_reply, "tourist_unified", followup_flag=False)
 
         reply = "Trenutno nimam podatkov o tem."
         reply = maybe_translate(reply, detected_lang)
@@ -2870,16 +2861,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = get_product_response(product_key) if product_key else answer_product_question(payload.message)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_unified_terminal", followup_flag=False)
-
-        # Za info vprašanja brez aktivnega flowa daj prednost semantičnemu/turističnemu odgovoru.
-        semantic_reply = semantic_info_answer(payload.message)
-        if semantic_reply:
-            semantic_reply = maybe_translate(semantic_reply, detected_lang)
-            return finalize(semantic_reply, "info_semantic_unified_terminal", followup_flag=False)
-        tourist_reply = answer_tourist_question(payload.message)
-        if tourist_reply:
-            tourist_reply = maybe_translate(tourist_reply, detected_lang)
-            return finalize(tourist_reply, "tourist_info_unified_terminal", followup_flag=False)
 
         reply = "Trenutno nimam podatkov o tem."
         reply = maybe_translate(reply, detected_lang)
