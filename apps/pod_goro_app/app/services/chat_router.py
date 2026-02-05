@@ -1922,11 +1922,9 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
 
     if step == "awaiting_details":
         if text:
-            set_state_field(state, "details", (state.get("details") or ""))
-            if state["details"]:
-                state["details"] += "\n" + text
-            else:
-                set_state_field(state, "details", text)
+            current_details = state.get("details") or ""
+            new_details = f"{current_details}\n{text}" if current_details else text
+            set_state_field(state, "details", new_details)
         set_state_field(state, "step", "awaiting_deadline")
         return "Hvala! Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
 
