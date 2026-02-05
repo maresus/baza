@@ -194,6 +194,199 @@ WEEKLY_EXPERIENCES = [
     },
 ]
 
+INFO_RESPONSES = {
+    "pozdrav": f"""Pozdravljeni pri {BRAND_NAME}! 😊
+
+Lahko pomagam z vprašanji o sobah, kosilih, izletih ali domačih izdelkih.""",
+    "smalltalk": "Hvala, dobro.",
+    "kdo_si": f"""Sem vaš digitalni pomočnik {BRAND_NAME}.
+
+Z veseljem odgovorim na vprašanja o nastanitvi, kosilih, izletih ali izdelkih.""",
+    "odpiralni_cas": """Odprti smo ob **sobotah in nedeljah med 12:00 in 20:00**.
+
+Zadnji prihod na kosilo je ob **15:00**.
+Ob ponedeljkih in torkih smo zaprti.
+
+Za skupine (15+ oseb) pripravljamo tudi med tednom od srede do petka – pokličite nas! 📞""",
+    "zajtrk": """Zajtrk servíramo med **8:00 in 9:00** in je **vključen v ceno nočitve**.
+
+Kaj vas čaka? 🥐
+- Sveže pomolzeno mleko
+- Zeliščni čaj babice Ivanke
+- Kruh iz krušne peči
+- Pohorska bunka, salama, pašteta
+- Domača marmelada in med od čebelarja Pislak
+- Skuta, maslo, sir iz kravjega mleka
+- Jajca z domače reje
+- Kislo mleko, jogurt z malinami po receptu gospodinje Maje
+
+Vse domače, vse sveže! ☕""",
+    "vecerja": """Večerja se streže ob **18:00** in stane **25 €/osebo**.
+
+Kaj dobite?
+- **Juha** – česnova, bučna, gobova, goveja, čemaževa ali topinambur
+- **Glavna jed** – meso s prilogami (skutni štruklji, narastki, krompir)
+- **Sladica** – specialiteta hiše: pohorska gibanica babice Ivanke
+
+Prilagodimo za vegetarijance, vegane in celiakijo! 🌿
+
+⚠️ **Ob ponedeljkih in torkih večerje ne strežemo** – takrat priporočamo bližnji gostilni Zeleno Poljeski hram ali Karla.""",
+    "sobe": """Imamo **3 sobe**, vse poimenovane po naših otrocih:
+
+🛏️ **POD VRHOM** – soba z balkonom (2+2)
+🛏️ **PRI POTOKU** – družinska soba z balkonom (2 odrasla + 2 otroka)  
+🛏️ **PRI SADOVNJAKU** – družinska soba z dvema spalnicama (2+2)
+
+Vsaka soba ima:
+✅ Predprostor, spalnico, kopalnico s tušem
+✅ Pohištvo iz lastnega lesa
+✅ Klimatizacijo
+✅ Brezplačen Wi-Fi
+✅ Satelitsko TV
+✅ Igrače za otroke
+
+Zajtrk je vključen v ceno! 🥐""",
+    "cena_sobe": """**Cenik nastanitve:**
+
+🛏️ **Nočitev z zajtrkom:** 50 €/osebo/noč (min. 2 noči)
+🍽️ **Večerja:** 25 €/osebo
+🏷️ **Turistična taksa:** 1,50 €
+
+**Popusti:**
+- Otroci do 5 let: **brezplačno** (z zajtrkom in večerjo)
+- Otroci 5-12 let: **50% popust**
+- Otroška posteljica: **brezplačno**
+- Doplačilo za enoposteljno: **+30%**""",
+    "klima": """Da, vse naše sobe so **klimatizirane** in udobne tudi v poletni vročini.""",
+    "wifi": """Da, na voljo imamo **brezplačen Wi-Fi** v vseh sobah in skupnih prostorih.""",
+    "prijava_odjava": """**Prijava (check-in):** od 14:00
+**Odjava (check-out):** do 10:00""",
+    "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
+    "zivali": """Na kmetiji imamo domače živali, ki jih lahko ob obisku tudi vidite.""",
+    "pets_policy": """Hišni ljubljenčki na naši domačiji niso dovoljeni.""",
+    "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
+    "kontakt": f"""Kontakt: **{FARM_INFO['phone']}** / **{FARM_INFO['mobile']}**
+Email: **{FARM_INFO['email']}**""",
+    "lokacija": f"""Nahajamo se na: **{FARM_INFO['address']}**.""",
+    "min_nocitve": """Minimalno bivanje je:
+- **3 nočitve** v juniju, juliju in avgustu
+- **2 nočitvi** v ostalih mesecih""",
+    "kapaciteta_mize": """Jedilnica 'Pri peči' sprejme do 15 oseb, 'Pri vrtu' pa do 35 oseb.""",
+    "alergije": """Seveda, prilagodimo jedi za alergije (gluten, laktoza) in posebne prehrane (vegan/vegetarijan).""",
+    "vina": """Ponujamo lokalna pohorska vina: bela, rdeča in penine. Izbor je sezonski in ga z veseljem predstavimo ob obisku.""",
+    "turizem": """V okolici so odlične možnosti za izlete (Pohorje, slapovi, razgledišča).""",
+    "smucisce": """Najbližja smučišča so Mariborsko Pohorje in Areh (približno 25–35 minut vožnje).""",
+    "terme": """Najbližje terme so Terme Zreče in Terme Ptuj (približno 30–40 minut vožnje).""",
+    "kolesa": """Izposoja koles je možna po dogovoru. Za več informacij nas kontaktirajte.""",
+    "skalca": """Slap Skalca je prijeten izlet v bližini – priporočamo sprehod ob potočku.""",
+    "darilni_boni": """Na voljo imamo darilne bone. Sporočite znesek in pripravimo bon za vas.""",
+    "jedilnik": """MAREC, APRIL, MAJ
+
+Pohorska bunka in zorjen Freserjev sir
+Hisna suha salama
+Pastetka iz domacih jetrc
+Zaseka
+Bucni namaz
+Hisni kruhek
+
+***
+
+Goveja zupca z rezanci in jetrnimi rolicami
+Koprivna juhica s cemazem in sirne lizike
+
+***
+
+Meso servirano na plosci
+
+Socna pecenka iz domacega pujskovega hrbta
+Hrustljavi piscanec s kmetije Pesek
+Piscancje kroglice z zelisci
+Mlado goveje meso iz Kovacnikove proste reje in jabolka z rdecim vinom
+
+Priloge servirane loceno od mesa
+
+Stukelj s skuto nase krave Miske
+Ricota s pirino kaso, jurcki in zelenjava
+Prazen krompir iz sporheta na drva
+Mini pita s porom
+Ocvrte hruske "Debeluske" z zdrobom
+Pomladna solatka iz vrta gospodinje Barbare
+
+***
+
+Pohorska gibanica babice Angelce s skuto
+
+CENA po ODRASLI osebi: 36 EUR
+Otroci (4 - 12 let): - 50 %
+
+Prosimo, najavite morebitna odstopanja od klasicnega mesnega jedilnika (vegi, vegansko, brez glutena, mleka, jajc).""",
+    "tedenska_ponudba": """CEZ TEDEN (SREDA-PETEK)
+
+Na voljo so degustacijski meniji:
+- 4-hodni degustacijski meni
+- 5-hodni degustacijski meni
+- 6-hodni degustacijski meni
+
+Tedenski meniji so na predhodno rezervacijo in se prilagodijo sezoni.""",
+    "tedenski_5hodni": """KULINARICNO DOZIVETJE
+SREDA - PETEK
+Penina Doppler, Diona 2017, zelo suho, 100 % chardonnay
+Pozdrav iz kuhinje
+***
+Freser, sauvignon, suho, 2024
+Kiblflajs s prelivom, zelenjava s Kovacnikovega vrta, zorjen Freserjev sir, hisni kruh z drozmi
+***
+Juha s kislim zeljem in krvavico
+***
+Freser, renski rizling, suho, 2019
+Ricotka pirine kase z jurcki in zelenjavo
+***
+Sumenjak, Alter, suho, 2021
+Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Barbare
+***
+Greif, rumeni muskat, polsladko, 2024
+Pohorska gibanica babice Angelce ali domac jabolcni strudl ali pita sezone, hisni sladoled
+
+CENA PO ODRASLI OSEBI: 43 EUR
+Cena vinske spremljave: 20 EUR za 5 kozarcev""",
+    "tedenski_6hodni": """KULINARICNO DOZIVETJE
+SREDA - PETEK
+Penina Doppler, Diona 2017, zelo suho, 100 % chardonnay
+Pozdrav iz kuhinje
+***
+Freser, sauvignon, suho, 2024
+Kiblflajs s prelivom, zelenjava s Kovacnikovega vrta, zorjen Freserjev sir, hisni kruh z drozmi
+***
+Juha s kislim zeljem in krvavico
+***
+Freser, renski rizling, suho, 2019
+Ricotka pirine kase z jurcki in zelenjavo
+***
+Sumenjak, Alter, suho, 2021
+Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Barbare
+***
+Greif, modra frankinja, suho, 2020
+Strukelj s skuto nase krave Miske, goveje meso iz Kovacnikove proste reje, rdeca pesa, rabarbara, naravna omaka
+***
+Greif, rumeni muskat, polsladko, 2024
+Pohorska gibanica babice Angelce ali domac jabolcni strudl ali pita sezone, hisni sladoled
+
+CENA PO ODRASLI OSEBI: 53 EUR
+Cena vinske spremljave: 25 EUR za 6 kozarcev""",
+    "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
+    "gospodar": """Gospodar kmetije je Jure.""",
+    "kmetija": """Kmetija Pod Goro je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
+    "gibanica": """Pohorska gibanica je naša specialiteta.""",
+    "izdelki": """V ponudbi imamo marmelade, likerje, mesnine, čaje, sirupe in darilne pakete.""",
+}
+
+INFO_RESPONSES_VARIANTS = {key: [value] for key, value in INFO_RESPONSES.items()}
+INFO_RESPONSES_VARIANTS["menu_info"] = [INFO_RESPONSES["jedilnik"]]
+INFO_RESPONSES_VARIANTS["menu_full"] = [INFO_RESPONSES["jedilnik"]]
+INFO_RESPONSES["menu_info"] = INFO_RESPONSES["jedilnik"]
+INFO_RESPONSES["menu_full"] = INFO_RESPONSES["jedilnik"]
+INFO_RESPONSES["sobe_info"] = INFO_RESPONSES["sobe"]
+
 CONFIG = BrandConfig(
     name=FARM_INFO["name"],
     address=FARM_INFO["address"],
