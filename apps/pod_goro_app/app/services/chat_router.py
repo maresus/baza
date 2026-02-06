@@ -1,3 +1,4 @@
+from app.logic.orchestrator import classify_intent as detect_intent, is_booking_intent, is_menu_query, parse_reservation_type, is_affirmative, is_negative, is_explicit_cancel_command, should_switch_from_reservation, tourist_answer
 import re
 import random
 import json
@@ -26,7 +27,6 @@ from app.rag.knowledge_base import (
 )
 from app.core.config import Settings
 from app.core.llm_client import get_llm_client
-from app.rag.chroma_service import answer_tourist_question, is_tourist_query
 from app.services.router_agent import route_message
 from app.services.executor_v2 import execute_decision
 from app.services.intent_helpers import (
@@ -36,7 +36,6 @@ from app.services.intent_helpers import (
     PRODUCT_FOLLOWUP_PHRASES,
     PRODUCT_STEMS,
     RESERVATION_START_PHRASES,
-    answer_product_question,
     detect_info_intent,
     detect_product_intent,
     detect_router_intent,
@@ -54,6 +53,19 @@ from app.services.intent_helpers import (
     is_reservation_related,
     is_reservation_typo,
     is_strong_inquiry_request,
+)
+from app.services.flows.info_flow import (
+    answer_food_question,
+    answer_farm_info,
+    answer_product_question,
+    answer_weekly_menu,
+    answer_wine_question,
+    format_current_menu,
+    is_full_menu_request,
+    is_hours_question,
+    parse_month_from_text,
+    parse_relative_month,
+    reset_info_state,
 )
 from app.brand.config import (
     BRAND_NAME,
@@ -467,25 +479,6 @@ class ChatRequestWithSession(ChatRequest):
 last_wine_query: Optional[str] = None
 SESSION_TIMEOUT_HOURS = 48
 GREETING_KEYWORDS = {"živjo", "zdravo", "hej", "hello", "dober dan", "pozdravljeni"}
-GOODBYE_KEYWORDS = {
-    "hvala",
-    "najlepša hvala",
-    "hvala lepa",
-    "adijo",
-    "nasvidenje",
-    "na svidenje",
-    "čao",
-    "ciao",
-    "bye",
-    "goodbye",
-    "lp",
-    "lep pozdrav",
-    "se vidimo",
-    "vidimo se",
-    "srečno",
-    "vse dobro",
-    "lahko noč",
-}
 GREETINGS = BRAND_GREETINGS
 THANKS_RESPONSES = BRAND_THANKS
 UNKNOWN_RESPONSES = BRAND_UNKNOWN
@@ -516,80 +509,9 @@ LOCATION_KEYWORDS = {
     "parkirisce",
 }
 
-FARM_INFO_KEYWORDS = {
-    "kje",
-    "naslov",
-    "lokacija",
-    "kako pridem",
-    "priti",
-    "parking",
-    "telefon",
-    "številka",
-    "stevilka",
-    "email",
-    "kontakt",
-    "odprti",
-    "odprto",
-    "delovni čas",
-    "ura",
-    "kdaj",
-    "wifi",
-    "internet",
-    "klima",
-    "nahajate",
-    "navodila",
-    "pot",
-    "avtom",
-    "parkirišče",
-    "parkirisce",
-}
 
-FOOD_GENERAL_KEYWORDS = {"hrana", "jest", "jesti", "ponujate", "kuhate", "jedilnik?"}
 
-HELP_KEYWORDS = {"pomoč", "help", "kaj znaš", "kaj znate", "kaj lahko", "možnosti"}
-WEEKLY_KEYWORDS = {
-    "teden",
-    "tedensk",
-    "čez teden",
-    "med tednom",
-    "sreda",
-    "četrtek",
-    "petek",
-    "degustacij",
-    "kulinarično",
-    "doživetje",
-    "4-hodn",
-    "5-hodn",
-    "6-hodn",
-    "7-hodn",
-    "4 hodn",
-    "5 hodn",
-    "6 hodn",
-    "7 hodn",
-    "štiri hod",
-    "stiri hod",
-    "pet hod",
-    "šest hod",
-    "sest hod",
-    "sedem hod",
-    "4-hodni meni",
-    "5-hodni meni",
-    "6-hodni meni",
-    "7-hodni meni",
-}
 
-PRICE_KEYWORDS = {
-    "cena",
-    "cene",
-    "cenika",
-    "cenik",
-    "koliko stane",
-    "koliko stal",
-    "koliko košta",
-    "koliko kosta",
-    "ceno",
-    "cenah",
-}
 
 GREETING_RESPONSES = [
     # Uporabljamo GREETINGS za variacije v prijaznih uvodih
@@ -631,101 +553,6 @@ ROOM_PRICING = {
     "closed_days": ["ponedeljek", "torek"],  # ni večerij
 }
 
-# Vinski seznam za fallback
-WINE_LIST = {
-    "penece": [
-        {"name": "Doppler DIONA brut 2013", "type": "zelo suho", "grape": "100% Chardonnay", "price": 30.00, "desc": "Penina po klasični metodi, eleganca, lupinasto sadje, kruhova skorja"},
-        {"name": "Opok27 NYMPHA rose brut 2022", "type": "izredno suho", "grape": "100% Modri pinot", "price": 26.00, "desc": "Rose frizzante, jagodni konfit, češnja, sveže"},
-        {"name": "Leber MUŠKATNA PENINA demi sec", "type": "polsladko", "grape": "100% Rumeni muškat", "price": 26.00, "desc": "Klasična metoda, 18 mesecev zorenja, svež vonj limone in muškata"},
-    ],
-    "bela": [
-        {"name": "Greif BELO zvrst 2024", "type": "suho", "grape": "Laški rizling + Sauvignon", "price": 14.00, "desc": "Mladostno, zeliščne in sadne note, visoke kisline"},
-        {"name": "Frešer SAUVIGNON 2023", "type": "suho", "grape": "100% Sauvignon", "price": 19.00, "desc": "Aromatičen, zeliščen, črni ribez, koprive, mineralno"},
-        {"name": "Frešer LAŠKI RIZLING 2023", "type": "suho", "grape": "100% Laški rizling", "price": 18.00, "desc": "Mladostno, mineralno, note jabolka in suhih zelišč"},
-        {"name": "Greif LAŠKI RIZLING terase 2020", "type": "suho", "grape": "100% Laški rizling", "price": 23.00, "desc": "Zoreno 14 mesecev v hrastu, zrelo rumeno sadje, oljnata tekstura"},
-        {"name": "Frešer RENSKI RIZLING Markus 2019", "type": "suho", "grape": "100% Renski rizling", "price": 22.00, "desc": "Breskev, petrolej, mineralno, zoreno v hrastu"},
-        {"name": "Skuber MUŠKAT OTTONEL 2023", "type": "polsladko", "grape": "100% Muškat ottonel", "price": 17.00, "desc": "Elegantna muškatna cvetica, harmonično, ljubko"},
-        {"name": "Greif RUMENI MUŠKAT 2023", "type": "polsladko", "grape": "100% Rumeni muškat", "price": 17.00, "desc": "Mladostno, sortno, note sena in limete"},
-    ],
-    "rdeca": [
-        {"name": "Skuber MODRA FRANKINJA 2023", "type": "suho", "grape": "100% Modra frankinja", "price": 16.00, "desc": "Rubinasta, ribez, murva, malina, polni okus"},
-        {"name": "Frešer MODRI PINOT Markus 2020", "type": "suho", "grape": "100% Modri pinot", "price": 23.00, "desc": "Višnje, češnje, maline, žametno, 12 mesecev v hrastu"},
-        {"name": "Greif MODRA FRANKINJA črešnjev vrh 2019", "type": "suho", "grape": "100% Modra frankinja", "price": 26.00, "desc": "Zrela, temno sadje, divja češnja, zreli tanini"},
-    ],
-}
-
-WINE_KEYWORDS = {
-    "vino",
-    "vina",
-    "vin",
-    "rdec",
-    "rdeca",
-    "rdeče",
-    "rdece",
-    "belo",
-    "bela",
-    "penin",
-    "penina",
-    "peneč",
-    "muskat",
-    "muškat",
-    "rizling",
-    "sauvignon",
-    "frankinja",
-    "pinot",
-}
-
-# sezonski jedilniki
-SEASONAL_MENUS = [
-    {
-        "months": {3, 4, 5},
-        "label": "Marec–Maj (pomladna srajčka)",
-        "items": [
-            "Pohorska bunka in zorjen Frešerjev sir, hišna suha salama, paštetka iz domačih jetrc, zaseka, bučni namaz, hišni kruhek",
-            "Juhe: goveja župca z rezanci in jetrnimi rolicami, koprivna juhica s čemažem",
-            "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice z zelišči, mlado goveje meso z rdečim vinom",
-            "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir, mini pita s porom, ocvrte hruške, pomladna solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
-            "Cena: 36 EUR odrasli, otroci 4–12 let -50%",
-        ],
-    },
-    {
-        "months": {6, 7, 8},
-        "label": "Junij–Avgust (poletna srajčka)",
-        "items": [
-            "Pohorska bunka, zorjen sir, hišna suha salama, paštetka iz jetrc z žajbljem, bučni namaz, kruhek",
-            "Juhe: goveja župca z rezanci, kremna juha poletnega vrta",
-            "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rabarbaro in rdečim vinom",
-            "Priloge: štukelj s skuto, ričota s pirino kašo, mlad krompir z rožmarinom, mini pita z bučkami, ocvrte hruške, poletna solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
-            "Cena: 36 EUR odrasli, otroci 4–12 let -50%",
-        ],
-    },
-    {
-        "months": {9, 10, 11},
-        "label": "September–November (jesenska srajčka)",
-        "items": [
-            "Dobrodošlica s hišnim likerjem ali sokom; lesena deska s pohorsko bunko, salamo, namazi, Frešerjev sirček, kruhek",
-            "Juhe: goveja župca z rezanci, bučna juha s kolerabo, sirne lizike z žajbljem",
-            "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rabarbaro in rdečo peso",
-            "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir iz šporheta, mini pita s porom, ocvrte hruške, jesenska solatka",
-            "Sladica: Pohorska gibanica (porcijsko)",
-            "Cena: 36 EUR odrasli, otroci 4–12 let -50%",
-        ],
-    },
-    {
-        "months": {12, 1, 2},
-        "label": "December–Februar (zimska srajčka)",
-        "items": [
-            "Pohorska bunka, zorjen sir, hišna suha salama, paštetka iz jetrc s čebulno marmelado, zaseka, bučni namaz, kruhek",
-            "Juhe: goveja župca z rezanci, krompirjeva juha s krvavico",
-            "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rdečim vinom",
-            "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir iz pečice, mini pita z bučkami, ocvrte hruške, zimska solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
-            "Cena: 36 EUR odrasli, otroci 4–12 let -50%",
-        ],
-    },
-]
 
 # kulinarična doživetja (sreda–petek, skupine 6+)
 WEEKLY_EXPERIENCES = [
@@ -836,267 +663,9 @@ last_product_query: Optional[str] = None
 last_info_query: Optional[str] = None
 last_menu_query: bool = False
 conversation_history: list[dict[str, str]] = []
-last_shown_products: list[str] = []
 last_interaction: Optional[datetime] = None
 unknown_question_state: dict[str, dict[str, Any]] = {}
 chat_session_id: str = str(uuid.uuid4())[:8]
-MENU_INTROS = [
-    "Hej! Poglej, kaj kuhamo ta vikend:",
-    "Z veseljem povem, kaj je na meniju:",
-    "Daj, da ti razkrijem naš sezonski meni:",
-    "Evo, vikend jedilnik:",
-]
-menu_intro_index = 0
-
-def answer_wine_question(message: str) -> str:
-    """Odgovarja na vprašanja o vinih SAMO iz WINE_LIST, z upoštevanjem followupov."""
-    global last_shown_products
-
-    lowered = message.lower()
-    is_followup = any(word in lowered for word in ["še", "drug", "kaj pa", "še kaj", "še kater", "še kakšn", "še kakšno"])
-
-    is_red = any(word in lowered for word in ["rdeč", "rdeca", "rdece", "rdeče", "frankinja", "pinot"])
-    is_white = any(word in lowered for word in ["bel", "bela", "belo", "rizling", "sauvignon"])
-    is_sparkling = any(word in lowered for word in ["peneč", "penina", "penece", "mehurčk", "brut"])
-    is_sweet = any(word in lowered for word in ["sladk", "polsladk", "muškat", "muskat"])
-    is_dry = any(word in lowered for word in ["suh", "suho", "suha"])
-
-    def format_wines(wines: list, category_name: str, temp: str) -> str:
-        # ob followupu skrij že prikazane
-        if is_followup:
-            wines = [w for w in wines if w["name"] not in last_shown_products]
-
-        if not wines:
-            return (
-                f"To so vsa naša {category_name} vina. Imamo pa še:\n"
-                "🥂 Bela vina (od 14€)\n"
-                "🍾 Peneča vina (od 26€)\n"
-                "🍯 Polsladka vina (od 17€)\n"
-                "🍷 Rdeča vina (od 16€)\n"
-                "Kaj vas zanima?"
-            )
-
-        lines = [f"Naša {category_name} vina:"]
-        for w in wines:
-            lines.append(f"• {w['name']} ({w['type']}, {w['price']:.0f}€) – {w['desc']}")
-            if w["name"] not in last_shown_products:
-                last_shown_products.append(w["name"])
-
-        if len(last_shown_products) > 15:
-            last_shown_products[:] = last_shown_products[-15:]
-
-        return "\n".join(lines) + f"\n\nServiramo ohlajeno na {temp}."
-
-    # Rdeča
-    if is_red:
-        wines = WINE_LIST["rdeca"]
-        if is_dry:
-            wines = [w for w in wines if "suho" in w["type"]]
-        if is_followup:
-            remaining = [w for w in wines if w["name"] not in last_shown_products]
-            if not remaining:
-                return (
-                    "To so vsa naša rdeča vina. Imamo pa še:\n"
-                    "🥂 Bela vina (od 14€)\n"
-                    "🍾 Peneča vina (od 26€)\n"
-                    "🍯 Polsladka vina (od 17€)\n"
-                    "Kaj vas zanima?"
-                )
-        return format_wines(wines, "rdeča", "14°C")
-
-    # Peneča
-    if is_sparkling:
-        return format_wines(WINE_LIST["penece"], "peneča", "6°C")
-
-    # Bela
-    if is_white:
-        wines = WINE_LIST["bela"]
-        if is_dry:
-            wines = [w for w in wines if "suho" in w["type"]]
-        if is_sweet:
-            wines = [w for w in wines if "polsladk" in w["type"]]
-        return format_wines(wines[:5], "bela", "8–10°C")
-
-    # Polsladka
-    if is_sweet:
-        wines = []
-        for w in WINE_LIST["bela"]:
-            if "polsladk" in w["type"]:
-                wines.append(w)
-        for w in WINE_LIST["penece"]:
-            if "polsladk" in w["type"].lower() or "demi" in w["type"].lower():
-                wines.append(w)
-        return format_wines(wines, "polsladka", "8°C")
-
-    # Splošno vprašanje
-    return (
-        "Ponujamo izbor lokalnih vin:\n\n"
-        "🍷 **Rdeča** (suha): Modra frankinja (Skuber 16€, Greif 26€), Modri pinot Frešer (23€)\n"
-        "🥂 **Bela** (suha): Sauvignon (19€), Laški rizling (18–23€), Renski rizling (22€)\n"
-        "🍾 **Peneča**: Doppler Diona brut (30€), Opok27 rose (26€), Muškatna penina (26€)\n"
-        "🍯 **Polsladka**: Rumeni muškat (17€), Muškat ottonel (17€)\n\n"
-        "Povejte, kaj vas zanima – rdeče, belo, peneče ali polsladko?"
-    )
-
-
-def answer_weekly_menu(message: str) -> str:
-    """Odgovarja na vprašanja o tedenski ponudbi (sreda-petek)."""
-    lowered = message.lower()
-
-    requested_courses = None
-    if "4" in message or "štiri" in lowered or "stiri" in lowered:
-        requested_courses = 4
-    elif "5" in message or "pet" in lowered:
-        requested_courses = 5
-    elif "6" in message or "šest" in lowered or "sest" in lowered:
-        requested_courses = 6
-    elif "7" in message or "sedem" in lowered:
-        requested_courses = 7
-
-    if requested_courses is None:
-        lines = [
-            "**KULINARIČNA DOŽIVETJA** (sreda–petek, od 13:00, min. 6 oseb)\n",
-            "Na voljo imamo degustacijske menije:",
-            "",
-            f"🍽️ **4-hodni meni**: {WEEKLY_MENUS[4]['price']}€/oseba (vinska spremljava +{WEEKLY_MENUS[4]['wine_pairing']}€ za {WEEKLY_MENUS[4]['wine_glasses']} kozarce)",
-            f"🍽️ **5-hodni meni**: {WEEKLY_MENUS[5]['price']}€/oseba (vinska spremljava +{WEEKLY_MENUS[5]['wine_pairing']}€ za {WEEKLY_MENUS[5]['wine_glasses']} kozarcev)",
-            f"🍽️ **6-hodni meni**: {WEEKLY_MENUS[6]['price']}€/oseba (vinska spremljava +{WEEKLY_MENUS[6]['wine_pairing']}€ za {WEEKLY_MENUS[6]['wine_glasses']} kozarcev)",
-            f"🍽️ **7-hodni meni**: {WEEKLY_MENUS[7]['price']}€/oseba (vinska spremljava +{WEEKLY_MENUS[7]['wine_pairing']}€ za {WEEKLY_MENUS[7]['wine_glasses']} kozarcev)",
-            "",
-            f"🥗 Posebne zahteve (vege, brez glutena): +{WEEKLY_INFO['special_diet_extra']}€/hod",
-            "",
-            f"📞 Rezervacije: {WEEKLY_INFO['contact']['phone']} ali {WEEKLY_INFO['contact']['email']}",
-            "",
-            "Povejte kateri meni vas zanima (4, 5, 6 ali 7-hodni) za podrobnosti!",
-        ]
-        return "\n".join(lines)
-
-    menu = WEEKLY_MENUS[requested_courses]
-    lines = [
-        f"**{menu['name']}**",
-        f"📅 {WEEKLY_INFO['days'].upper()}, {WEEKLY_INFO['time']}",
-        f"👥 Minimum {WEEKLY_INFO['min_people']} oseb",
-        "",
-    ]
-
-    for i, course in enumerate(menu["courses"], 1):
-        wine_text = f" 🍷 _{course['wine']}_" if course["wine"] else ""
-        lines.append(f"**{i}.** {course['dish']}{wine_text}")
-
-    lines.extend(
-        [
-            "",
-            f"💰 **Cena: {menu['price']}€/oseba**",
-            f"🍷 Vinska spremljava: +{menu['wine_pairing']}€ ({menu['wine_glasses']} kozarcev)",
-            f"🥗 Vege/brez glutena: +{WEEKLY_INFO['special_diet_extra']}€/hod",
-            "",
-            f"📞 Rezervacije: {WEEKLY_INFO['contact']['phone']} ali {WEEKLY_INFO['contact']['email']}",
-        ]
-    )
-
-    return "\n".join(lines)
-
-
-def detect_intent(message: str, state: dict[str, Optional[str | int]]) -> str:
-    global last_product_query, last_wine_query
-    lower_message = message.lower()
-
-    # 1) nadaljevanje rezervacije ima vedno prednost
-    if state["step"] is not None:
-        if is_menu_query(message):
-            return "menu"
-        if is_hours_question(message):
-            return "farm_info"
-        return "reservation"
-
-    # vprašanja o odpiralnem času / zajtrk/večerja
-    if is_hours_question(message):
-        return "farm_info"
-
-    # koliko sob imate -> info, ne rezervacija
-    if re.search(r"koliko\s+soba", lower_message) or re.search(r"koliko\s+sob", lower_message):
-        return "room_info"
-
-    # Rezervacija - fuzzy match (tudi s tipkarskimi napakami)
-    rezerv_patterns = ["rezerv", "rezev", "rezer", "book", "buking", "bokking", "reserve", "reservation"]
-    soba_patterns = ["sobo", "sobe", "soba", "room"]
-    miza_patterns = ["mizo", "mize", "miza", "table"]
-    has_rezerv = any(p in lower_message for p in rezerv_patterns)
-    has_soba = any(p in lower_message for p in soba_patterns)
-    has_miza = any(p in lower_message for p in miza_patterns)
-    if has_rezerv and (has_soba or has_miza or "nočitev" in lower_message or "nocitev" in lower_message):
-        return "reservation"
-    if is_reservation_typo(message) and (has_soba or has_miza):
-        return "reservation"
-    if any(phrase in lower_message for phrase in RESERVATION_START_PHRASES):
-        return "reservation"
-
-    # goodbye/hvala
-    if is_goodbye(message):
-        return "goodbye"
-
-    # jedilnik / meni naj ne sproži rezervacije
-    if is_menu_query(message):
-        return "menu"
-
-    # SOBE - posebej pred rezervacijo
-    sobe_keywords = ["sobe", "soba", "sobo", "nastanitev", "prenočitev", "nočitev nočitve", "rooms", "room", "accommodation"]
-    if any(kw in lower_message for kw in sobe_keywords) and "rezerv" not in lower_message and "book" not in lower_message:
-        return "room_info"
-
-    # vino intent
-    if any(keyword in lower_message for keyword in WINE_KEYWORDS):
-        return "wine"
-
-    # vino followup (če je bila prejšnja interakcija o vinih)
-    if last_wine_query and (
-        any(phrase in lower_message for phrase in ["še", "še kakšn", "še kater", "kaj pa", "drug", "katera", "katere"])
-        or re.search(r"\bkater[aeio]\b", lower_message)
-    ):
-        return "wine_followup"
-
-    # cene sob
-    if any(word in lower_message for word in PRICE_KEYWORDS):
-        if any(word in lower_message for word in ["sob", "nočitev", "nocitev", "noč", "spanje", "bivanje"]):
-            return "room_pricing"
-
-    # tedenska ponudba (degustacijski meniji) – pred jedilnikom
-    if any(word in lower_message for word in WEEKLY_KEYWORDS):
-        return "weekly_menu"
-    if re.search(r"\b[4-7]\s*-?\s*hodn", lower_message):
-        return "weekly_menu"
-
-    # 3) info o kmetiji / kontakt
-    if any(keyword in lower_message for keyword in FARM_INFO_KEYWORDS):
-        return "farm_info"
-
-    if is_tourist_query(message):
-        return "tourist_info"
-
-    # 3) produktna vprašanja (salama, bunka, marmelada, paket, vino …)
-    if any(stem in lower_message for stem in PRODUCT_STEMS):
-        return "product"
-
-    # 4) kratko nadaljevanje produktnega vprašanja
-    if last_product_query and any(
-        phrase in lower_message for phrase in PRODUCT_FOLLOWUP_PHRASES
-    ):
-        return "product_followup"
-
-    # 5) info vprašanja (kje, soba, nočitve …)
-    if any(keyword in lower_message for keyword in INFO_KEYWORDS):
-        return "info"
-    # 6) splošna hrana (ne jedilnik)
-    if any(word in lower_message for word in FOOD_GENERAL_KEYWORDS) and not is_menu_query(message):
-        return "food_general"
-    # 7) pomoč
-    if any(word in lower_message for word in HELP_KEYWORDS):
-        return "help"
-    # 9) tedenska ponudba
-    if any(word in lower_message for word in WEEKLY_KEYWORDS):
-        return "weekly_menu"
-    return "default"
-
 
 def handle_info_during_booking(message: str, session_state: dict) -> Optional[str]:
     """
@@ -1140,40 +709,9 @@ def handle_info_during_booking(message: str, session_state: dict) -> Optional[st
     return None
 
 
-def is_booking_intent(message: str) -> bool:
-    lowered = message.lower()
-    if any(phrase in lowered for phrase in RESERVATION_START_PHRASES):
-        return True
-    intent_tokens = ["rad bi", "rada bi", "želim", "zelim", "hočem", "hocem", "imel bi", "imela bi"]
-    has_intent = any(tok in lowered for tok in intent_tokens)
-    has_type = parse_reservation_type(message) in {"room", "table"}
-    return has_intent and has_type
 
 
-def should_switch_from_reservation(message: str, state: dict[str, Optional[str | int]]) -> bool:
-    lowered = message.lower()
-    if is_reservation_related(message):
-        return False
-    if is_affirmative(message) or lowered in {"ne", "no"}:
-        return False
-    if extract_date(message) or extract_date_range(message) or extract_time(message):
-        return False
-    if parse_people_count(message).get("total"):
-        return False
-    if state.get("step") in {"awaiting_phone", "awaiting_email"}:
-        return False
-    if detect_info_intent(message) or detect_product_intent(message) or is_menu_query(message) or is_hours_question(message):
-        return True
-    if is_tourist_query(message):
-        return True
-    return False
 
-
-def is_explicit_cancel_command(message: str) -> bool:
-    lowered = message.lower().strip()
-    if lowered in {"stop", "konec", "prekini", "cancel", "quit", "exit"}:
-        return True
-    return any(token in lowered for token in {"pustimo", "pozabi", "ne rabim", "ni treba", "prekin"})
 
 
 def is_event_inquiry_request(message: str) -> bool:
@@ -1229,190 +767,6 @@ def extract_phone(text: str) -> str:
     return digits if len(digits) >= 7 else ""
 
 
-def is_hours_question(message: str) -> bool:
-    lowered = message.lower()
-    patterns = [
-        "odprti",
-        "odprt",
-        "odpiralni",
-        "obratovalni",
-        "obratujete",
-        "do kdaj",
-        "kdaj lahko pridem",
-        "kdaj ste",
-        "kateri uri",
-        "kosilo ob",
-        "kosilo do",
-        "kosila",
-        "zajtrk",
-        "breakfast",
-        "večerj",
-        "vecerj",
-        "prijava",
-        "odjava",
-        "check-in",
-        "check out",
-        "kosilo",
-        "večerja",
-        "vecerja",
-    ]
-    return any(pat in lowered for pat in patterns)
-
-
-def is_menu_query(message: str) -> bool:
-    lowered = message.lower()
-    reservation_indicators = ["rezerv", "sobo", "sobe", "mizo", "nočitev", "nočitve", "nocitev"]
-    if any(indicator in lowered for indicator in reservation_indicators):
-        return False
-    weekly_indicators = [
-        "teden",
-        "tedensk",
-        "čez teden",
-        "med tednom",
-        "sreda",
-        "četrtek",
-        "petek",
-        "hodni",
-        "hodn",
-        "hodov",
-        "degustacij",
-        "kulinarično",
-        "doživetje",
-    ]
-    if any(indicator in lowered for indicator in weekly_indicators):
-        return False
-    menu_keywords = ["jedilnik", "meni", "meniju", "jedo", "kuhate"]
-    if any(word in lowered for word in menu_keywords):
-        return True
-    if "vikend kosilo" in lowered or "vikend kosila" in lowered:
-        return True
-    if "kosilo" in lowered and "rezerv" not in lowered and "mizo" not in lowered:
-        return True
-    return False
-
-
-def parse_month_from_text(message: str) -> Optional[int]:
-    lowered = message.lower()
-    month_map = {
-        "januar": 1,
-        "januarja": 1,
-        "februar": 2,
-        "februarja": 2,
-        "marec": 3,
-        "marca": 3,
-        "april": 4,
-        "aprila": 4,
-        "maj": 5,
-        "maja": 5,
-        "junij": 6,
-        "junija": 6,
-        "julij": 7,
-        "julija": 7,
-        "avgust": 8,
-        "avgusta": 8,
-        "september": 9,
-        "septembra": 9,
-        "oktober": 10,
-        "oktobra": 10,
-        "november": 11,
-        "novembra": 11,
-        "december": 12,
-        "decembra": 12,
-    }
-    for key, val in month_map.items():
-        if key in lowered:
-            return val
-    return None
-
-
-def parse_relative_month(message: str) -> Optional[int]:
-    lowered = message.lower()
-    today = datetime.now()
-    if "jutri" in lowered:
-        target = today + timedelta(days=1)
-        return target.month
-    if "danes" in lowered:
-        return today.month
-    return None
-
-
-def next_menu_intro() -> str:
-    global menu_intro_index
-    intro = MENU_INTROS[menu_intro_index % len(MENU_INTROS)]
-    menu_intro_index += 1
-    return intro
-
-
-def answer_farm_info(message: str) -> str:
-    lowered = message.lower()
-
-    if any(word in lowered for word in ["zajc", "zajček", "zajcka", "zajčki", "kunec", "zajce"]):
-        return "Imamo prijazne zajčke, ki jih lahko obiskovalci božajo. Ob obisku povejte, pa vas usmerimo do njih."
-
-    if any(word in lowered for word in ["ogled", "tour", "voden", "vodenje", "guid", "sprehod po kmetiji"]):
-        return "Organiziranih vodenih ogledov pri nas ni. Ob obisku se lahko samostojno sprehodite in vprašate osebje, če želite videti živali."
-
-    if any(word in lowered for word in ["navodila", "pot", "pot do", "pridem", "priti", "pot do vas", "avtom"]):
-        return FARM_INFO["directions"]["from_maribor"]
-
-    if any(word in lowered for word in ["kje", "naslov", "lokacija", "nahajate"]):
-        return (
-            f"Nahajamo se na: {FARM_INFO['address']} ({FARM_INFO['location_description']}). "
-            f"Parking: {FARM_INFO['parking']}. Če želite navodila za pot, povejte, od kod prihajate."
-        )
-
-    if any(word in lowered for word in ["telefon", "številka", "stevilka", "poklicat", "klicat"]):
-        return f"Telefon: {FARM_INFO['phone']}, mobitel: {FARM_INFO['mobile']}. Pišete lahko na {FARM_INFO['email']}."
-
-    if "email" in lowered or "mail" in lowered:
-        return f"E-mail: {FARM_INFO['email']}. Splet: {FARM_INFO['website']}."
-
-    if any(word in lowered for word in ["odprt", "kdaj", "delovni", "ura"]):
-        return (
-            f"Kosila: {FARM_INFO['opening_hours']['restaurant']} | "
-            f"Sobe: {FARM_INFO['opening_hours']['rooms']} | "
-            f"Trgovina: {FARM_INFO['opening_hours']['shop']} | "
-            f"Zaprto: {FARM_INFO['opening_hours']['closed']}"
-        )
-
-    if "parking" in lowered or "parkirišče" in lowered or "parkirisce" in lowered or "avto" in lowered:
-        return f"{FARM_INFO['parking']}. Naslov za navigacijo: {FARM_INFO['address']}."
-
-    if "wifi" in lowered or "internet" in lowered or "klima" in lowered:
-        facilities = ", ".join(FARM_INFO["facilities"])
-        return f"Na voljo imamo: {facilities}."
-
-    if any(word in lowered for word in ["počet", "delat", "aktivnost", "izlet"]):
-        activities = "; ".join(FARM_INFO["activities"])
-        return f"Pri nas in v okolici lahko: {activities}."
-
-    if is_hours_question(message):
-        return (
-            "Kosila: sobota/nedelja 12:00-20:00 (zadnji prihod 15:00). "
-            "Zajtrk: 8:00–9:00 (za goste sob). "
-            "Prijava 15:00–20:00, odjava do 11:00. "
-            "Večerje za goste po dogovoru (pon/torki kuhinja zaprta)."
-        )
-
-    return (
-        f"{FARM_INFO['name']} | Naslov: {FARM_INFO['address']} | Tel: {FARM_INFO['phone']} | "
-        f"Email: {FARM_INFO['email']} | Splet: {FARM_INFO['website']}"
-    )
-
-
-def answer_food_question(message: str) -> str:
-    lowered = message.lower()
-    if "alerg" in lowered or "gob" in lowered or "glive" in lowered:
-        return (
-          "Alergije uredimo brez težav. Ob rezervaciji zapiši alergije (npr. brez gob) ali povej osebju ob prihodu, da lahko prilagodimo jedi. "
-          "Želiš, da označim alergije v tvoji rezervaciji?"
-        )
-    return (
-        "Pripravljamo tradicionalne pohorske jedi iz lokalnih sestavin.\n"
-        "Vikend kosila (sob/ned): 36€ odrasli, otroci 4–12 let -50%, vključuje predjed, juho, glavno jed, priloge in sladico.\n"
-        "Če želite videti aktualni sezonski jedilnik, recite 'jedilnik'. Posebne zahteve (vege, brez glutena) uredimo ob rezervaciji."
-    )
-
 
 def answer_room_pricing(message: str) -> str:
     """Odgovori na vprašanja o cenah sob."""
@@ -1457,54 +811,6 @@ def get_help_response() -> str:
         "❓ Vprašanja – karkoli o naši ponudbi\n"
         "Kar vprašajte!"
     )
-
-
-def is_full_menu_request(message: str) -> bool:
-    lowered = message.lower()
-    return any(
-        phrase in lowered
-        for phrase in [
-            "celoten meni",
-            "celotni meni",
-            "poln meni",
-            "celoten jedilnik",
-            "celotni jedilnik",
-            "poln jedilnik",
-        ]
-    )
-
-
-def format_current_menu(month_override: Optional[int] = None, force_full: bool = False) -> str:
-    now = datetime.now()
-    month = month_override or now.month
-    current = None
-    for menu in SEASONAL_MENUS:
-        if month in menu["months"]:
-            current = menu
-            break
-    if not current:
-        current = SEASONAL_MENUS[0]
-    lines = [
-        next_menu_intro(),
-        f"{current['label']}",
-    ]
-    items = [item for item in current["items"] if not item.lower().startswith("cena")]
-    if SHORT_MODE and not force_full:
-        for item in items[:4]:
-            lines.append(f"- {item}")
-        lines.append("Cena: 36 EUR odrasli, otroci 4–12 let -50%.")
-        lines.append("")
-        lines.append("Za celoten sezonski meni recite: \"celoten meni\".")
-    else:
-        for item in items:
-            lines.append(f"- {item}")
-        lines.append("Cena: 36 EUR odrasli, otroci 4–12 let -50%.")
-        lines.append("")
-        lines.append(
-            "Jedilnik je sezonski; če želiš meni za drug mesec, samo povej mesec (npr. 'kaj pa novembra'). "
-            "Vege ali brez glutena uredimo ob rezervaciji."
-        )
-    return "\n".join(lines)
 
 
 def detect_reset_request(message: str) -> bool:
@@ -1567,36 +873,8 @@ def is_switch_topic_command(message: str) -> bool:
     return any(phrase in lowered for phrase in switch_words)
 
 
-def is_affirmative(message: str) -> bool:
-    lowered = message.strip().lower()
-    return lowered in {
-        "da",
-        "ja",
-        "seveda",
-        "potrjujem",
-        "potrdim",
-        "potrdi",
-        "zelim",
-        "želim",
-        "zelimo",
-        "želimo",
-        "rad bi",
-        "rada bi",
-        "bi",
-        "yes",
-        "oui",
-        "ok",
-        "okej",
-        "okey",
-        "sure",
-        "yep",
-        "yeah",
-    }
 
 
-def is_negative(message: str) -> bool:
-    lowered = message.strip().lower()
-    return lowered in {"ne", "no", "ne hvala", "no thanks"}
 
 
 def is_contact_request(message: str) -> bool:
@@ -1705,14 +983,6 @@ def get_greeting_response() -> str:
 def get_goodbye_response() -> str:
     return random.choice(THANKS_RESPONSES)
 
-
-def is_goodbye(message: str) -> bool:
-    lowered = message.lower().strip()
-    if lowered in GOODBYE_KEYWORDS:
-        return True
-    if any(keyword in lowered for keyword in ["hvala", "adijo", "nasvidenje", "čao", "ciao", "bye"]):
-        return True
-    return False
 
 
 def detect_language(message: str) -> str:
@@ -1983,7 +1253,7 @@ def handle_inquiry_flow(message: str, state: dict[str, Optional[str]], session_i
 def reset_conversation_context(session_id: Optional[str] = None) -> None:
     """Počisti začasne pogovorne podatke in ponastavi sejo."""
     global conversation_history, last_product_query, last_wine_query, last_info_query, last_menu_query
-    global last_shown_products, chat_session_id, unknown_question_state, last_interaction
+    global chat_session_id, unknown_question_state, last_interaction
     if session_id:
         state = reservation_states.get(session_id)
         if state is not None:
@@ -2000,7 +1270,7 @@ def reset_conversation_context(session_id: Optional[str] = None) -> None:
     last_wine_query = None
     last_info_query = None
     last_menu_query = False
-    last_shown_products = []
+    reset_info_state()
     chat_session_id = str(uuid.uuid4())[:8]
     last_interaction = None
 
@@ -2060,78 +1330,6 @@ def table_intro_text() -> str:
         "Jedilnici: 'Pri peči' (15 oseb) in 'Pri vrtu' (35 oseb)."
     )
 
-
-def parse_reservation_type(message: str) -> Optional[str]:
-    lowered = message.lower()
-
-    def _has_term(term: str) -> bool:
-        if " " in term:
-            return term in lowered
-        return re.search(rf"(?<!\w){re.escape(term)}(?!\w)", lowered) is not None
-
-    # soba - slovensko, angleško, nemško
-    room_keywords = [
-        # slovensko
-        "soba",
-        "sobe",
-        "sobo",
-        "sob",
-        "nočitev",
-        "prenocitev",
-        "noč",
-        "prenočiti",
-        "prespati",
-        # angleško
-        "room",
-        "rooms",
-        "stay",
-        "overnight",
-        "night",
-        "accommodation",
-        "sleep",
-        # nemško
-        "zimmer",
-        "übernachtung",
-        "übernachten",
-        "nacht",
-        "schlafen",
-        "unterkunft",
-    ]
-    if any(_has_term(word) for word in room_keywords):
-        return "room"
-
-    # miza - slovensko, angleško, nemško
-    table_keywords = [
-        # slovensko
-        "miza",
-        "mizo",
-        "mize",
-        "rezervacija mize",
-        "kosilo",
-        "večerja",
-        "kosilu",
-        "mizico",
-        "jest",
-        "jesti",
-        # angleško
-        "table",
-        "lunch",
-        "dinner",
-        "meal",
-        "eat",
-        "dining",
-        "restaurant",
-        # nemško
-        "tisch",
-        "mittagessen",
-        "abendessen",
-        "essen",
-        "speisen",
-        "restaurant",
-    ]
-    if any(_has_term(word) for word in table_keywords):
-        return "table"
-    return None
 
 
 def _validate_reservation_rules_bound(arrival_date_str: str, nights: int) -> Tuple[bool, str, str]:
@@ -2356,6 +1554,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     answer = format_current_menu(
                         month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
                         force_full=is_full_menu_request(payload.message),
+
+                        short_mode=SHORT_MODE,
                     )
                     last_menu_query = True
                 elif product_key or is_product_query(payload.message):
@@ -2411,6 +1611,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = format_current_menu(
                 month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
                 force_full=is_full_menu_request(payload.message),
+
+                short_mode=SHORT_MODE,
             )
             last_menu_query = True
             reply = maybe_translate(reply, detected_lang)
@@ -2812,7 +2014,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(llm_reply, "general_llm", followup_flag=False)
         # Če nič ne ujame, poskusi turistični RAG
         if state.get("step") is None:
-            tourist_reply = answer_tourist_question(payload.message)
+            tourist_reply = tourist_answer(payload.message)
             if tourist_reply:
                 tourist_reply = maybe_translate(tourist_reply, detected_lang)
                 return finalize(tourist_reply, "tourist_info", followup_flag=False)
@@ -2852,6 +2054,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = format_current_menu(
                 month_override=parse_month_from_text(payload.message) or parse_relative_month(payload.message),
                 force_full=is_full_menu_request(payload.message),
+
+                short_mode=SHORT_MODE,
             )
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "menu_unified_terminal", followup_flag=False)
@@ -3036,7 +2240,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "wine_followup")
 
-    intent = detect_intent(payload.message, state)
+    intent = detect_intent(payload.message, state, last_product_query=last_product_query, last_wine_query=last_wine_query)
 
     if is_contact_request(payload.message) and last_info_query and has_wine_context(last_info_query):
         reply = (
@@ -3100,7 +2304,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
         return finalize(reply, "room_pricing")
 
     if intent == "tourist_info":
-        tourist_reply = answer_tourist_question(payload.message)
+        tourist_reply = tourist_answer(payload.message)
         if tourist_reply:
             detected_lang = detect_language(payload.message)
             if detected_lang == "en":
@@ -3123,7 +2327,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
 
     month_hint = parse_month_from_text(payload.message) or parse_relative_month(payload.message)
     if is_menu_query(payload.message):
-        reply = format_current_menu(month_override=month_hint, force_full=is_full_menu_request(payload.message))
+        reply = format_current_menu(month_override=month_hint, force_full=is_full_menu_request(payload.message), short_mode=SHORT_MODE)
         last_product_query = None
         last_wine_query = None
         last_info_query = None
@@ -3131,7 +2335,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "menu")
     if month_hint is not None and intent == "default":
-        reply = format_current_menu(month_override=month_hint, force_full=is_full_menu_request(payload.message))
+        reply = format_current_menu(month_override=month_hint, force_full=is_full_menu_request(payload.message), short_mode=SHORT_MODE)
         last_product_query = None
         last_wine_query = None
         last_info_query = None
@@ -3240,75 +2444,6 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
 
     reply = maybe_translate(reply, detected_lang)
     return finalize(reply, intent)
-WEEKLY_MENUS = {
-    4: {
-        "name": "4-HODNI DEGUSTACIJSKI MENI",
-        "price": 36,
-        "wine_pairing": 15,
-        "wine_glasses": 4,
-        "courses": [
-            {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
-            {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
-        ],
-    },
-    5: {
-        "name": "5-HODNI DEGUSTACIJSKI MENI",
-        "price": 43,
-        "wine_pairing": 20,
-        "wine_glasses": 5,
-        "courses": [
-            {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
-            {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
-            {"wine": "Frešer Renski rizling 2019 (suho)", "dish": "Ričotka pirine kaše z jurčki in zelenjavo"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
-        ],
-    },
-    6: {
-        "name": "6-HODNI DEGUSTACIJSKI MENI",
-        "price": 53,
-        "wine_pairing": 25,
-        "wine_glasses": 6,
-        "courses": [
-            {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
-            {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
-            {"wine": "Frešer Renski rizling 2019 (suho)", "dish": "Ričotka pirine kaše z jurčki in zelenjavo"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Modra frankinja 2020 (suho)", "dish": "Štrukelj s skuto naše krave Miške, goveje meso iz Kmetije Pod Goroe proste reje, rdeča pesa, rabarbara, naravna omaka"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
-        ],
-    },
-    7: {
-        "name": "7-HODNI DEGUSTACIJSKI MENI",
-        "price": 62,
-        "wine_pairing": 29,
-        "wine_glasses": 7,
-        "courses": [
-            {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
-            {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
-            {"wine": "Greif Laški rizling Terase 2020 (suho)", "dish": "An ban en goban – Jurčki, ajda, ocvirki, korenček, peteršilj"},
-            {"wine": "Frešer Renski rizling 2019 (suho)", "dish": "Ričotka pirine kaše z jurčki in zelenjavo"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Modra frankinja 2020 (suho)", "dish": "Štrukelj s skuto naše krave Miške, goveje meso iz Kmetije Pod Goroe proste reje, rdeča pesa, rabarbara, naravna omaka"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
-        ],
-    },
-}
-
-WEEKLY_INFO = {
-    "days": "sreda, četrtek, petek",
-    "time": "od 13:00 naprej",
-    "min_people": 6,
-    "contact": {"phone": "031 777 888", "email": "info@kmetijapodgoro.si"},
-    "special_diet_extra": 8,
-}
-
 
 @router.post("/stream")
 def chat_stream(payload: ChatRequestWithSession):
@@ -3382,7 +2517,7 @@ def chat_stream(payload: ChatRequestWithSession):
             )
 
     # Če je aktivna availability ali rezervacija, uporabimo obstoječo pot (brez pravega streama)
-    if availability_state.get("active") or state.get("step") is not None or detect_intent(payload.message, state) == "reservation":
+    if availability_state.get("active") or state.get("step") is not None or detect_intent(payload.message, state, last_product_query=last_product_query, last_wine_query=last_wine_query) == "reservation":
         response = chat_endpoint(payload)
         return StreamingResponse(
             _stream_text_chunks(response.reply),
