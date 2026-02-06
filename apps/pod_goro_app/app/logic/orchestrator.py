@@ -287,6 +287,9 @@ def is_explicit_cancel_command(message: str) -> bool:
 
 def should_switch_from_reservation(message: str, state: dict[str, Optional[str | int]]) -> bool:
     lowered = message.lower()
+    step = state.get("step")
+    if is_tourist_query(message) and step not in {"awaiting_name", "awaiting_phone", "awaiting_email"}:
+        return True
     if is_reservation_related(message):
         return False
     if is_affirmative(message) or lowered in {"ne", "no"}:
