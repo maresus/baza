@@ -309,9 +309,12 @@ def should_switch_from_reservation(message: str, state: dict[str, Optional[str |
 
 
 def tourist_answer(message: str) -> Optional[str]:
-    if is_tourist_query(message):
-        return answer_tourist_question(message)
-    return None
+    if not is_tourist_query(message):
+        return None
+    answer = answer_tourist_question(message)
+    if answer:
+        return answer
+    return "Žal nimam turističnih informacij o tem kraju. Lahko vprašate kaj drugega ali nas pokličete za priporočila."
 
 def classify_intent(
     message: str,

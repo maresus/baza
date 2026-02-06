@@ -52,6 +52,11 @@ TOURIST_KEYWORDS = [
     "kje",
     "kaj početi",
     "kaj delati",
+    "kaj lahko delam",
+    "kaj lahko počnem",
+    "kaj lahko pocnem",
+    "kaj delam",
+    "maribor",
     "v bližini",
     "blizu",
 ]
