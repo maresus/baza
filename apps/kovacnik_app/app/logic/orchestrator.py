@@ -265,9 +265,17 @@ AFFIRMATIVE_KEYWORDS = {
     "lahko",
     "yes",
     "y",
+    "yes.",
+    "da.",
+    "ja.",
+    "yep",
+    "sure",
+    "yes please",
+    "yes,",
+    "yes!",
 }
 
-NEGATIVE_KEYWORDS = {"ne", "no", "ne hvala", "no thanks"}
+NEGATIVE_KEYWORDS = {"ne", "no", "ne hvala", "no thanks", "no.", "no!", "ne."}
 
 
 def is_affirmative(message: str) -> bool:
@@ -282,7 +290,7 @@ def is_negative(message: str) -> bool:
 
 def is_explicit_cancel_command(message: str) -> bool:
     lowered = message.lower().strip()
-    if lowered in {"stop", "konec", "prekini", "cancel", "quit", "exit"}:
+    if lowered in {"stop", "konec", "prekini", "cancel", "quit", "exit", "cancel_reservation", "cancel-reservation"}:
         return True
     return any(token in lowered for token in {"pustimo", "pozabi", "ne rabim", "ni treba", "prekin"})
 

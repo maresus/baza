@@ -1341,6 +1341,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     set_state_field(state, "language", detected_lang)
     set_state_field(state, "session_id", session_id)
 
+    def _yes_no_buttons() -> list[dict]:
+        return [
+            {"label": "Da ✅", "payload": "YES"},
+            {"label": "Ne ❌", "payload": "NO"},
+        ]
+
     def _sanitize_policy_response(text: str) -> str:
         def _finish(sentence_text: str) -> str:
             trimmed = sentence_text.strip()
@@ -1411,8 +1417,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if len(conversation_history) > 12:
             conversation_history = conversation_history[-12:]
         blocks: list[UIBlock] = [UIBlock(type="text", content=final_reply)]
-        if buttons:
-            button_models = [ActionButton(**btn) for btn in buttons]
+        btns = list(buttons) if buttons else []
+        if state.get("step") is not None and any(k in intent_value for k in ["reservation", "booking"]):
+            if not any(str(b.get("payload")).lower() == "cancel_reservation" for b in btns):
+                btns.append({"label": "Prekliči ❌", "payload": "CANCEL_RESERVATION"})
+        if btns:
+            button_models = [ActionButton(**btn) for btn in btns]
             blocks.append(UIBlock(type="buttons", content=button_models))
         return ChatResponse(
             reply=final_reply,
@@ -2067,10 +2077,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             consent = start_inquiry_consent(inquiry_state)
             reply = f"{info_reply}\n\n---\n\n{consent}"
             reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "inquiry_offer", followup_flag=False)
+            return finalize(reply, "inquiry_offer", followup_flag=False, buttons=_yes_no_buttons())
         inquiry_reply = start_inquiry_consent(inquiry_state)
         inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
-        return finalize(inquiry_reply, "inquiry_offer", followup_flag=False)
+        return finalize(inquiry_reply, "inquiry_offer", followup_flag=False, buttons=_yes_no_buttons())
 
     # če je prejšnji odgovor bil "ne vem" in uporabnik pošlje email
     if session_id in unknown_question_state and is_email(payload.message):
@@ -2419,7 +2429,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 )
                 set_state_field(state, "awaiting_continue", True)
                 llm_reply = maybe_translate(llm_reply, detected_lang)
-                return finalize(llm_reply, "info_during_reservation", followup_flag=False)
+                return finalize(
+                    llm_reply,
+                    "info_during_reservation",
+                    followup_flag=False,
+                    buttons=_yes_no_buttons(),
+                )
         if is_product_query(payload.message):
             reply = answer_product_question(payload.message)
             last_product_query = payload.message
@@ -2429,7 +2444,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             reply = f"{reply}\n\nŽeliš nadaljevati rezervacijo? (da/ne)"
             set_state_field(state, "awaiting_continue", True)
-            return finalize(reply, "product_during_reservation", followup_flag=False)
+            return finalize(
+                reply,
+                "product_during_reservation",
+                followup_flag=False,
+                buttons=_yes_no_buttons(),
+            )
         if is_info_query(payload.message):
             reply = answer_farm_info(payload.message)
             last_product_query = None
@@ -2439,7 +2459,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             reply = f"{reply}\n\nŽeliš nadaljevati rezervacijo? (da/ne)"
             set_state_field(state, "awaiting_continue", True)
-            return finalize(reply, "info_during_reservation", followup_flag=False)
+            return finalize(
+                reply,
+                "info_during_reservation",
+                followup_flag=False,
+                buttons=_yes_no_buttons(),
+            )
 
         reply = handle_reservation_flow(payload.message, state)
         last_product_query = None
