@@ -1342,11 +1342,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     set_state_field(state, "session_id", session_id)
 
     # Tourist override (allow outside booking flow when appropriate)
-    if is_tourist_query(payload.message) and (state.get("step") is None or should_switch_from_reservation(payload.message, state)):
-        tourist_reply = tourist_answer(payload.message)
-        if tourist_reply:
-            tourist_reply = maybe_translate(tourist_reply, detected_lang)
-            return finalize(tourist_reply, "tourist_info", followup_flag=False)
+    tourist_reply = tourist_answer(payload.message)
+    if tourist_reply and (state.get("step") is None or should_switch_from_reservation(payload.message, state)):
+        tourist_reply = maybe_translate(tourist_reply, detected_lang)
+        return finalize(tourist_reply, "tourist_info", followup_flag=False)
 
 
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
