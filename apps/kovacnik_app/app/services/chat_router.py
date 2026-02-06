@@ -14,7 +14,7 @@ import threading
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from app.models.chat import ChatRequest, ChatResponse
+from app.models.chat import ActionButton, ChatRequest, ChatResponse, UIBlock
 from app.services.reservation_service import ReservationService
 from app.services.email_service import send_guest_confirmation, send_admin_notification, send_custom_message
 from app.rag.rag_engine import rag_engine
@@ -1379,7 +1379,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             parts = parts[:4]
         return _finish(" ".join(parts))
 
-    def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
+    def finalize(
+        reply_text: str,
+        intent_value: str,
+        followup_flag: bool = False,
+        buttons: list[dict] | None = None,
+    ) -> ChatResponse:
         nonlocal needs_followup
         global conversation_history
         if USE_UNIFIED_ROUTER and unified_state is not None:
@@ -1405,7 +1410,16 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         conversation_history.append({"role": "assistant", "content": final_reply})
         if len(conversation_history) > 12:
             conversation_history = conversation_history[-12:]
-        return ChatResponse(reply=final_reply)
+        blocks: list[UIBlock] = [UIBlock(type="text", content=final_reply)]
+        if buttons:
+            button_models = [ActionButton(**btn) for btn in buttons]
+            blocks.append(UIBlock(type="buttons", content=button_models))
+        return ChatResponse(
+            reply=final_reply,
+            blocks=blocks,
+            intent=intent_value,
+            session_id=session_id,
+        )
 
     # Tourist override (allow outside booking flow when appropriate)
     tourist_reply = tourist_answer(payload.message)
@@ -2104,7 +2118,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if is_ambiguous_reservation_request(payload.message):
             reply = "Želite rezervirati **sobo** ali **mizo**?"
             reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "clarify_reservation", followup_flag=False)
+            buttons = [
+                {"label": "Rezerviraj sobo 🛏️", "payload": "BOOK_ROOM"},
+                {"label": "Rezerviraj mizo 🍽️", "payload": "BOOK_TABLE"},
+            ]
+            return finalize(reply, "clarify_reservation", followup_flag=False, buttons=buttons)
         if is_ambiguous_inquiry_request(payload.message):
             reply = (
                 "Ali želite, da zabeležim **povpraševanje/naročilo**? "
