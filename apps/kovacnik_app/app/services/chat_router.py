@@ -1526,6 +1526,16 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         # No active booking: deterministic entry routing.
         reservation_type = parse_reservation_type(payload.message)
         if reservation_type in {"room", "table"} or is_reservation_related(payload.message):
+            if reservation_type is None and not any(
+                tok in lowered for tok in ["soba", "sobe", "noč", "noc", "miza", "mizo", "table", "kosilo"]
+            ):
+                reply = "Želite rezervirati **sobo** ali **mizo**?"
+                reply = maybe_translate(reply, detected_lang)
+                buttons = [
+                    {"label": "Rezerviraj sobo 🛏️", "payload": "BOOK_ROOM"},
+                    {"label": "Rezerviraj mizo 🍽️", "payload": "BOOK_TABLE"},
+                ]
+                return finalize(reply, "clarify_reservation", followup_flag=False, buttons=buttons)
             reset_reservation_state(state)
             set_state_field(state, "type", reservation_type or ("room" if "soba" in lowered or "noč" in lowered else "table"))
             reply = handle_reservation_flow(payload.message, state)
