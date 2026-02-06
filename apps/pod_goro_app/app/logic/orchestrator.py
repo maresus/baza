@@ -311,7 +311,11 @@ def should_switch_from_reservation(message: str, state: dict[str, Optional[str |
 def tourist_answer(message: str) -> Optional[str]:
     if not is_tourist_query(message):
         return None
-    answer = answer_tourist_question(message)
+    try:
+        answer = answer_tourist_question(message)
+    except Exception as exc:
+        print(f"[TOURIST] Failed to answer tourist question: {exc}")
+        answer = None
     if answer:
         return answer
     return "Žal nimam turističnih informacij o tem kraju. Lahko vprašate kaj drugega ali nas pokličete za priporočila."
