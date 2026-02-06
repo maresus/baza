@@ -326,10 +326,18 @@ def classify_intent(
     lower_message = message.lower()
 
     if state["step"] is not None:
-        if is_menu_query(message):
-            return "menu"
-        if is_hours_question(message):
-            return "farm_info"
+        critical_steps = {"awaiting_name", "awaiting_phone", "awaiting_email"}
+        if state.get("step") not in critical_steps:
+            if is_tourist_query(message):
+                return "tourist_info"
+            if is_menu_query(message):
+                return "menu"
+            if is_hours_question(message):
+                return "farm_info"
+            if detect_info_intent(message):
+                return "info"
+            if detect_product_intent(message):
+                return "product"
         return "reservation"
 
     if is_hours_question(message):
