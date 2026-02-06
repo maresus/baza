@@ -1,4 +1,4 @@
-from app.logic.orchestrator import classify_intent as detect_intent, is_booking_intent, is_menu_query, parse_reservation_type, is_affirmative, is_negative, is_explicit_cancel_command, should_switch_from_reservation, tourist_answer
+from app.logic.orchestrator import classify_intent as detect_intent, is_booking_intent, is_menu_query, parse_reservation_type, is_affirmative, is_negative, is_explicit_cancel_command, should_switch_from_reservation, tourist_answer, is_event_inquiry_request, is_product_followup, detect_reset_request
 import re
 import random
 import json
@@ -722,24 +722,8 @@ def handle_info_during_booking(message: str, session_state: dict) -> Optional[st
 
 
 
-def is_event_inquiry_request(message: str) -> bool:
-    lowered = message.lower()
-    if re.search(r"(team\w*build|teamb\w*|porok\w*|cater\w*|pogost\w*|dogod\w*)", lowered):
-        return True
-    words = re.findall(r"[a-zA-ZčšžČŠŽ]+", lowered)
-    for word in words:
-        if difflib.SequenceMatcher(None, word, "teambuilding").ratio() >= 0.65:
-            return True
-    return False
 
 
-def is_product_followup(message: str) -> bool:
-    lowered = message.lower()
-    if not last_product_query:
-        return False
-    if any(phrase in lowered for phrase in PRODUCT_FOLLOWUP_PHRASES):
-        return True
-    return False
 
 def strip_product_followup(text: str) -> str:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -776,45 +760,6 @@ def extract_phone(text: str) -> str:
 
 
 
-def detect_reset_request(message: str) -> bool:
-    lowered = message.lower()
-    reset_words = [
-        "reset",
-        "začni znova",
-        "zacni znova",
-        "od začetka",
-        "od zacetka",
-        "zmota",
-        "zmoto",
-        "zmotu",
-        "zmotil",
-        "zmotila",
-        "zgresil",
-        "zgrešil",
-        "zgrešila",
-        "zgresila",
-        "napačno",
-        "narobe",
-        "popravi",
-        "nova rezervacija",
-    ]
-    exit_words = [
-        "konec",
-        "stop",
-        "prekini",
-        "nehaj",
-        "pustimo",
-        "pozabi",
-        "ne rabim",
-        "ni treba",
-        "drugič",
-        "drugic",
-        "cancel",
-        "quit",
-        "exit",
-        "pusti",
-    ]
-    return any(word in lowered for word in reset_words + exit_words)
 
 
 def is_escape_command(message: str) -> bool:
