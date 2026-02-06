@@ -1366,13 +1366,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     set_state_field(state, "language", detected_lang)
     set_state_field(state, "session_id", session_id)
 
-    # Tourist override (allow outside booking flow when appropriate)
-    tourist_reply = tourist_answer(payload.message)
-    if tourist_reply and (state.get("step") is None or should_switch_from_reservation(payload.message, state)):
-        tourist_reply = maybe_translate(tourist_reply, detected_lang)
-        return finalize(tourist_reply, "tourist_info", followup_flag=False)
-
-
     def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
         nonlocal needs_followup
         global conversation_history
@@ -1396,6 +1389,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if len(conversation_history) > 12:
             conversation_history = conversation_history[-12:]
         return ChatResponse(reply=final_reply)
+
+    # Tourist override (allow outside booking flow when appropriate)
+    tourist_reply = tourist_answer(payload.message)
+    if tourist_reply and (state.get("step") is None or should_switch_from_reservation(payload.message, state)):
+        tourist_reply = maybe_translate(tourist_reply, detected_lang)
+        return finalize(tourist_reply, "tourist_info", followup_flag=False)
 
     def _sanitize_policy_response(text: str) -> str:
         def _finish(sentence_text: str) -> str:
