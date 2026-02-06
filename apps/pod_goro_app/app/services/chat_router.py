@@ -1366,36 +1366,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     set_state_field(state, "language", detected_lang)
     set_state_field(state, "session_id", session_id)
 
-    def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
-        nonlocal needs_followup
-        global conversation_history
-        final_reply = reply_text
-        if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]):
-            if "pozdrav" not in intent_value and "greeting" not in intent_value:
-                final_reply = _sanitize_policy_response(final_reply)
-        flag = followup_flag or needs_followup or is_unknown_response(final_reply)
-        if flag:
-            final_reply = get_unknown_response(detected_lang)
-        conv_id = reservation_service.log_conversation(
-            session_id=session_id,
-            user_message=payload.message,
-            bot_response=final_reply,
-            intent=intent_value,
-            needs_followup=flag,
-        )
-        if flag:
-            unknown_question_state[session_id] = {"question": payload.message, "conv_id": conv_id}
-        conversation_history.append({"role": "assistant", "content": final_reply})
-        if len(conversation_history) > 12:
-            conversation_history = conversation_history[-12:]
-        return ChatResponse(reply=final_reply)
-
-    # Tourist override (allow outside booking flow when appropriate)
-    tourist_reply = tourist_answer(payload.message)
-    if tourist_reply and (state.get("step") is None or should_switch_from_reservation(payload.message, state)):
-        tourist_reply = maybe_translate(tourist_reply, detected_lang)
-        return finalize(tourist_reply, "tourist_info", followup_flag=False)
-
     def _sanitize_policy_response(text: str) -> str:
         def _finish(sentence_text: str) -> str:
             trimmed = sentence_text.strip()
@@ -1433,6 +1403,36 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if len(parts) > 4:
             parts = parts[:4]
         return _finish(" ".join(parts))
+
+    def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
+        nonlocal needs_followup
+        global conversation_history
+        final_reply = reply_text
+        if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]):
+            if "pozdrav" not in intent_value and "greeting" not in intent_value:
+                final_reply = _sanitize_policy_response(final_reply)
+        flag = followup_flag or needs_followup or is_unknown_response(final_reply)
+        if flag:
+            final_reply = get_unknown_response(detected_lang)
+        conv_id = reservation_service.log_conversation(
+            session_id=session_id,
+            user_message=payload.message,
+            bot_response=final_reply,
+            intent=intent_value,
+            needs_followup=flag,
+        )
+        if flag:
+            unknown_question_state[session_id] = {"question": payload.message, "conv_id": conv_id}
+        conversation_history.append({"role": "assistant", "content": final_reply})
+        if len(conversation_history) > 12:
+            conversation_history = conversation_history[-12:]
+        return ChatResponse(reply=final_reply)
+
+    # Tourist override (allow outside booking flow when appropriate)
+    tourist_reply = tourist_answer(payload.message)
+    if tourist_reply and (state.get("step") is None or should_switch_from_reservation(payload.message, state)):
+        tourist_reply = maybe_translate(tourist_reply, detected_lang)
+        return finalize(tourist_reply, "tourist_info", followup_flag=False)
 
     if is_switch_topic_command(payload.message):
         reset_reservation_state(state)
