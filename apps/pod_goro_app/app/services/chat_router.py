@@ -1366,6 +1366,18 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     set_state_field(state, "language", detected_lang)
     set_state_field(state, "session_id", session_id)
 
+    def _yes_no_buttons() -> list[dict]:
+        return [
+            {"label": "Da ✅", "payload": "YES"},
+            {"label": "Ne ❌", "payload": "NO"},
+        ]
+
+    def _yes_no_buttons() -> list[dict]:
+        return [
+            {"label": "Da ✅", "payload": "YES"},
+            {"label": "Ne ❌", "payload": "NO"},
+        ]
+
     def _sanitize_policy_response(text: str) -> str:
         def _finish(sentence_text: str) -> str:
             trimmed = sentence_text.strip()
@@ -1404,7 +1416,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             parts = parts[:4]
         return _finish(" ".join(parts))
 
-    def finalize(reply_text: str, intent_value: str, followup_flag: bool = False) -> ChatResponse:
+    def finalize(
+        reply_text: str,
+        intent_value: str,
+        followup_flag: bool = False,
+        buttons: list[dict] | None = None,
+    ) -> ChatResponse:
         nonlocal needs_followup
         global conversation_history
         final_reply = reply_text
@@ -1426,7 +1443,24 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         conversation_history.append({"role": "assistant", "content": final_reply})
         if len(conversation_history) > 12:
             conversation_history = conversation_history[-12:]
-        return ChatResponse(reply=final_reply)
+        blocks: list[UIBlock] = [UIBlock(type="text", content=final_reply)]
+        btns = list(buttons) if buttons else []
+        if "(da/ne)" in final_reply.lower() and not any(
+            str(b.get("payload")).upper() in {"YES", "NO"} for b in btns
+        ):
+            btns.extend(_yes_no_buttons())
+        if state.get("step") is not None and any(k in intent_value for k in ["reservation", "booking"]):
+            if not any(str(b.get("payload")).lower() == "cancel_reservation" for b in btns):
+                btns.append({"label": "Prekliči ❌", "payload": "CANCEL_RESERVATION"})
+        if btns:
+            button_models = [ActionButton(**btn) for btn in btns]
+            blocks.append(UIBlock(type="buttons", content=button_models))
+        return ChatResponse(
+            reply=final_reply,
+            blocks=blocks,
+            intent=intent_value,
+            session_id=session_id,
+        )
 
     # Tourist override (allow outside booking flow when appropriate)
     tourist_reply = tourist_answer(payload.message)
@@ -1789,10 +1823,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             consent = start_inquiry_consent(inquiry_state)
             reply = f"{info_reply}\n\n---\n\n{consent}"
             reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "inquiry_offer", followup_flag=False)
+            return finalize(reply, "inquiry_offer", followup_flag=False, buttons=_yes_no_buttons())
         inquiry_reply = start_inquiry_consent(inquiry_state)
         inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
-        return finalize(inquiry_reply, "inquiry_offer", followup_flag=False)
+        return finalize(inquiry_reply, "inquiry_offer", followup_flag=False, buttons=_yes_no_buttons())
 
     # če je prejšnji odgovor bil "ne vem" in uporabnik pošlje email
     if session_id in unknown_question_state and is_email(payload.message):
