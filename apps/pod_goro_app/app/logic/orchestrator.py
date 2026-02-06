@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 import re
+import difflib
 
 from app.rag.chroma_service import answer_tourist_question, is_tourist_query
 from app.services.flows.info_flow import is_hours_question
@@ -412,6 +413,74 @@ def classify_intent(
         return "weekly_menu"
 
     return "default"
+
+
+
+
+RESET_WORDS = [
+    "reset",
+    "začni znova",
+    "zacni znova",
+    "od začetka",
+    "od zacetka",
+    "zmota",
+    "zmoto",
+    "zmotu",
+    "zmotil",
+    "zmotila",
+    "zgresil",
+    "zgrešil",
+    "zgrešila",
+    "zgresila",
+    "napačno",
+    "narobe",
+    "popravi",
+    "nova rezervacija",
+]
+
+EXIT_WORDS = [
+    "konec",
+    "stop",
+    "prekini",
+    "nehaj",
+    "pustimo",
+    "pozabi",
+    "ne rabim",
+    "ni treba",
+    "drugič",
+    "drugic",
+    "cancel",
+    "quit",
+    "exit",
+    "pusti",
+]
+
+
+def detect_reset_request(message: str) -> bool:
+    lowered = message.lower()
+    return any(word in lowered for word in RESET_WORDS + EXIT_WORDS)
+
+
+
+def is_event_inquiry_request(message: str) -> bool:
+    lowered = message.lower()
+    if re.search(r"(team\w*build|teamb\w*|porok\w*|cater\w*|pogost\w*|dogod\w*)", lowered):
+        return True
+    words = re.findall(r"[a-zA-ZčšžČŠŽ]+", lowered)
+    for word in words:
+        if difflib.SequenceMatcher(None, word, "teambuilding").ratio() >= 0.65:
+            return True
+    return False
+
+
+
+def is_product_followup(message: str, last_product_query: str | None = None) -> bool:
+    lowered = message.lower()
+    if not last_product_query:
+        return False
+    if any(phrase in lowered for phrase in PRODUCT_FOLLOWUP_PHRASES):
+        return True
+    return False
 
 
 def detect_intent(
