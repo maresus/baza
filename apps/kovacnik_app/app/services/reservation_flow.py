@@ -393,49 +393,11 @@ def _handle_room_reservation_impl(
         if "@" not in email or "." not in email:
             return "Prosim vpišite veljaven e-poštni naslov (npr. info@primer.si)."
         set_state_field(reservation_state, "email", email)
-        # Finalize booking immediately after email (atomic close).
-        summary_state = reservation_state.copy()
-        chosen_location = reservation_state.get("location") or "Sobe (dodelimo ob potrditvi)"
-        res_id = reservation_service.create_reservation(
-            date=reservation_state["date"] or "",
-            people=int(reservation_state["people"] or 0),
-            reservation_type="room",
-            source="chat",
-            nights=int(reservation_state["nights"] or 0),
-            rooms=int(reservation_state["rooms"] or 0),
-            name=str(reservation_state["name"]),
-            phone=str(reservation_state["phone"]),
-            email=reservation_state["email"],
-            location=chosen_location,
-            note=(reservation_state.get("note") or ""),
-            kids=str(reservation_state.get("kids") or ""),
-            kids_small=str(reservation_state.get("kids_ages") or ""),
+        set_state_field(reservation_state, "step", "awaiting_dinner")
+        return (
+            "Želite ob bivanju tudi večerje? (25€/oseba, vključuje juho, glavno jed in sladico)\n"
+            "Odgovorite Da ali Ne."
         )
-        email_data = {
-            "id": res_id,
-            "name": reservation_state.get("name", ""),
-            "email": reservation_state.get("email", ""),
-            "phone": reservation_state.get("phone", ""),
-            "date": reservation_state.get("date", ""),
-            "nights": reservation_state.get("nights", 0),
-            "rooms": reservation_state.get("rooms", 0),
-            "people": reservation_state.get("people", 0),
-            "reservation_type": "room",
-            "location": chosen_location,
-            "note": reservation_state.get("note", ""),
-            "kids": reservation_state.get("kids", ""),
-            "kids_ages": reservation_state.get("kids_ages", ""),
-        }
-        send_reservation_emails_async(email_data)
-        reset_reservation_state(state)
-        lines = [
-            f"Hvala, {summary_state.get('name')}! Vaša rezervacija je prejeta.",
-            f"📅 Datum: {summary_state.get('date')}, {summary_state.get('nights')} noči",
-            f"👥 Osebe: {summary_state.get('people')}",
-            f"🛏️ Soba: {chosen_location}",
-            f"📧 Povzetek sem poslal na: {summary_state.get('email')}",
-        ]
-        return "\n".join([line for line in lines if line])
 
     if step == "awaiting_dinner":
         answer = message.strip().lower()
@@ -818,42 +780,8 @@ def _handle_table_reservation_impl(
         if "@" not in email or "." not in email:
             return "Prosim vpišite veljaven e-poštni naslov (npr. info@primer.si)."
         set_state_field(reservation_state, "email", email)
-        # Finalize booking immediately after email (atomic close).
-        summary_state = reservation_state.copy()
-        res_id = reservation_service.create_reservation(
-            date=reservation_state["date"] or "",
-            people=int(reservation_state["people"] or 0),
-            reservation_type="table",
-            source="chat",
-            time=str(reservation_state.get("time") or ""),
-            name=str(reservation_state["name"]),
-            phone=str(reservation_state["phone"]),
-            email=reservation_state["email"],
-            location=str(reservation_state.get("location") or ""),
-            note=(reservation_state.get("note") or ""),
-        )
-        email_data = {
-            "id": res_id,
-            "name": reservation_state.get("name", ""),
-            "email": reservation_state.get("email", ""),
-            "phone": reservation_state.get("phone", ""),
-            "date": reservation_state.get("date", ""),
-            "time": reservation_state.get("time", ""),
-            "people": reservation_state.get("people", 0),
-            "reservation_type": "table",
-            "location": reservation_state.get("location", ""),
-            "note": reservation_state.get("note", ""),
-        }
-        send_reservation_emails_async(email_data)
-        reset_reservation_state(state)
-        lines = [
-            f"Hvala, {summary_state.get('name')}! Rezervacija mize je prejeta.",
-            f"📅 Datum: {summary_state.get('date')}",
-            f"⏰ Ura: {summary_state.get('time')}",
-            f"👥 Osebe: {summary_state.get('people')}",
-            f"📧 Povzetek sem poslal na: {summary_state.get('email')}",
-        ]
-        return "\n".join([line for line in lines if line])
+        set_state_field(reservation_state, "step", "awaiting_note")
+        return "Želite še kaj sporočiti? (posebne želje, alergije, praznovanje...)"
 
     return "Nadaljujmo z rezervacijo mize. Kateri datum vas zanima?"
 
