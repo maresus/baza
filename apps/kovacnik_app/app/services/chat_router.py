@@ -1489,7 +1489,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             step = state.get("step")
             msg = (payload.message or "").strip()
             slot_input = False
-            if step == "awaiting_email" and re.match(r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", msg):
+            if step == "awaiting_email" and re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", msg):
                 slot_input = True
             elif step == "awaiting_phone" and len(re.sub(r"\\D+", "", msg)) >= 7 and "?" not in msg:
                 slot_input = True
