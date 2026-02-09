@@ -1486,6 +1486,20 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
         # Active booking flow: only this branch can advance/update booking state.
         if state.get("step") is not None:
+            step = state.get("step")
+            msg = (payload.message or "").strip()
+            slot_input = False
+            if step == "awaiting_email" and re.match(r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", msg):
+                slot_input = True
+            elif step == "awaiting_phone" and len(re.sub(r"\\D+", "", msg)) >= 7 and "?" not in msg:
+                slot_input = True
+            elif step == "awaiting_name" and "?" not in msg and len(msg.split()) >= 2:
+                slot_input = True
+            if slot_input:
+                reply = handle_reservation_flow(payload.message, state)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "booking_continue_unified", followup_flag=False)
+
             switch_type = parse_reservation_type(payload.message)
             if switch_type in {"room", "table"} and switch_type != state.get("type"):
                 reset_reservation_state(state)
