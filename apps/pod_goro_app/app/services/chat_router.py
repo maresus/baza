@@ -2474,9 +2474,14 @@ def chat_stream(payload: ChatRequestWithSession):
         pass
 
     if USE_UNIFIED_ROUTER:
-        response = chat_endpoint(payload)
+        try:
+            response = chat_endpoint(payload)
+            reply_text = getattr(response, "reply", None) or "Seveda, z veseljem pomagam. Kaj vas zanima?"
+        except Exception as exc:
+            print(f"[STREAM] Failed to handle stream request: {exc}")
+            reply_text = "Seveda, z veseljem pomagam. Kaj vas zanima?"
         return StreamingResponse(
-            _stream_text_chunks(response.reply),
+            _stream_text_chunks(reply_text),
             media_type="text/plain",
         )
 
