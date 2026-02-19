@@ -1,5 +1,5 @@
 """
-ChromaDB Service za iskanje v občinskih podatkih Rače-Zeleno Polje.
+ChromaDB Service za iskanje v občinskih podatkih Rače-Fram.
 Uporablja se za turistična vprašanja o okolici.
 """
 
@@ -162,7 +162,7 @@ def answer_tourist_question(question: str) -> Optional[str]:
     if not relevant:
         return None
 
-    intro = "Na podlagi informacij o občini Rače-Zeleno Polje:\n\n"
+    intro = "Na podlagi informacij o občini Rače-Fram:\n\n"
     content = format_tourist_info(relevant)
 
     return intro + content

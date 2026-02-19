@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quick smoke test for Kmetija Pod Goro AI chat API.
+# Quick smoke test for Kovačnik AI chat API.
 # Usage: ./smoke_test.sh [base_url]
 # Default base_url: http://127.0.0.1:8000
 

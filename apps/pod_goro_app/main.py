@@ -1,15 +1,10 @@
 from pathlib import Path
-import sys
-
-# Ensure shared_core is importable
-sys.path.append(str(Path(__file__).resolve().parents[1] / "shared_core"))
 
 from dotenv import load_dotenv
 
 # Nalozi .env pred uvozom modulov, ki berejo environment na import time.
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
-import os
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
@@ -31,16 +26,10 @@ def startup_tasks() -> None:
 def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
-@app.get("/version")
-def version_info() -> dict[str, str]:
-    return {
-        "commit": os.getenv("RAILWAY_GIT_COMMIT_SHA") or os.getenv("GIT_COMMIT") or "unknown"
-    }
-
 @app.get("/", response_class=HTMLResponse)
 def chat_ui() -> HTMLResponse:
     """
-    Preprost UI za testiranje Kmetija Pod Goro AI chata.
+    Preprost UI za testiranje Kovačnik AI chata.
     Streže datoteko static/chat.html iz root mape projekta.
     """
     html_path = Path("static/chat.html")

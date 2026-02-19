@@ -14,30 +14,24 @@ from app.models.reservation import ReservationRecord
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 ROOMS = [
-    {"id": "POD_VRHOM", "name": "Soba Pod vrhom - Soba z balkonom (2 + 2)", "capacity": 4},
+    {"id": "GOZD", "name": "Soba GOZD - Soba z balkonom (2 + 2)", "capacity": 4},
     {
-        "id": "PRI_POTOKU",
-        "name": "Soba Pri potoku - Družinska soba z balkonom (2 odrasla + 2 otroka)",
+        "id": "RAZGLED",
+        "name": "Soba RAZGLED - Družinska soba z balkonom (2 odrasla + 2 otroka)",
         "capacity": 4,
     },
     {
-        "id": "PRI_SADOVNJAKU",
-        "name": "Soba Pri sadovnjaku - Družinska soba z dvema spalnicama (2 odrasla + 2 otroka)",
+        "id": "SONCE",
+        "name": "Soba SONCE - Družinska soba z dvema spalnicama (2 odrasla + 2 otroka)",
         "capacity": 4,
     },
 ]
 ROOM_NAME_MAP = {
-    "pod vrhom": "POD_VRHOM",
-    "podvrhom": "POD_VRHOM",
-    "pri potoku": "PRI_POTOKU",
-    "pripotoku": "PRI_POTOKU",
-    "pri sadovnjaku": "PRI_SADOVNJAKU",
-    "prisadovnjaku": "PRI_SADOVNJAKU",
-    # backward compatibility aliases
-    "aljaž": "POD_VRHOM",
-    "aljaz": "POD_VRHOM",
-    "julija": "PRI_POTOKU",
-    "ana": "PRI_SADOVNJAKU",
+    "aljaž": "GOZD",
+    "aljaz": "GOZD",
+    "jULIJA".lower(): "RAZGLED",
+    "julija": "RAZGLED",
+    "ana": "SONCE",
 }
 
 DINING_ROOMS = [
@@ -570,7 +564,7 @@ class ReservationService:
             return False, "Uro prosim vpišite v obliki HH:MM (npr. 12:30)."
         hour, minute = map(int, normalized_time.split(":"))
         if hour < OPENING_START_HOUR or hour > OPENING_END_HOUR:
-            return False, "Kuhinja obratuje med 12:00 in 20:00. Prosimo izberite uro znotraj tega okna."
+            return False, "Kuhinja obratuje med 12:00 in 20:00, zadnji prihod na kosilo je ob 15:00. Prosimo izberite uro znotraj tega okna."
         if hour > LAST_LUNCH_ARRIVAL_HOUR or (hour == LAST_LUNCH_ARRIVAL_HOUR and minute > 0):
             return False, "Zadnji prihod na kosilo je ob 15:00. Prosimo izberite zgodnejšo uro."
         return True, ""

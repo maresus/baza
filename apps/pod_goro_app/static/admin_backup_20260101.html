@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kmetija Pod Goro – Rezervacije</title>
+  <title>Kovačnik – Rezervacije</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -253,7 +253,7 @@
   <div class="page">
     <header>
       <div>
-        <div class="title">🏠 Kmetija Pod Goro - Rezervacije</div>
+        <div class="title">🏠 Kovačnik - Rezervacije</div>
         <div class="subtitle" id="current-date"></div>
       </div>
       <div class="actions">
@@ -427,9 +427,9 @@
             <label>Soba</label>
             <select id="room-edit-location">
               <option value="">Nedoločeno (dodeli ob potrditvi)</option>
-              <option value="ALJAZ">ALJAŽ</option>
-              <option value="JULIJA">JULIJA</option>
-              <option value="ANA">ANA</option>
+              <option value="GOZD">GOZD</option>
+              <option value="RAZGLED">RAZGLED</option>
+              <option value="SONCE">SONCE</option>
             </select>
           </div>
           <div class="form-group">
@@ -592,9 +592,9 @@
             <label>Soba</label>
             <select id="new-room-location">
               <option value="">Nedoločeno</option>
-              <option value="ALJAZ">ALJAŽ</option>
-              <option value="JULIJA">JULIJA</option>
-              <option value="ANA">ANA</option>
+              <option value="GOZD">GOZD</option>
+              <option value="RAZGLED">RAZGLED</option>
+              <option value="SONCE">SONCE</option>
             </select>
           </div>
           <div class="form-group">
@@ -1093,14 +1093,14 @@
       } else {
         qs('confirm-label').textContent = 'Izberi sobo';
         hint.textContent = r.location ? `Gost je izbral: ${(r.location || '').toUpperCase()}` : 'Gost ni izbral sobe.';
-        ['', 'ALJAZ', 'JULIJA', 'ANA'].forEach(opt => {
+        ['', 'GOZD', 'RAZGLED', 'SONCE'].forEach(opt => {
           const o = document.createElement('option');
           o.value = opt;
           o.textContent = opt ? opt : '-- izberi --';
           select.appendChild(o);
         });
         const currentRoom = (r.location || '').toUpperCase();
-        select.value = currentRoom && ['ALJAZ','JULIJA','ANA'].includes(currentRoom) ? currentRoom : '';
+        select.value = currentRoom && ['GOZD','RAZGLED','SONCE'].includes(currentRoom) ? currentRoom : '';
       }
       qs('confirm-modal').classList.add('active');
     }
@@ -1551,9 +1551,9 @@
     function normalizeRoom(location) {
       if (!location) return '';
       const upper = String(location).toUpperCase();
-      if (upper.includes('ALJAZ') || upper.includes('ALJAŽ')) return 'ALJAZ';
-      if (upper.includes('JULIJA')) return 'JULIJA';
-      if (upper.includes('ANA')) return 'ANA';
+      if (upper.includes('GOZD') || upper.includes('GOZD')) return 'GOZD';
+      if (upper.includes('RAZGLED')) return 'RAZGLED';
+      if (upper.includes('SONCE')) return 'SONCE';
       return '';
     }
 

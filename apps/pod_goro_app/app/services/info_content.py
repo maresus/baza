@@ -31,11 +31,11 @@ SEASONAL_MENUS = [
         "months": {3, 4, 5},
         "label": "Marec–Maj (pomladna srajčka)",
         "items": [
-            "Pohorska bunka in zorjen sir, hišna suha salama, paštetka iz domačih jetrc, zaseka, bučni namaz, hišni kruhek",
+            "Pohorska bunka in zorjen Frešerjev sir, hišna suha salama, paštetka iz domačih jetrc, zaseka, bučni namaz, hišni kruhek",
             "Juhe: goveja župca z rezanci in jetrnimi rolicami, koprivna juhica s čemažem",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice z zelišči, mlado goveje meso z rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir, mini pita s porom, ocvrte hruške, pomladna solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
+            "Sladica: Pohorska gibanica babice Angelce",
             "Cena: 36 EUR odrasli, otroci 4–12 let -50%",
         ],
     },
@@ -47,7 +47,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci, kremna juha poletnega vrta",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rabarbaro in rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, mlad krompir z rožmarinom, mini pita z bučkami, ocvrte hruške, poletna solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
+            "Sladica: Pohorska gibanica babice Angelce",
             "Cena: 36 EUR odrasli, otroci 4–12 let -50%",
         ],
     },
@@ -55,7 +55,7 @@ SEASONAL_MENUS = [
         "months": {9, 10, 11},
         "label": "September–November (jesenska srajčka)",
         "items": [
-            "Dobrodošlica s hišnim likerjem ali sokom; lesena deska s pohorsko bunko, salamo, namazi, hišni sirček, kruhek",
+            "Dobrodošlica s hišnim likerjem ali sokom; lesena deska s pohorsko bunko, salamo, namazi, Frešerjev sirček, kruhek",
             "Juhe: goveja župca z rezanci, bučna juha s kolerabo, sirne lizike z žajbljem",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rabarbaro in rdečo peso",
             "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir iz šporheta, mini pita s porom, ocvrte hruške, jesenska solatka",
@@ -71,7 +71,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci, krompirjeva juha s krvavico",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir iz pečice, mini pita z bučkami, ocvrte hruške, zimska solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
+            "Sladica: Pohorska gibanica babice Angelce",
             "Cena: 36 EUR odrasli, otroci 4–12 let -50%",
         ],
     },
@@ -93,10 +93,10 @@ WEEKLY_MENUS = {
         "wine_glasses": 4,
         "courses": [
             {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
+            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kovačnikovega vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
             {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
+            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Barbare"},
+            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Angelce ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
         ],
     },
     5: {
@@ -106,11 +106,11 @@ WEEKLY_MENUS = {
         "wine_glasses": 5,
         "courses": [
             {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
+            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kovačnikovega vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
             {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
             {"wine": "Frešer Renski rizling 2019 (suho)", "dish": "Ričotka pirine kaše z jurčki in zelenjavo"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
+            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Barbare"},
+            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Angelce ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
         ],
     },
     6: {
@@ -120,12 +120,12 @@ WEEKLY_MENUS = {
         "wine_glasses": 6,
         "courses": [
             {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
+            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kovačnikovega vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
             {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
             {"wine": "Frešer Renski rizling 2019 (suho)", "dish": "Ričotka pirine kaše z jurčki in zelenjavo"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Modra frankinja 2020 (suho)", "dish": "Štrukelj s skuto naše krave Miške, goveje meso iz Kmetije Pod Goroe proste reje, rdeča pesa, rabarbara, naravna omaka"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
+            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Barbare"},
+            {"wine": "Greif Modra frankinja 2020 (suho)", "dish": "Štrukelj s skuto naše krave Miške, goveje meso iz Kovačnikove proste reje, rdeča pesa, rabarbara, naravna omaka"},
+            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Angelce ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
         ],
     },
     7: {
@@ -135,13 +135,13 @@ WEEKLY_MENUS = {
         "wine_glasses": 7,
         "courses": [
             {"wine": "Penina Doppler Diona 2017 (zelo suho, 100% chardonnay)", "dish": "Pozdrav iz kuhinje"},
-            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
+            {"wine": "Frešer Sauvignon 2024 (suho)", "dish": "Kiblflajš s prelivom, zelenjava s Kovačnikovega vrta, zorjen Frešerjev sir, hišni kruh z drožmi"},
             {"wine": None, "dish": "Juha s kislim zeljem in krvavico"},
             {"wine": "Greif Laški rizling Terase 2020 (suho)", "dish": "An ban en goban – Jurčki, ajda, ocvirki, korenček, peteršilj"},
             {"wine": "Frešer Renski rizling 2019 (suho)", "dish": "Ričotka pirine kaše z jurčki in zelenjavo"},
-            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Maje"},
-            {"wine": "Greif Modra frankinja 2020 (suho)", "dish": "Štrukelj s skuto naše krave Miške, goveje meso iz Kmetije Pod Goroe proste reje, rdeča pesa, rabarbara, naravna omaka"},
-            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Ivanke ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
+            {"wine": "Šumenjak Alter 2021 (suho)", "dish": "Krompir iz naše njive, zelenjavni pire, pohan pišek s kmetije Pesek, solatka iz vrta gospodinje Barbare"},
+            {"wine": "Greif Modra frankinja 2020 (suho)", "dish": "Štrukelj s skuto naše krave Miške, goveje meso iz Kovačnikove proste reje, rdeča pesa, rabarbara, naravna omaka"},
+            {"wine": "Greif Rumeni muškat 2024 (polsladko)", "dish": "Pohorska gibanica babice Angelce ali domač jabolčni štrudl ali pita sezone, hišni sladoled"},
         ],
     },
 }
@@ -150,7 +150,7 @@ WEEKLY_INFO = {
     "days": "sreda, četrtek, petek",
     "time": "od 13:00 naprej",
     "min_people": 6,
-    "contact": {"phone": "031 777 888", "email": "info@kmetijapodgoro.si"},
+    "contact": {"phone": "031 330 113", "email": "info@kovacnik.com"},
     "special_diet_extra": 8,
 }
 
@@ -268,7 +268,7 @@ def answer_farm_info(message: str) -> str:
             f"Kosila: {FARM_INFO['opening_hours']['restaurant']} | "
             f"Sobe: {FARM_INFO['opening_hours']['rooms']} | "
             f"Trgovina: {FARM_INFO['opening_hours']['shop']} | "
-            f"Zaprto: {FARM_INFO['opening_hours']['closed']}"
+            f"Zaprto: {FARM_INFO['opening_hours']['closed']} (ob ponedeljkih in torkih zaprto)"
         )
 
     if "parking" in lowered or "parkirišče" in lowered or "parkirisce" in lowered or "avto" in lowered:
@@ -294,6 +294,36 @@ def answer_farm_info(message: str) -> str:
         f"{FARM_INFO['name']} | Naslov: {FARM_INFO['address']} | Tel: {FARM_INFO['phone']} | "
         f"Email: {FARM_INFO['email']} | Splet: {FARM_INFO['website']}"
     )
+
+
+def is_hours_question(message: str) -> bool:
+    lowered = message.lower()
+    patterns = [
+        "odprti",
+        "odprt",
+        "odpiralni",
+        "obratovalni",
+        "obratujete",
+        "do kdaj",
+        "kdaj lahko pridem",
+        "kdaj ste",
+        "kateri uri",
+        "kosilo ob",
+        "kosilo do",
+        "kosila",
+        "zajtrk",
+        "breakfast",
+        "večerj",
+        "vecerj",
+        "prijava",
+        "odjava",
+        "check-in",
+        "check out",
+        "kosilo",
+        "večerja",
+        "vecerja",
+    ]
+    return any(pat in lowered for pat in patterns)
 
 
 def answer_food_question(message: str) -> str:
@@ -389,33 +419,3 @@ def format_current_menu(month_override: Optional[int] = None, force_full: bool =
             "Vege ali brez glutena uredimo ob rezervaciji."
         )
     return "\n".join(lines)
-
-
-def is_hours_question(message: str) -> bool:
-    lowered = message.lower()
-    patterns = [
-        "odprti",
-        "odprt",
-        "odpiralni",
-        "obratovalni",
-        "obratujete",
-        "do kdaj",
-        "kdaj lahko pridem",
-        "kdaj ste",
-        "kateri uri",
-        "kosilo ob",
-        "kosilo do",
-        "kosila",
-        "zajtrk",
-        "breakfast",
-        "večerj",
-        "vecerj",
-        "prijava",
-        "odjava",
-        "check-in",
-        "check out",
-        "kosilo",
-        "večerja",
-        "vecerja",
-    ]
-    return any(pat in lowered for pat in patterns)

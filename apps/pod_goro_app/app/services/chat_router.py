@@ -14,7 +14,7 @@ import threading
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from app.models.chat import ChatRequest, ChatResponse
+from app.models.chat import ActionButton, ChatRequest, ChatResponse, UIBlock
 from app.services.reservation_service import ReservationService
 from app.services.email_service import send_guest_confirmation, send_admin_notification, send_custom_message
 from app.rag.rag_engine import rag_engine
@@ -29,6 +29,16 @@ from app.core.config import Settings
 from app.core.llm_client import get_llm_client
 from app.services.router_agent import route_message
 from app.services.executor_v2 import execute_decision
+from app.services.routing import decide_route, SwitchAction, handle_interrupt
+from app.services.session.unified_state import (
+    get_unified_state,
+    reset_unified_state,
+    set_flow,
+    ensure_flow_data,
+    set_last_intent,
+    set_pending_question,
+)
+from app.services.session.state_writer import set_state_field
 from app.services.intent_helpers import (
     INFO_FOLLOWUP_PHRASES,
     INFO_KEYWORDS,
@@ -36,6 +46,7 @@ from app.services.intent_helpers import (
     PRODUCT_FOLLOWUP_PHRASES,
     PRODUCT_STEMS,
     RESERVATION_START_PHRASES,
+    answer_product_question,
     detect_info_intent,
     detect_product_intent,
     detect_router_intent,
@@ -53,19 +64,6 @@ from app.services.intent_helpers import (
     is_reservation_related,
     is_reservation_typo,
     is_strong_inquiry_request,
-)
-from app.services.flows.info_flow import (
-    answer_food_question,
-    answer_farm_info,
-    answer_product_question,
-    answer_weekly_menu,
-    answer_wine_question,
-    format_current_menu,
-    is_full_menu_request,
-    is_hours_question,
-    parse_month_from_text,
-    parse_relative_month,
-    reset_info_state,
 )
 from app.brand.config import (
     BRAND_NAME,
@@ -101,7 +99,6 @@ from app.services.parsing import (
     extract_time,
     parse_people_count,
 )
-from app.services.session.state_writer import set_state_field
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -111,17 +108,8 @@ if USE_UNIFIED_ROUTER:
     USE_ROUTER_V2 = False
 INQUIRY_RECIPIENT = os.getenv("INQUIRY_RECIPIENT", "satlermarko@gmail.com")
 SHORT_MODE = os.getenv("SHORT_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
-STRICT_POLICY = os.getenv("STRICT_POLICY", "true").strip().lower() in {"1", "true", "yes", "on"}
 DISABLE_INQUIRY = os.getenv("DISABLE_INQUIRY", "true").strip().lower() in {"1", "true", "yes", "on"}
-SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kmetijapodgoro.si").rstrip("/")
-INFO_EMAIL = os.getenv("INFO_EMAIL", "info@kmetijapodgoro.si")
 _router_logger = logging.getLogger("router_v2")
-
-
-def handle_interrupt(answer: str, _current_step: Optional[str]) -> str:
-    """Interrupt nikoli ne sili uporabnika v nadaljevanje flowa."""
-    return answer
-
 
 # ========== CENTRALIZIRANI INFO ODGOVORI (brez LLM!) ==========
 BOOKING_RELEVANT_KEYS = {"sobe", "vecerja", "cena_sobe", "min_nocitve", "kapaciteta_mize"}
@@ -195,8 +183,8 @@ except Exception as exc:
 def _llm_system_prompt_full_kb(language: str = "si") -> str:
     common = (
         f"Ti si asistent Domačije {BRAND_SHORT}. Upoštevaj te potrjene podatke kot glavne:\n"
-        "- Gospodar kmetije: Jure\n"
-        "- Družina: Babica Ivanka, Jure, Maja, Tine (partnerka Kaja), Lara, Nika\n"
+        "- Gospodar kmetije: Gospodar\n"
+        "- Družina: Hiša, gostitelji in otroci\n"
         "- Konjička: Malajka in Marsij\n\n"
         "Preverjeni meniji (uporabi dobesedno, brez dodajanja novih jedi):\n"
         "Zimska srajčka (dec–feb):\n"
@@ -204,7 +192,7 @@ def _llm_system_prompt_full_kb(language: str = "si") -> str:
         "- Goveja župca z rezanci in jetrnimi rolicami ali koprivna juhica s čemažem in sirne lizike\n"
         "- Meso na plošči: pujskov hrbet, hrustljavi piščanec Pesek, piščančje kroglice z zelišči, mlado goveje meso z jabolki in rdečim vinom\n"
         "- Priloge: štukelj s skuto, ričota s pirino kašo in jurčki, pražen krompir iz šporheta na drva, mini pita s porom, ocvrte hruške “Debeluške”, pomladna/zimska solata\n"
-        "- Sladica: Pohorska gibanica babice Ivanke\n\n"
+        "- Sladica: Pohorska gibanica babice Angelce\n\n"
         "Tukaj so VSE informacije o domačiji:\n"
         f"{FULL_KB_TEXT}\n\n"
         "Ne izmišljuj si podatkov.\n"
@@ -485,6 +473,9 @@ UNKNOWN_RESPONSES = BRAND_UNKNOWN
 
 reservation_service = ReservationService()
 
+# Spletna trgovina (policy)
+STRICT_POLICY = os.getenv("STRICT_POLICY", "true").strip().lower() in {"1", "true", "yes", "on"}
+
 LOCATION_KEYWORDS = {
     "kje",
     "naslov",
@@ -659,6 +650,22 @@ def reset_inquiry_state(state: dict[str, Optional[str]]) -> None:
     state.update(_blank_inquiry_state())
 
 
+def _sync_unified_state(
+    unified_state: dict[str, Any],
+    reservation_state: dict[str, Optional[str | int]],
+    inquiry_state: dict[str, Optional[str]],
+) -> None:
+    if inquiry_state.get("step"):
+        set_flow(unified_state, "inquiry", inquiry_state.get("step"))
+        return
+    if reservation_state.get("step"):
+        res_type = reservation_state.get("type")
+        flow = "reservation_room" if res_type == "room" else "reservation_table"
+        set_flow(unified_state, flow, reservation_state.get("step"))
+        return
+    set_flow(unified_state, "idle", None)
+
+
 last_product_query: Optional[str] = None
 last_info_query: Optional[str] = None
 last_menu_query: bool = False
@@ -671,7 +678,7 @@ def handle_info_during_booking(message: str, session_state: dict) -> Optional[st
     """
     Če je booking aktiven in uporabnik vpraša info ali produkt, odgovorimo + nadaljujemo flow.
     """
-    if not session_state or (session_state.get("step") is None and not session_state.get("type")):
+    if not session_state or session_state.get("step") is None:
         return None
     step = session_state.get("step")
     msg = (message or "").strip()
@@ -691,19 +698,20 @@ def handle_info_during_booking(message: str, session_state: dict) -> Optional[st
     info_key = detect_info_intent(message)
     if info_key:
         info_response = get_info_response(info_key)
-        continuation = get_booking_continuation(session_state.get("step"), session_state)
         if STRICT_POLICY:
             return info_response
+        continuation = get_booking_continuation(session_state.get("step"), session_state)
         return f"{info_response}\n\n---\n\n📝 **Nadaljujemo z rezervacijo:**\n{continuation}"
 
     product_key = detect_product_intent(message)
     if product_key:
-        product_response = get_product_response(product_key)
-        if is_bulk_order_request(message):
-            product_response = f"Za večja naročila pišite na {INFO_EMAIL}."
-        continuation = get_booking_continuation(session_state.get("step"), session_state)
+        if STRICT_POLICY and is_bulk_order_request(message):
+            product_response = f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
+        else:
+            product_response = get_product_response(product_key)
         if STRICT_POLICY:
             return product_response
+        continuation = get_booking_continuation(session_state.get("step"), session_state)
         return f"{product_response}\n\n---\n\n📝 **Nadaljujemo z rezervacijo:**\n{continuation}"
 
     return None
@@ -750,51 +758,6 @@ def extract_phone(text: str) -> str:
     digits = re.sub(r"\D", "", text)
     return digits if len(digits) >= 7 else ""
 
-
-
-def answer_room_pricing(message: str) -> str:
-    """Odgovori na vprašanja o cenah sob."""
-    lowered = message.lower()
-
-    if "večerj" in lowered or "penzion" in lowered:
-        return (
-            f"**Penzionska večerja**: {ROOM_PRICING['dinner_price']}€/oseba\n"
-            f"Vključuje: {ROOM_PRICING['dinner_includes']}\n\n"
-            "⚠️ Ob ponedeljkih in torkih večerij ni.\n"
-            f"Večerja je ob {ROOM_PRICING['dinner_time']}."
-        )
-
-    if "otro" in lowered or "popust" in lowered or "otrok" in lowered:
-        return (
-            "**Popusti za otroke:**\n"
-            "• Otroci do 4 let: **brezplačno**\n"
-            "• Otroci 4-12 let: **50% popust**\n"
-            "• Otroci nad 12 let: polna cena"
-        )
-
-    return (
-        f"**Cena sobe**: {ROOM_PRICING['base_price']}€/nočitev na odraslo osebo (min. {ROOM_PRICING['min_adults']} odrasli)\n\n"
-        f"**Zajtrk**: vključen ({ROOM_PRICING['breakfast_time']})\n"
-        f"**Večerja**: {ROOM_PRICING['dinner_price']}€/oseba ({ROOM_PRICING['dinner_includes']})\n\n"
-        "**Popusti za otroke:**\n"
-        "• Do 4 let: brezplačno\n"
-        "• 4-12 let: 50% popust\n\n"
-        f"**Minimalno bivanje**: {ROOM_PRICING['min_nights_other']} nočitvi (poleti {ROOM_PRICING['min_nights_summer']})\n"
-        f"**Prijava**: {ROOM_PRICING['check_in']}, **Odjava**: {ROOM_PRICING['check_out']}\n\n"
-        "Za rezervacijo povejte datum in število oseb!"
-    )
-
-
-def get_help_response() -> str:
-    return (
-        "Pomagam vam lahko z:\n"
-        "📅 Rezervacije – sobe ali mize za vikend kosilo\n"
-        "🍽️ Jedilnik – aktualni sezonski meni\n"
-        "🏠 Info o kmetiji – lokacija, kontakt, delovni čas\n"
-        "🛒 Izdelki – salame, marmelade, vina, likerji\n"
-        "❓ Vprašanja – karkoli o naši ponudbi\n"
-        "Kar vprašajte!"
-    )
 
 
 
@@ -922,11 +885,17 @@ def last_bot_mentions_product_order(last_bot: str) -> bool:
 
 
 def get_greeting_response() -> str:
-    return random.choice(GREETINGS)
+    base = random.choice(GREETINGS)
+    if "pozdrav" in base.lower():
+        return base
+    return f"Pozdravljeni! {base}"
 
 
 def get_goodbye_response() -> str:
-    return random.choice(THANKS_RESPONSES)
+    base = random.choice(THANKS_RESPONSES)
+    if "adijo" in base.lower():
+        return base
+    return f"Adijo! {base}"
 
 
 
@@ -1262,7 +1231,7 @@ def generate_confirmation_email(state: dict[str, Optional[str | int]]) -> str:
 
 def room_intro_text() -> str:
     return (
-        "Sobe: POD VRHOM (2+2), PRI POTOKU (2+2), PRI SADOVNJAKU (2+2). "
+        "Sobe: GOZD (2+2), RAZGLED (2+2), SONCE (2+2). "
         "Minimalno 3 nočitve v juniju/juliju/avgustu, 2 nočitvi v ostalih mesecih. "
         "Prijava 14:00, odjava 10:00, zajtrk 8:00–9:00, večerja 18:00 (pon/torki brez večerij). "
         "Sobe so klimatizirane, Wi‑Fi je brezplačen, zajtrk je vključen."
@@ -1358,19 +1327,19 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     if last_interaction and now - last_interaction > timedelta(hours=SESSION_TIMEOUT_HOURS):
         reset_conversation_context(session_id)
     last_interaction = now
-    state = get_reservation_state(session_id)
-    inquiry_state = get_inquiry_state(session_id)
+    unified_state = None
+    if USE_UNIFIED_ROUTER:
+        unified_state = get_unified_state(session_id)
+        state = ensure_flow_data(unified_state, "reservation", _blank_reservation_state())
+        inquiry_state = ensure_flow_data(unified_state, "inquiry", _blank_inquiry_state())
+    else:
+        state = get_reservation_state(session_id)
+        inquiry_state = get_inquiry_state(session_id)
     needs_followup = False
     detected_lang = detect_language(payload.message)
     # vedno osveži jezik seje, da se lahko sproti preklaplja
     set_state_field(state, "language", detected_lang)
     set_state_field(state, "session_id", session_id)
-
-    def _yes_no_buttons() -> list[dict]:
-        return [
-            {"label": "Da ✅", "payload": "YES"},
-            {"label": "Ne ❌", "payload": "NO"},
-        ]
 
     def _yes_no_buttons() -> list[dict]:
         return [
@@ -1424,10 +1393,42 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     ) -> ChatResponse:
         nonlocal needs_followup
         global conversation_history
+        if USE_UNIFIED_ROUTER and unified_state is not None:
+            _sync_unified_state(unified_state, state, inquiry_state)
         final_reply = reply_text
+        # Apply strict policy for info/product responses (no offers, no questions, short)
         if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]):
+            # Pozdrava ne saniramo, sicer lahko pade na napačen fallback.
             if "pozdrav" not in intent_value and "greeting" not in intent_value:
                 final_reply = _sanitize_policy_response(final_reply)
+
+        # Pod Goro variant: keep logic identical, mask personal names in outputs.
+        replacements = [
+            (r"\bSoba GOZD\b", "Soba GOZD"),
+            (r"\bSoba GOZD\b", "Soba GOZD"),
+            (r"\bSoba RAZGLED\b", "Soba RAZGLED"),
+            (r"\bSoba SONCE\b", "Soba SONCE"),
+            (r"\bGOZD\b", "GOZD"),
+            (r"\bGOZD\b", "GOZD"),
+            (r"\bRAZGLED\b", "RAZGLED"),
+            (r"\bANA\b", "SONCE"),
+            (r"\bBarbara\b", "Gostiteljica"),
+            (r"\bDanilo\b", "Gospodar"),
+            (r"\bAljaž\b", "Gost"),
+            (r"\bAljaz\b", "Gost"),
+            (r"\bJulija\b", "Gostja"),
+            (r"\bAna\b", "Gostja"),
+            (r"\bAngelca\b", "Hiša"),
+            (r"\bŠtern\b", "Domačija"),
+            (r"\bStern\b", "Domačija"),
+            (r"\bMarsi\b", "poni"),
+            (r"\bMarsij\b", "poni"),
+            (r"\bMalajka\b", "poni"),
+            (r"\bMiška\b", "krava"),
+        ]
+        for pattern, repl in replacements:
+            final_reply = re.sub(pattern, repl, final_reply)
+
         flag = followup_flag or needs_followup or is_unknown_response(final_reply)
         if flag:
             final_reply = get_unknown_response(detected_lang)
@@ -1445,10 +1446,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             conversation_history = conversation_history[-12:]
         blocks: list[UIBlock] = [UIBlock(type="text", content=final_reply)]
         btns = list(buttons) if buttons else []
-        if "(da/ne)" in final_reply.lower() and not any(
-            str(b.get("payload")).upper() in {"YES", "NO"} for b in btns
-        ):
-            btns.extend(_yes_no_buttons())
         if state.get("step") is not None and any(k in intent_value for k in ["reservation", "booking"]):
             if not any(str(b.get("payload")).lower() == "cancel_reservation" for b in btns):
                 btns.append({"label": "Prekliči ❌", "payload": "CANCEL_RESERVATION"})
@@ -1476,6 +1473,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "switch_topic", followup_flag=False)
 
+    # Pozdrav obravnavaj takoj, preden info policy začne rezati vprašalne dele.
     if is_greeting(payload.message):
         reply = get_greeting_response()
         reply = maybe_translate(reply, detected_lang)
@@ -1501,6 +1499,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "inquiry_disabled_unified", followup_flag=False)
+
+        if is_bulk_order_request(payload.message) and (is_product_query(payload.message) or detect_product_intent(payload.message)):
+            reply = f"Za večja naročila pišite na {INFO_EMAIL}."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "bulk_order_email_unified", followup_flag=False)
 
         if is_explicit_cancel_command(payload.message) or is_escape_command(payload.message):
             reset_reservation_state(state)
@@ -1599,11 +1602,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "tourist_followup_unified", followup_flag=False)
 
-        if is_bulk_order_request(payload.message) and (is_product_query(payload.message) or detect_product_intent(payload.message)):
-            reply = f"Za večja naročila pišite na {INFO_EMAIL}."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "bulk_order_email_unified", followup_flag=False)
-
         info_key = detect_info_intent(payload.message)
         if info_key == "vina":
             reply = answer_wine_question(payload.message)
@@ -1644,22 +1642,39 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "unified_hard_gate", followup_flag=False)
 
+    # Strict policy: route special-event inquiries directly to email
     if STRICT_POLICY:
-        info_during = handle_info_during_booking(payload.message, state)
-        if info_during:
-            reply = maybe_translate(info_during, detected_lang)
-            return finalize(reply, "info_during_reservation", followup_flag=False)
-
+        lowered = payload.message.lower()
+        if is_event_inquiry_request(payload.message):
+            reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "inquiry_disabled", followup_flag=False)
+        if detect_product_intent(payload.message) == "gibanica_narocilo" and not any(
+            tok in lowered for tok in ["kaj je", "kaj pomeni"]
+        ):
+            reply = f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_unavailable", followup_flag=False)
+        if is_bulk_order_request(payload.message) and (is_product_query(payload.message) or detect_product_intent(payload.message)):
+            reply = f"Za večja naročila pišite na {INFO_EMAIL}."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "bulk_order_email", followup_flag=False)
+        if DISABLE_INQUIRY and (
+            is_inquiry_trigger(payload.message)
+            or is_event_inquiry_request(payload.message)
+        ):
+            reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "inquiry_disabled", followup_flag=False)
         if state.get("step") is None and not state.get("type"):
-            lowered_now = payload.message.lower()
             wine_followup_hint = (
-                re.search(r"\bkater[aeio]\b", lowered_now)
-                or "katera pa" in lowered_now
-                or "katere pa" in lowered_now
-                or "so to" in lowered_now
-                or "ta vina" in lowered_now
+                re.search(r"\bkater[aeio]\b", lowered)
+                or "katera pa" in lowered
+                or "katere pa" in lowered
+                or "so to" in lowered
+                or "ta vina" in lowered
             )
-            wine_context = any(tok in lowered_now for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"])
+            wine_context = any(tok in lowered for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"])
             info_key = detect_info_intent(payload.message)
             if info_key == "vina" or (last_wine_query and wine_followup_hint and wine_context):
                 combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
@@ -1682,31 +1697,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             product_key = detect_product_intent(payload.message)
             if product_key:
                 product_reply = get_product_response(product_key)
-                if is_bulk_order_request(payload.message):
-                    product_reply = f"Za večja naročila pišite na {INFO_EMAIL}."
                 product_reply = maybe_translate(product_reply, detected_lang)
                 return finalize(product_reply, "product_strict", followup_flag=False)
-
-    if STRICT_POLICY:
-        lowered = payload.message.lower()
-        if is_event_inquiry_request(payload.message):
-            reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "inquiry_disabled", followup_flag=False)
-        if detect_product_intent(payload.message) == "gibanica_narocilo" and not any(
-            tok in lowered for tok in ["kaj je", "kaj pomeni"]
-        ):
-            reply = f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "product_unavailable", followup_flag=False)
-        if is_bulk_order_request(payload.message) and (is_product_query(payload.message) or detect_product_intent(payload.message)):
-            reply = f"Za večja naročila pišite na {INFO_EMAIL}."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "bulk_order_email", followup_flag=False)
-        if DISABLE_INQUIRY and (is_inquiry_trigger(payload.message) or is_event_inquiry_request(payload.message)):
-            reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "inquiry_disabled", followup_flag=False)
 
     if state.get("awaiting_continue"):
         if is_negative(payload.message):
@@ -1736,6 +1728,38 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         availability_followup = maybe_translate(availability_followup, detected_lang)
         return finalize(availability_followup, "availability_followup", followup_flag=False)
 
+    if USE_UNIFIED_ROUTER and state.get("step") is None and not inquiry_state.get("step"):
+        if is_inquiry_trigger(payload.message):
+            set_state_field(inquiry_state, "details", payload.message)
+            set_state_field(inquiry_state, "step", "awaiting_deadline")
+            reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "inquiry_start", followup_flag=False)
+        info_key = detect_info_intent(payload.message)
+        if info_key:
+            if info_key == "vina":
+                reply = answer_wine_question(payload.message)
+                last_wine_query = payload.message
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "wine", followup_flag=False)
+            reply = get_info_response(info_key)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info", followup_flag=False)
+        if detect_product_intent(payload.message) or is_product_query(payload.message):
+            key = detect_product_intent(payload.message)
+            reply = get_product_response(key) if key else answer_product_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_info", followup_flag=False)
+        detected_type = parse_reservation_type(payload.message)
+        if detected_type or is_reservation_related(payload.message):
+            set_state_field(state, "type", detected_type or state.get("type") or ("room" if "soba" in payload.message.lower() else "table"))
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_start", followup_flag=False)
+
     availability_state = get_availability_state(state)
     if availability_state.get("active") and availability_state.get("can_reserve") and is_negative(payload.message):
         reset_availability_state(state)
@@ -1750,13 +1774,13 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         and llm_is_affirmative(payload.message, last_bot_for_affirm, detected_lang)
     )
     if state.get("step") is None and (is_affirmative(payload.message) or llm_affirm):
-        # Če smo govorili o izdelkih, "da/ja" pomeni naročilo -> daj povezavo do trgovine.
+        # Če smo govorili o izdelkih, "ja" pomeni naročilo -> daj povezavo do trgovine.
         last_user_msg = get_last_user_message()
         if last_bot_mentions_product_order(last_bot_for_affirm) or last_product_query or is_product_query(last_user_msg):
             reply = f"Super! Naročilo lahko oddate tukaj: {SHOP_URL}"
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_order_link", followup_flag=False)
-        # Če smo govorili o povpraševanju (teambuilding/poroka/catering), "da/ja" pomeni začetek inquiry.
+        # Če smo govorili o povpraševanju (teambuilding/poroka/catering), "ja" pomeni začetek inquiry.
         if inquiry_state.get("step") is None:
             last_bot_lower = last_bot_for_affirm.lower()
             inquiry_ctx = (
@@ -1764,10 +1788,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 or any(tok in last_bot_lower for tok in ["povpraš", "ponudb", "teambuilding", "porok", "catering", "pogostitev"])
             )
             if inquiry_ctx:
-                if DISABLE_INQUIRY:
-                    reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
-                    reply = maybe_translate(reply, detected_lang)
-                    return finalize(reply, "inquiry_disabled", followup_flag=False)
                 set_state_field(inquiry_state, "details", last_user_msg or payload.message)
                 set_state_field(inquiry_state, "step", "awaiting_deadline")
                 reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
@@ -1786,8 +1806,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 reply = maybe_translate(reply, detected_lang)
                 return finalize(reply, "availability_to_reservation", followup_flag=False)
         last_bot = last_bot_for_affirm.lower()
-        last_user = get_last_reservation_user_message()
-        if last_user or last_bot_mentions_reservation(last_bot):
+        if last_bot_mentions_reservation(last_bot):
+            last_user = get_last_reservation_user_message()
             if last_bot:
                 set_reservation_type_from_text(state, last_bot)
             if last_user:
@@ -1808,6 +1828,272 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "reservation_context_start", followup_flag=False)
 
+    if state.get("step") is not None:
+        slot_input = False
+        msg = (payload.message or "").strip()
+        step = state.get("step")
+        if step == "awaiting_email" and re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", msg):
+            slot_input = True
+        elif step == "awaiting_phone" and len(re.sub(r"\D+", "", msg)) >= 7 and "?" not in msg:
+            slot_input = True
+        elif step == "awaiting_name" and "?" not in msg and len(msg.split()) >= 2:
+            slot_input = True
+
+        if is_explicit_cancel_command(payload.message):
+            reset_reservation_state(state)
+            reply = "V redu, rezervacijo sem preklical. Kako vam lahko pomagam?"
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_cancelled", followup_flag=False)
+
+        if USE_UNIFIED_ROUTER:
+            decision = decide_route(payload.message)
+            if decision.primary_intent == "GREETING":
+                reply = handle_interrupt(get_greeting_response(), state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "greeting_interrupt", followup_flag=False)
+            if decision.primary_intent == "GOODBYE":
+                reply = handle_interrupt(get_goodbye_response(), state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "goodbye_interrupt", followup_flag=False)
+            if decision.primary_intent == "BOOKING_TABLE" and state.get("type") != "table":
+                reset_reservation_state(state)
+                set_state_field(state, "type", "table")
+                reply = handle_reservation_flow(payload.message, state)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "reservation_table_switch", followup_flag=False)
+            if decision.primary_intent == "BOOKING_ROOM" and state.get("type") != "room":
+                reset_reservation_state(state)
+                set_state_field(state, "type", "room")
+                reply = handle_reservation_flow(payload.message, state)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "reservation_room_switch", followup_flag=False)
+            if decision.primary_intent == "INQUIRY" and decision.action == SwitchAction.HARD_SWITCH:
+                reset_reservation_state(state)
+                if DISABLE_INQUIRY:
+                    reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "inquiry_disabled", followup_flag=False)
+                set_state_field(inquiry_state, "details", payload.message)
+                set_state_field(inquiry_state, "step", "awaiting_deadline")
+                reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "inquiry_start", followup_flag=False)
+            if decision.primary_intent == "WINE":
+                wine_reply = answer_wine_question(payload.message)
+                reply = handle_interrupt(wine_reply, state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "wine_interrupt", followup_flag=False)
+            if decision.primary_intent == "MENU":
+                month_hint = parse_month_from_text(payload.message)
+                menu_reply = format_current_menu(month_override=month_hint, force_full=is_full_menu_request(payload.message), short_mode=SHORT_MODE)
+                reply = handle_interrupt(menu_reply, state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "menu_interrupt", followup_flag=False)
+        info_key = detect_info_intent(payload.message)
+        if info_key and not slot_input:
+            if info_key == "vina":
+                reply = answer_wine_question(payload.message)
+                last_wine_query = payload.message
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+            else:
+                reply = get_info_response(info_key)
+            reply = handle_interrupt(reply, state.get("step"))
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info_interrupt", followup_flag=False)
+        if (detect_product_intent(payload.message) or is_product_query(payload.message)) and not slot_input:
+            key = detect_product_intent(payload.message)
+            reply = get_product_response(key) if key else answer_product_question(payload.message)
+            reply = handle_interrupt(reply, state.get("step"))
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_interrupt", followup_flag=False)
+        if USE_UNIFIED_ROUTER:
+            decision = decide_route(payload.message)
+            if decision.action == SwitchAction.SOFT_INTERRUPT and decision.secondary_intent in {"INFO", "PRODUCT"}:
+                if decision.secondary_intent == "INFO":
+                    key = detect_info_intent(payload.message)
+                    info_reply = get_info_response(key) if key else "Kako vam lahko pomagam?"
+                    reply = handle_interrupt(info_reply, state.get("step"))
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "info_interrupt", followup_flag=False)
+                if decision.secondary_intent == "PRODUCT":
+                    key = detect_product_intent(payload.message)
+                    product_reply = get_product_response(key) if key else answer_product_question(payload.message)
+                    reply = handle_interrupt(product_reply, state.get("step"))
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "product_interrupt", followup_flag=False)
+        generic_info_question = (
+            ("?" in payload.message or is_info_only_question(payload.message) or is_info_query(payload.message))
+            and not is_reservation_related(payload.message)
+        )
+        if generic_info_question and not slot_input:
+            key = detect_info_intent(payload.message)
+            if key == "vina":
+                info_reply = answer_wine_question(payload.message)
+                last_wine_query = payload.message
+                last_product_query = None
+                last_info_query = None
+                last_menu_query = False
+            else:
+                info_reply = get_info_response(key) if key else answer_farm_info(payload.message)
+            reply = handle_interrupt(info_reply, state.get("step"))
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info_interrupt", followup_flag=False)
+        reply = handle_reservation_flow(payload.message, state)
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "reservation_flow", followup_flag=False)
+
+    wine_followup_message = payload.message.strip().lower()
+    wine_followup_hint = (
+        re.search(r"\bkater[aeio]\b", wine_followup_message)
+        or "katera pa" in wine_followup_message
+        or "katere pa" in wine_followup_message
+        or "so to" in wine_followup_message
+        or "ta vina" in wine_followup_message
+    )
+    wine_context_now = any(
+        tok in wine_followup_message
+        for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"]
+    )
+    info_key_now = detect_info_intent(payload.message)
+    # Wine questions/followups have priority over generic info routing.
+    if info_key_now == "vina" or (last_wine_query and wine_followup_hint and wine_context_now):
+        combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
+        reply = answer_wine_question(combined)
+        last_wine_query = combined
+        last_product_query = None
+        last_info_query = None
+        last_menu_query = False
+        reply = maybe_translate(reply, detected_lang)
+        return finalize(reply, "wine_followup", followup_flag=False)
+
+    if USE_UNIFIED_ROUTER:
+
+        decision = decide_route(payload.message)
+        if unified_state is not None:
+            set_last_intent(unified_state, decision.primary_intent)
+
+        in_active_flow = (
+            state.get("step") is not None
+            or inquiry_state.get("step") is not None
+            or get_availability_state(state).get("active")
+        )
+
+        if decision.action == SwitchAction.SOFT_INTERRUPT and in_active_flow and decision.secondary_intent in {"INFO", "PRODUCT"}:
+            if decision.secondary_intent == "INFO":
+                key = detect_info_intent(payload.message)
+                info_reply = get_info_response(key) if key else "Kako vam lahko pomagam?"
+                reply = handle_interrupt(info_reply, state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "info_interrupt", followup_flag=False)
+            if decision.secondary_intent == "PRODUCT":
+                key = detect_product_intent(payload.message)
+                product_reply = get_product_response(key) if key else answer_product_question(payload.message)
+                reply = handle_interrupt(product_reply, state.get("step"))
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "product_interrupt", followup_flag=False)
+
+        if decision.action == SwitchAction.HARD_SWITCH:
+            reset_reservation_state(state)
+            reset_inquiry_state(inquiry_state)
+            reset_availability_state(state)
+            if unified_state is not None:
+                reset_unified_state(unified_state)
+
+            if decision.primary_intent == "BOOKING_TABLE":
+                set_state_field(state, "type", "table")
+                reply = handle_reservation_flow(payload.message, state)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "reservation_table_start", followup_flag=False)
+            if decision.primary_intent == "BOOKING_ROOM":
+                set_state_field(state, "type", "room")
+                reply = handle_reservation_flow(payload.message, state)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "reservation_room_start", followup_flag=False)
+            if decision.primary_intent == "INQUIRY":
+                set_state_field(inquiry_state, "details", payload.message)
+                set_state_field(inquiry_state, "step", "awaiting_deadline")
+                reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "inquiry_start", followup_flag=False)
+            if decision.primary_intent == "PRODUCT":
+                key = detect_product_intent(payload.message)
+                reply = get_product_response(key) if key else answer_product_question(payload.message)
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "product_info", followup_flag=False)
+            if decision.primary_intent == "INFO":
+                key = detect_info_intent(payload.message)
+                reply = get_info_response(key) if key else "Kako vam lahko pomagam?"
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "info", followup_flag=False)
+            if decision.primary_intent == "GREETING":
+                reply = get_greeting_response()
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "greeting", followup_flag=False)
+            if decision.primary_intent == "GOODBYE":
+                reply = get_goodbye_response()
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "goodbye", followup_flag=False)
+
+        # Unified-only fallback path: do not continue into legacy router stack.
+        if decision.primary_intent == "BOOKING_TABLE":
+            set_state_field(state, "type", "table")
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_table_start", followup_flag=False)
+        if decision.primary_intent == "BOOKING_ROOM":
+            set_state_field(state, "type", "room")
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_room_start", followup_flag=False)
+        if decision.primary_intent == "INQUIRY":
+            if DISABLE_INQUIRY:
+                reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
+                reply = maybe_translate(reply, detected_lang)
+                return finalize(reply, "inquiry_disabled", followup_flag=False)
+            set_state_field(inquiry_state, "details", payload.message)
+            set_state_field(inquiry_state, "step", "awaiting_deadline")
+            reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "inquiry_start", followup_flag=False)
+        if decision.primary_intent == "PRODUCT":
+            key = detect_product_intent(payload.message)
+            reply = get_product_response(key) if key else answer_product_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "product_info", followup_flag=False)
+        if decision.primary_intent == "INFO":
+            key = detect_info_intent(payload.message)
+            reply = get_info_response(key) if key else answer_farm_info(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "info", followup_flag=False)
+        if decision.primary_intent == "WINE":
+            last_wine_query = payload.message
+            last_product_query = None
+            last_info_query = None
+            last_menu_query = False
+            reply = answer_wine_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "wine", followup_flag=False)
+        if decision.primary_intent == "MENU":
+            month_hint = parse_month_from_text(payload.message)
+            reply = format_current_menu(month_override=month_hint, force_full=is_full_menu_request(payload.message), short_mode=SHORT_MODE)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "menu", followup_flag=False)
+        if decision.primary_intent == "GREETING":
+            reply = get_greeting_response()
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "greeting", followup_flag=False)
+        if decision.primary_intent == "GOODBYE":
+            reply = get_goodbye_response()
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "goodbye", followup_flag=False)
+
+        # conservative fallback in unified mode
+        fallback_reply = "Trenutno nimam podatkov o tem."
+        fallback_reply = maybe_translate(fallback_reply, detected_lang)
+        return finalize(fallback_reply, "unified_fallback", followup_flag=False)
+
     # zabeležimo user vprašanje v zgodovino (omejimo na zadnjih 6 parov)
     conversation_history.append({"role": "user", "content": payload.message})
     if len(conversation_history) > 12:
@@ -1821,10 +2107,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(inquiry_reply, "inquiry", followup_flag=False)
 
     if state.get("step") is None and is_inquiry_trigger(payload.message):
-        if DISABLE_INQUIRY:
-            reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "inquiry_disabled", followup_flag=False)
         if is_strong_inquiry_request(payload.message):
             set_state_field(inquiry_state, "details", payload.message.strip())
             set_state_field(inquiry_state, "step", "awaiting_deadline")
@@ -1898,7 +2180,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         if is_ambiguous_reservation_request(payload.message):
             reply = "Želite rezervirati **sobo** ali **mizo**?"
             reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "clarify_reservation", followup_flag=False)
+            buttons = [
+                {"label": "Rezerviraj sobo 🛏️", "payload": "BOOK_ROOM"},
+                {"label": "Rezerviraj mizo 🍽️", "payload": "BOOK_TABLE"},
+            ]
+            return finalize(reply, "clarify_reservation", followup_flag=False, buttons=buttons)
         if is_ambiguous_inquiry_request(payload.message):
             reply = (
                 "Ali želite, da zabeležim **povpraševanje/naročilo**? "
@@ -1942,19 +2228,11 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         return finalize(llm_reply, "info_llm", followup_flag=False)
 
     if USE_ROUTER_V2:
-        info_during = handle_info_during_booking(payload.message, state)
-        if info_during:
-            reply = maybe_translate(info_during, detected_lang)
-            return finalize(reply, "info_during_reservation", followup_flag=False)
         decision = route_message(
             payload.message,
             has_active_booking=state.get("step") is not None,
             booking_step=state.get("step"),
         )
-        if DISABLE_INQUIRY and decision.get("routing", {}).get("intent") == "INQUIRY":
-            reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "inquiry_disabled", followup_flag=False)
         routing_info = decision.get("routing", {})
         print(f"[ROUTER_V2] intent={routing_info.get('intent')} conf={routing_info.get('confidence')} info={decision.get('context', {}).get('info_key')} product={decision.get('context', {}).get('product_category')} interrupt={routing_info.get('is_interrupt')}")
         info_key = decision.get("context", {}).get("info_key") or ""
@@ -1987,10 +2265,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     llm_reply = f"{llm_reply}\n\n---\n\n📝 **Nadaljujemo z rezervacijo:**\n{cont}"
                 llm_reply = maybe_translate(llm_reply, detected_lang)
                 if state.get("step") is None and is_unknown_response(llm_reply) and inquiry_state.get("step") is None:
-                    if STRICT_POLICY:
-                        reply = "Trenutno nimam podatkov o tem."
-                        reply = maybe_translate(reply, detected_lang)
-                        return finalize(reply, "info_unknown", followup_flag=False)
                     inquiry_reply = start_inquiry_consent(inquiry_state)
                     inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
                     return finalize(inquiry_reply, "inquiry_offer", followup_flag=False)
@@ -2034,6 +2308,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 return finalize(semantic_reply, "info_semantic", followup_flag=False)
             # Če še vedno nič, priznaj neznano in ponudi email
             if state.get("step") is None:
+                if STRICT_POLICY:
+                    reply = "Trenutno nimam podatkov o tem."
+                    reply = maybe_translate(reply, detected_lang)
+                    return finalize(reply, "info_unknown", followup_flag=False)
                 inquiry_reply = start_inquiry_consent(inquiry_state)
                 inquiry_reply = maybe_translate(inquiry_reply, detected_lang)
                 return finalize(inquiry_reply, "info_unknown", followup_flag=False)
@@ -2114,6 +2392,27 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     # Fuzzy router za rezervacije (robustno na tipkarske napake)
     router_intent = detect_router_intent(payload.message, state)
+
+    # Zamenjava tipa rezervacije med aktivnim flowom (npr. "mizo bi" med room bookingom)
+    if state["step"] is not None:
+        current_type = state.get("type")
+        lowered_msg = payload.message.lower()
+        wants_table = any(tok in lowered_msg for tok in ["mizo", "miza", "mize", "table", "kosilo"])
+        wants_room = any(tok in lowered_msg for tok in ["sobo", "soba", "sobe", "room", "nočitev"])
+        # Če uporabnik želi drug tip kot trenutni, zamenjaj flow
+        if wants_table and not wants_room and current_type != "table":
+            reset_reservation_state(state)
+            set_state_field(state, "type", "table")
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_switch_to_table", followup_flag=False)
+        if wants_room and not wants_table and current_type != "room":
+            reset_reservation_state(state)
+            set_state_field(state, "type", "room")
+            reply = handle_reservation_flow(payload.message, state)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "reservation_switch_to_room", followup_flag=False)
+
     if router_intent == "booking_room" and state["step"] is None:
         reset_reservation_state(state)
         set_state_field(state, "type", "room")
@@ -2135,26 +2434,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     # aktivna rezervacija ima prednost, vendar omogoča izhod ali druga vprašanja
     if state["step"] is not None:
-        if is_explicit_cancel_command(payload.message):
+        if is_inquiry_trigger(payload.message) and is_strong_inquiry_request(payload.message):
             reset_reservation_state(state)
-            reply = "V redu, rezervacijo sem preklical. Kako vam lahko pomagam?"
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "reservation_cancelled", followup_flag=False)
-
-        switch_type = parse_reservation_type(payload.message)
-        if switch_type in {"room", "table"} and switch_type != state.get("type"):
-            reset_reservation_state(state)
-            set_state_field(state, "type", switch_type)
-            reply = handle_reservation_flow(payload.message, state)
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, f"reservation_{switch_type}_switch", followup_flag=False)
-
-        if is_event_inquiry_request(payload.message) or (is_inquiry_trigger(payload.message) and is_strong_inquiry_request(payload.message)):
-            reset_reservation_state(state)
-            if DISABLE_INQUIRY:
-                reply = f"Za tovrstna povpraševanja pišite na {INFO_EMAIL}."
-                reply = maybe_translate(reply, detected_lang)
-                return finalize(reply, "inquiry_disabled", followup_flag=False)
             set_state_field(inquiry_state, "details", payload.message.strip())
             set_state_field(inquiry_state, "step", "awaiting_deadline")
             reply = "Super, zabeležim povpraševanje. Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
@@ -2169,14 +2450,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             prompt = reservation_prompt_for_state(state, room_intro_text, table_intro_text)
             reply = maybe_translate(prompt, detected_lang)
             return finalize(reply, "reservation_continue", followup_flag=False)
-        if is_greeting(payload.message):
-            reply = handle_interrupt(get_greeting_response(), state.get("step"))
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "greeting_interrupt", followup_flag=False)
-        if is_goodbye(payload.message):
-            reply = handle_interrupt(get_goodbye_response(), state.get("step"))
-            reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "goodbye_interrupt", followup_flag=False)
         lowered_message = payload.message.lower()
         question_like = (
             "?" in payload.message
@@ -2185,38 +2458,55 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             or any(word in lowered_message for word in ["gospodar", "družin", "lastnik", "kmetij"])
         )
         if question_like:
-            info_key = detect_info_intent(payload.message)
-            if info_key:
-                info_reply = get_info_response(info_key)
-            elif USE_FULL_KB_LLM:
-                info_reply = _llm_answer_full_kb(payload.message, detected_lang)
+            if USE_FULL_KB_LLM:
+                llm_reply = _llm_answer_full_kb(payload.message, detected_lang)
             else:
-                info_reply = _llm_answer(payload.message, conversation_history)
-            if info_reply:
+                llm_reply = _llm_answer(payload.message, conversation_history)
+            if llm_reply:
                 continuation = get_booking_continuation(state.get("step"), state)
-                info_reply = f"{info_reply}\n\n---\n\n📝 Nadaljujemo z rezervacijo:\n{continuation}"
-                info_reply = maybe_translate(info_reply, detected_lang)
-                return finalize(info_reply, "info_during_reservation", followup_flag=False)
+                llm_reply = (
+                    f"{llm_reply}\n\n---\n\n"
+                    f"Želiš nadaljevati rezervacijo? (da/ne)\n"
+                    f"📝 Trenutno čakamo:\n{continuation}"
+                )
+                set_state_field(state, "awaiting_continue", True)
+                llm_reply = maybe_translate(llm_reply, detected_lang)
+                return finalize(
+                    llm_reply,
+                    "info_during_reservation",
+                    followup_flag=False,
+                    buttons=_yes_no_buttons(),
+                )
         if is_product_query(payload.message):
             reply = answer_product_question(payload.message)
             last_product_query = payload.message
             last_wine_query = None
             last_info_query = None
             last_menu_query = False
-            continuation = get_booking_continuation(state.get("step"), state)
-            reply = f"{reply}\n\n---\n\n📝 Nadaljujemo z rezervacijo:\n{continuation}"
             reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "product_during_reservation", followup_flag=False)
+            reply = f"{reply}\n\nŽeliš nadaljevati rezervacijo? (da/ne)"
+            set_state_field(state, "awaiting_continue", True)
+            return finalize(
+                reply,
+                "product_during_reservation",
+                followup_flag=False,
+                buttons=_yes_no_buttons(),
+            )
         if is_info_query(payload.message):
             reply = answer_farm_info(payload.message)
             last_product_query = None
             last_wine_query = None
             last_info_query = payload.message
             last_menu_query = False
-            continuation = get_booking_continuation(state.get("step"), state)
-            reply = f"{reply}\n\n---\n\n📝 Nadaljujemo z rezervacijo:\n{continuation}"
             reply = maybe_translate(reply, detected_lang)
-            return finalize(reply, "info_during_reservation", followup_flag=False)
+            reply = f"{reply}\n\nŽeliš nadaljevati rezervacijo? (da/ne)"
+            set_state_field(state, "awaiting_continue", True)
+            return finalize(
+                reply,
+                "info_during_reservation",
+                followup_flag=False,
+                buttons=_yes_no_buttons(),
+            )
 
         reply = handle_reservation_flow(payload.message, state)
         last_product_query = None
@@ -2225,29 +2515,6 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         last_menu_query = False
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "reservation")
-
-    wine_followup_message = payload.message.strip().lower()
-    wine_followup_hint = (
-        re.search(r"\bkater[aeio]\b", wine_followup_message)
-        or "katera pa" in wine_followup_message
-        or "katere pa" in wine_followup_message
-        or "so to" in wine_followup_message
-        or "ta vina" in wine_followup_message
-    )
-    wine_context_now = any(
-        tok in wine_followup_message
-        for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"]
-    )
-    info_key_now = detect_info_intent(payload.message)
-    if info_key_now == "vina" or (last_wine_query and wine_followup_hint and wine_context_now):
-        combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
-        reply = answer_wine_question(combined)
-        last_wine_query = combined
-        last_product_query = None
-        last_info_query = None
-        last_menu_query = False
-        reply = maybe_translate(reply, detected_lang)
-        return finalize(reply, "wine_followup")
 
     intent = detect_intent(payload.message, state, last_product_query=last_product_query, last_wine_query=last_wine_query)
 
@@ -2290,9 +2557,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     if intent == "room_info":
         reply = """Seveda! 😊 Imamo tri prijetne družinske sobe:
 
-🛏️ **Soba POD VRHOM** - soba z balkonom (2+2 osebi)
-🛏️ **Soba PRI POTOKU** - družinska soba z balkonom (2 odrasla + 2 otroka)  
-🛏️ **Soba PRI SADOVNJAKU** - družinska soba z dvema spalnicama (2 odrasla + 2 otroka)
+🛏️ **Soba GOZD** - soba z balkonom (2+2 osebi)
+🛏️ **Soba RAZGLED** - družinska soba z balkonom (2 odrasla + 2 otroka)  
+🛏️ **Soba SONCE** - družinska soba z dvema spalnicama (2 odrasla + 2 otroka)
 
 **Cena**: 50€/osebo/noč z zajtrkom
 **Večerja**: dodatnih 25€/osebo
@@ -2439,7 +2706,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
     except Exception:
         reply = (
             "Trenutno imam tehnične težave pri dostopu do podatkov. "
-            "Za natančne informacije prosim preverite www.kmetijapodgoro.si."
+            "Za natančne informacije prosim preverite www.kovacnik.com."
         )
         last_info_query = None
     last_product_query = None

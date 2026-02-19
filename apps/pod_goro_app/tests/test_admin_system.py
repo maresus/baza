@@ -37,7 +37,7 @@ def sample_room_reservation():
         "people": 2,
         "adults": 2,
         "nights": 3,
-        "room": "Tine",
+        "room": "Aljaž",
         "country": "Slovenija",
         "kids": "",
         "kids_small": "",
@@ -73,10 +73,10 @@ def sample_chat_reservation():
         "rooms": 1,
         "people": 4,
         "reservation_type": "room",
-        "name": "Nika Kovač",
+        "name": "Ana Kovač",
         "phone": "040 111 222",
         "email": "ana@test.si",
-        "location": "Soba Nika",
+        "location": "Soba Ana",
         "note": "Z zajtrkom",
     }
 
@@ -399,7 +399,7 @@ class TestEmailService:
             "rooms": 1,
             "people": 2,
             "phone": "041 123 456",
-            "location": "Tine",
+            "location": "Aljaž",
         }
 
         html = _guest_room_confirmation_html(test_data)
@@ -460,7 +460,7 @@ class TestIntegration:
                 "people": 2,
                 "adults": 2,
                 "nights": 2,
-                "room": "Lara",
+                "room": "Julija",
                 "country": "Slovenija",
             },
             headers={"X-Webhook-Secret": secret},

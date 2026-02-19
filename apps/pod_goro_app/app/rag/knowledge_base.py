@@ -78,8 +78,8 @@ def load_knowledge_chunks() -> list[KnowledgeChunk]:
 KNOWLEDGE_CHUNKS: List[KnowledgeChunk] = load_knowledge_chunks()
 
 CONTACT = {
-    "phone": "02 700 12 34, 031 777 888",
-    "email": "info@kmetijapodgoro.si",
+    "phone": "02 601 54 00, 031 330 113",
+    "email": "info@kovacnik.com",
 }
 
 
@@ -511,9 +511,9 @@ def _gather_relevant_chunks(question: str, base_top_k: int = 6) -> list[Knowledg
             return chunks[:4]
         return [
             KnowledgeChunk(
-                url="https://kmetijapodgoro.si/cenik/",
+                url="https://kovacnik.com/cenik/",
                 title="Jahanje s ponijem",
-                paragraph="Jahanje s ponijem / 1 krog – 5,00 € (glej cenik Kmetija Pod Goro).",
+                paragraph="Jahanje s ponijem / 1 krog – 5,00 € (glej cenik Domačija Kovačnik).",
             )
         ]
 
@@ -585,7 +585,7 @@ def _filter_chunks_by_category(question: str, chunks: list[KnowledgeChunk]) -> l
 
 
 SYSTEM_PROMPT = """
-Ti si Maja - prijazna gostiteljica na Turistični kmetiji Kmetija Pod Goro na Pohorju. Pomagaš gostom z informacijami o kmetiji, sobah, hrani in okolici.
+Ti si prijazna gostiteljica na turistični kmetiji na Pohorju. Pomagaš gostom z informacijami o kmetiji, sobah, hrani in okolici.
 
 TVOJA OSEBNOST:
 - Si topla, prijazna in pristna - kot da se pogovarjaš z gostom v jedilnici
@@ -632,7 +632,7 @@ Ti: "Ni za kaj! Če boste imeli še kakšno vprašanje, sem tu. Lep pozdrav s Po
 ČESA NE DELAŠ:
 - Ne izmišljuješ si informacij, ki jih nimaš
 - Ne govoriš preveč uradno ali robotsko
-- Ne ponavljaš "Več informacij na kmetijapodgoro.si" pri vsakem odgovoru
+- Ne ponavljaš "Več informacij na kovacnik.com" pri vsakem odgovoru
 - Ne daješ predolgih odgovorov brez potrebe
 - Ne zaključuješ vedno z istim stavkom
 """
@@ -661,7 +661,7 @@ def generate_llm_answer(question: str, top_k: int = 6, history: list[dict[str, s
     client = get_llm_client()
     convo: list[dict[str, str]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "developer", "content": f"Kontekst iz baze znanja Kmetija Pod Goro:\n{context_text}"},
+        {"role": "developer", "content": f"Kontekst iz baze znanja Kovačnik:\n{context_text}"},
     ]
     if history:
         # vzamemo zadnjih nekaj sporočil, da ohranimo kratko zgodovino
@@ -687,5 +687,5 @@ def generate_llm_answer(question: str, top_k: int = 6, history: list[dict[str, s
         answer = "\n".join(outputs).strip()
 
     return answer or (
-        "Trenutno v podatkih ne najdem jasnega odgovora. Prosimo, preverite www.kmetijapodgoro.si."
+        "Trenutno v podatkih ne najdem jasnega odgovora. Prosimo, preverite www.kovacnik.com."
     )

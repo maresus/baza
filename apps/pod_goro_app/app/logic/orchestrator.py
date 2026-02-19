@@ -6,6 +6,7 @@ import difflib
 
 from app.rag.chroma_service import answer_tourist_question, is_tourist_query
 from app.services.flows.info_flow import is_hours_question
+
 from app.services.intent_helpers import (
     INFO_KEYWORDS,
     PRODUCT_FOLLOWUP_PHRASES,

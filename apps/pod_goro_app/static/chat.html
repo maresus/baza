@@ -2,26 +2,27 @@
 <html lang="sl">
 <head>
   <meta charset="UTF-8" />
-  <title>Kmetija Pod Goro – Pogovor</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Kovačnik AI – Pogovor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Work+Sans:wght@400;500;600&display=swap');
 
     :root {
-      --bg: #edf0e8;
-      --bg-2: #f3f6ef;
-      --ink: #2a2f2a;
-      --muted: #6a7268;
-      --pine: #2f4a3a;
-      --accent: #c28c52;
-      --paper: #fbf9f4;
-      --line: #dfe6d6;
-      --shadow: 0 16px 36px rgba(22, 28, 18, 0.14);
+      --bg: #efe7db;
+      --bg-2: #f7f1e7;
+      --ink: #2a2a25;
+      --muted: #6e6456;
+      --green: #2f3b2f;
+      --accent: #b77b3c;
+      --paper: #fffaf2;
+      --line: #e6dccd;
+      --shadow: 0 16px 40px rgba(25, 18, 8, 0.12);
       --radius: 22px;
-      --app-vh: 100vh;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     html,
     body {
@@ -32,9 +33,9 @@
 
     body {
       margin: 0;
-      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      font-family: 'Work Sans', system-ui, -apple-system, sans-serif;
       color: var(--ink);
-      background: linear-gradient(160deg, #f2f5ee 0%, #e6eadf 45%, #e4e8dd 100%);
+      background: radial-gradient(1200px 600px at 20% 0%, #f8f3ea 0%, #efe7db 40%, #ede2d5 100%);
       min-height: 100vh;
       position: relative;
       overflow-x: hidden;
@@ -45,24 +46,25 @@
       content: "";
       position: absolute;
       border-radius: 999px;
-      opacity: 0.35;
+      filter: blur(0px);
+      opacity: 0.3;
       z-index: 0;
     }
 
     body::before {
-      width: 360px;
-      height: 360px;
-      background: #bcd0c2;
+      width: 420px;
+      height: 420px;
+      background: #d9c1a1;
       top: -120px;
-      left: -80px;
+      right: -120px;
     }
 
     body::after {
-      width: 500px;
-      height: 500px;
-      background: #e1c7a5;
+      width: 520px;
+      height: 520px;
+      background: #b9c7b2;
       bottom: -180px;
-      right: -120px;
+      left: -180px;
     }
 
     .shell {
@@ -74,18 +76,18 @@
     }
 
     .frame {
-      background: rgba(255,255,255,0.8);
+      background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
       border: 1px solid var(--line);
       min-width: 0;
       border-radius: 28px;
       box-shadow: var(--shadow);
       padding: 20px 22px 18px;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       animation: lift 0.6s ease;
     }
 
     @keyframes lift {
-      from { transform: translateY(12px); opacity: 0; }
+      from { transform: translateY(10px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
 
@@ -110,16 +112,16 @@
       width: 52px;
       height: 52px;
       border-radius: 16px;
-      background: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=220&q=60') center/cover no-repeat;
+      background: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=200&q=60') center/cover no-repeat;
       border: 2px solid #fff;
       box-shadow: 0 6px 18px rgba(0,0,0,0.12);
     }
 
     .brand h1 {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Fraunces', serif;
       font-size: 1.5rem;
       margin: 0;
-      color: var(--pine);
+      color: var(--green);
     }
 
     .brand p {
@@ -141,15 +143,15 @@
       font-size: 0.85rem;
       padding: 6px 12px;
       border-radius: 999px;
-      background: #e1f0e1;
-      border: 1px solid #c3d9c4;
-      color: var(--pine);
+      background: #e6f2e6;
+      border: 1px solid #c5dec5;
+      color: var(--green);
       white-space: nowrap;
     }
 
     .btn {
       border: 1px solid var(--line);
-      background: var(--pine);
+      background: var(--green);
       color: #fff;
       padding: 10px 16px;
       border-radius: 14px;
@@ -160,14 +162,14 @@
       white-space: nowrap;
     }
 
-    .btn.secondary {
-      background: #fff;
-      color: var(--pine);
-    }
-
     .btn:disabled {
       opacity: 0.6;
       cursor: default;
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--green);
     }
 
     .btn:hover {
@@ -186,10 +188,10 @@
     }
 
     .intro h2 {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Fraunces', serif;
       font-size: 1.1rem;
       margin: 0;
-      color: var(--pine);
+      color: var(--green);
     }
 
     .intro p {
@@ -225,19 +227,19 @@
       line-height: 1.55;
       white-space: pre-wrap;
       word-break: break-word;
-      border: 1px solid #e6efe0;
+      border: 1px solid #efe4d3;
       box-shadow: 0 8px 18px rgba(0,0,0,0.06);
     }
 
     .msg.user {
       margin-left: auto;
-      background: #e8f0e5;
+      background: #e7efe4;
       border-bottom-right-radius: 6px;
     }
 
     .msg.bot {
       margin-right: auto;
-      background: #f4efe5;
+      background: #fbf1e4;
       border-bottom-left-radius: 6px;
     }
 
@@ -246,7 +248,7 @@
       background: transparent;
       border: none;
       box-shadow: none;
-      color: #9aa19a;
+      color: #9c9487;
       font-size: 0.75rem;
       padding: 0;
     }
@@ -276,7 +278,7 @@
 
     .composer textarea:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(194, 140, 82, 0.2);
+      box-shadow: 0 0 0 2px rgba(183, 123, 60, 0.2);
     }
 
     .composer-actions {
@@ -305,13 +307,13 @@
 
     .chip:hover {
       border-color: var(--accent);
-      color: var(--pine);
-      background: #fff3e2;
+      color: var(--green);
+      background: #fff3e0;
     }
 
     .status {
       font-size: 0.78rem;
-      color: #7c857c;
+      color: #7b7265;
     }
 
     @media (min-width: 860px) {
@@ -356,11 +358,6 @@
 
       .brand h1 {
         font-size: 1.25rem;
-      }
-
-      .intro {
-        margin-top: 12px;
-        padding: 12px;
       }
 
       .grid {
@@ -412,19 +409,19 @@
         <div class="brand">
           <div class="brand-mark"></div>
           <div>
-            <h1>Kmetija Pod Goro</h1>
-            <p>Jasen odgovor, prijazen ton in brez nepotrebnih ovinkov.</p>
+            <h1>Domačija Kovačnik</h1>
+            <p>Topel, jasen in hiter odgovor na vsako vprašanje o naši ponudbi.</p>
           </div>
         </div>
         <div class="top-actions">
           <button id="newSessionBtn" class="btn secondary">Nova seja</button>
-          <div class="presence">Maja · prisotna</div>
+          <div class="presence">Gostiteljica · prisotna</div>
         </div>
       </div>
 
       <div class="intro">
-        <h2>Dobrodošli na Kmetiji Pod Goro</h2>
-        <p>Vprašajte o sobah, mizi, izletih ali domačih izdelkih. Odgovorim kratko in uporabno.</p>
+        <h2>Dobrodošli na Kovačniku</h2>
+        <p>Vprašajte o sobah, kosilu, izletih ali domačih izdelkih. Odgovorim jedrnato in brez ovinkov.</p>
       </div>
 
       <div class="grid">
@@ -451,18 +448,6 @@
   </div>
 
   <script>
-    function setAppVh() {
-      const vh = (window.visualViewport && window.visualViewport.height)
-        ? window.visualViewport.height
-        : window.innerHeight;
-      document.documentElement.style.setProperty("--app-vh", `${Math.round(vh)}px`);
-    }
-    setAppVh();
-    window.addEventListener("resize", setAppVh);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", setAppVh);
-    }
-
     const apiUrl = "/chat/stream";
     const sessionKey = "chat_session_id";
     let sessionId = localStorage.getItem(sessionKey);
@@ -475,12 +460,6 @@
     const inputEl = document.getElementById("input");
     const sendBtn = document.getElementById("sendBtn");
     const statusEl = document.getElementById("status");
-
-    inputEl.addEventListener("focus", () => {
-      setTimeout(() => {
-        inputEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }, 120);
-    });
 
     const ONE_HOUR = 3600 * 1000;
 
@@ -499,13 +478,13 @@
     function renderWelcome() {
       messagesEl.innerHTML = `
         <div class="msg bot">
-          Pozdravljeni pri Kmetiji Pod Goro! 😊
+          Pozdravljeni pri Domačiji Kovačnik! 😊
           <br /><br />
           Lahko pomagam z vprašanji o sobah, mizi za kosilo, izletih ali naših domačih izdelkih.
           <br /><br />
           Poskusite:
           <br />• "Kaj ponujate za vikend kosila?"
-          <br />• "Imate suho salamo ali domačo bunko?"
+          <br />• "Imate suho salamo ali pohorsko bunko?"
           <br />• "Rad bi rezerviral sobo za vikend."
         </div>
       `;

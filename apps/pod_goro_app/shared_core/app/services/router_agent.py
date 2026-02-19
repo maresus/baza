@@ -308,11 +308,11 @@ def route_message(
     if people:
         entities["people_count"] = people
     if any(room in text for room in ["aljaz", "aljaž"]):
-        entities["room_name"] = "POD_VRHOM"
+        entities["room_name"] = "GOZD"
     elif "julija" in text:
-        entities["room_name"] = "PRI_POTOKU"
+        entities["room_name"] = "RAZGLED"
     elif "ana" in text:
-        entities["room_name"] = "PRI_SADOVNJAKU"
+        entities["room_name"] = "SONCE"
 
     # Če smo v koraku za telefon in dobimo številko, prisilimo nadaljevanje bookinga
     if booking_step == "awaiting_phone":

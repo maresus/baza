@@ -30,7 +30,7 @@ class WordPressReservation(BaseModel):
 
     # Polja za sobe
     nights: Optional[int] = None
-    room: Optional[str] = None  # 'Tine' | 'Nika' | 'Lara'
+    room: Optional[str] = None  # 'Aljaž' | 'Ana' | 'Julija'
     country: Optional[str] = None
     adults: Optional[int] = None
     kids: Optional[str] = None

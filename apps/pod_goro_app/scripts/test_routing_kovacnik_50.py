@@ -8,22 +8,14 @@ from typing import List, Tuple, Union
 os.environ.setdefault("USE_UNIFIED_ROUTER", "true")
 os.environ.setdefault("STRICT_POLICY", "true")
 os.environ.setdefault("DISABLE_INQUIRY", "true")
-os.environ.setdefault("SHOP_BASE_URL", "https://kmetijapodgoro.si")
-os.environ.setdefault("INFO_EMAIL", "info@kmetijapodgoro.si")
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) in sys.path:
-    sys.path.remove(str(ROOT))
-sys.path.insert(0, str(ROOT))
+sys.path.append(str(ROOT))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from main import app  # noqa: E402
 import app.services.chat_router as chat_router  # noqa: E402
-sys.path.append(str(ROOT.parent))  # to import shared scenario builder
-try:
-    from scripts.routing_scenarios import build_scenarios, slice_scenarios  # noqa: E402
-except ModuleNotFoundError:
-    from routing_scenarios import build_scenarios, slice_scenarios  # noqa: E402
+from scripts.routing_scenarios import build_scenarios, slice_scenarios  # noqa: E402
 
 chat_router.USE_FULL_KB_LLM = False
 
@@ -42,7 +34,7 @@ def _expect_match(reply: str, expected: Union[str, List[str]]) -> bool:
 
 def run_scenario(name: str, turns: List[Turn], idx: int) -> List[str]:
     failures: List[str] = []
-    session_id = f"podgoro_100_{idx}_{name}"
+    session_id = f"kovacnik_50_{idx}_{name}"
     for msg, expected in turns:
         resp = client.post("/chat", json={"message": msg, "session_id": session_id})
         if resp.status_code != 200:
@@ -56,12 +48,12 @@ def run_scenario(name: str, turns: List[Turn], idx: int) -> List[str]:
 
 def main() -> None:
     scenarios = build_scenarios(
-        base_url="https://kmetijapodgoro.si",
-        location_token="Zeleno",
-        email_token="info@kmetijapodgoro.si",
+        base_url="https://kovacnik.com",
+        location_token="Planica",
+        email_token="info@kovacnik.com",
         include_booking=True,
     )
-    scenarios = slice_scenarios(scenarios, 100)
+    scenarios = slice_scenarios(scenarios, 50)
 
     all_failures: List[str] = []
     for idx, (name, turns) in enumerate(scenarios, start=1):

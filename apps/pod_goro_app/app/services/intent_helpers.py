@@ -37,26 +37,26 @@ if _topics_path.exists():
 
 PRODUCT_RESPONSES = {
     "marmelada": [
-        "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kmetijapodgoro.si/katalog (sekcija Marmelade).",
-        "Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: https://kmetijapodgoro.si/katalog.",
+        "Imamo **domače marmelade**: jagodna, marelična, borovničeva, malinova, stara brajda, božična. Cena od 5,50 €.\n\nKupite ob obisku ali naročite v spletni trgovini: https://kovacnik.com/katalog (sekcija Marmelade).",
+        "Ponujamo več vrst **domačih marmelad** – jagoda, marelica, borovnica, malina, božična, stara brajda. Cena 5,50 €/212 ml.\n\nNa voljo ob obisku ali v spletni trgovini: https://kovacnik.com/katalog.",
     ],
     "liker": [
-        "Imamo **domače likerje**: borovničev, žajbljev, aronija, smrekovi vršički (3 cl/5 cl) in za domov 350 ml (13–15 €), tepkovec 15 €.\n\nKupite ob obisku ali naročite: https://kmetijapodgoro.si/katalog (sekcija Likerji in žganje).",
-        "Naši **domači likerji** (žajbelj, smrekovi vršički, aronija, borovničevec) in žganja (tepkovec, tavžentroža). Cene za 350 ml od 13 €.\n\nNa voljo v spletni trgovini: https://kmetijapodgoro.si/katalog ali ob obisku.",
+        "Imamo **domače likerje**: borovničev, žajbljev, aronija, smrekovi vršički (3 cl/5 cl) in za domov 350 ml (13–15 €), tepkovec 15 €.\n\nKupite ob obisku ali naročite: https://kovacnik.com/katalog (sekcija Likerji in žganje).",
+        "Naši **domači likerji** (žajbelj, smrekovi vršički, aronija, borovničevec) in žganja (tepkovec, tavžentroža). Cene za 350 ml od 13 €.\n\nNa voljo v spletni trgovini: https://kovacnik.com/katalog ali ob obisku.",
     ],
     "bunka": [
-        "Imamo **pohorsko bunko** (18–21 €) ter druge mesnine.\n\nNa voljo ob obisku ali v spletni trgovini: https://kmetijapodgoro.si/katalog (sekcija Mesnine).",
-        "Pohorska bunka je na voljo (18–21 €), skupaj s suho klobaso in salamo.\n\nNaročilo: https://kmetijapodgoro.si/katalog.",
+        "Imamo **pohorsko bunko** (18–21 €) ter druge mesnine.\n\nNa voljo ob obisku ali v spletni trgovini: https://kovacnik.com/katalog (sekcija Mesnine).",
+        "Pohorska bunka je na voljo (18–21 €), skupaj s suho klobaso in salamo.\n\nNaročilo: https://kovacnik.com/katalog.",
     ],
     "izdelki_splosno": [
-        "Prodajamo **domače izdelke** (marmelade, likerji/žganja, mesnine, čaji, sirupi, paketi) ob obisku ali v spletni trgovini: https://kmetijapodgoro.si/katalog.",
-        "Na voljo so **marmelade, likerji/žganja, mesnine, čaji, sirupi, darilni paketi**. Naročite na spletu (https://kmetijapodgoro.si/katalog) ali kupite ob obisku.",
+        "Prodajamo **domače izdelke** (marmelade, likerji/žganja, mesnine, čaji, sirupi, paketi). Trgovina: https://kovacnik.com/katalog.",
+        "Na voljo so **marmelade, likerji/žganja, mesnine, čaji, sirupi, darilni paketi**. Trgovina: https://kovacnik.com/katalog.",
     ],
     "gibanica_narocilo": """Za naročilo gibanice za domov:
 - Pohorska gibanica s skuto: 40 € za 10 kosov
 - Pohorska gibanica z orehi: 45 € za 10 kosov
 
-Napišite, koliko kosov in za kateri datum želite prevzem. Ob večjih količinah (npr. 40 kosov) potrebujemo predhodni dogovor. Naročilo: info@kmetijapodgoro.si""",
+Napišite, koliko kosov in za kateri datum želite prevzem. Ob večjih količinah (npr. 40 kosov) potrebujemo predhodni dogovor. Naročilo: info@kovacnik.com""",
 }
 
 PRODUCT_STEMS = {
@@ -186,7 +186,7 @@ INFO_FOLLOWUP_PHRASES = {
 def get_info_response(key: str) -> str:
     if key.startswith("topic:"):
         topic_key = key.split(":", 1)[1]
-        if topic_key in INFO_RESPONSES:
+        if STRICT_POLICY and topic_key in INFO_RESPONSES:
             return maybe_shorten_response(_apply_policy(INFO_RESPONSES[topic_key]))
         if topic_key in _TOPIC_RESPONSES:
             return maybe_shorten_response(_apply_policy(_TOPIC_RESPONSES[topic_key]))
@@ -226,10 +226,13 @@ def maybe_shorten_response(text: str) -> str:
 
 
 def _apply_policy(text: str) -> str:
+    """Apply strict policy: no questions, no unsolicited offers, keep short."""
     if not STRICT_POLICY or not text:
         return text
+    # Normalize whitespace
     normalized = " ".join(text.replace("\n", " ").split())
     normalized = re.sub(r"(?i)trgovina:\s*https?://\\S+", "", normalized).strip()
+    # Split into sentences
     sentences = re.split(r"(?<=[.!?])\s+", normalized)
     filtered = []
     for s in sentences:
@@ -237,11 +240,13 @@ def _apply_policy(text: str) -> str:
         if not s_clean:
             continue
         low = s_clean.lower()
+        # Remove questions or unsolicited offers
         if s_clean.endswith("?"):
             continue
         if any(p in low for p in ["če želite", "vas zanima", "lahko vam", "priporočam", "predlagam", "sporočite", "povejte"]):
             continue
         filtered.append(s_clean)
+    # Keep max 4 sentences
     if not filtered:
         return normalized[:300].rstrip(".") + "."
     return " ".join(filtered[:4])
@@ -311,17 +316,19 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "wifi"
     if any(w in text for w in ["prijava", "odjava", "check in", "check out"]):
         return "prijava_odjava"
-    if "parkir" in text or "parking" in text:
+    if any(w in text for w in ["parkir", "parking"]):
         return "parking"
-    if re.search(r"\b(pes|psa|psi|psov|kuž|kuz|dog|mačk|mack|ljubljenč|hišni ljubljen)\b", text):
+    if re.search(r"(?<!\w)(pes|psa|psi|psov|kuž|kuz|dog)(?!\w)", text) or any(
+        w in text for w in ["mačk", "ljubljenč", "hišni ljubljen"]
+    ):
         return "pets_policy"
-    if re.search(r"\b(žival|konj|poni)\b", text):
+    if any(w in text for w in ["žival", "konj", "poni"]):
         return "zivali"
     if any(w in text for w in ["gospodar", "gosp", "lastnik", "kdo vodi", "vodi kmetijo", "vodi domačijo"]):
         return "gospodar"
     if any(w in text for w in ["plačilo", "kartic", "gotovina"]):
         return "placilo"
-    if any(w in text for w in ["telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):
+    if any(w in text for w in ["kontakt", "telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):
         return "kontakt"
     if any(w in text for w in ["email", "e-mail", "epošta", "e-pošta", "mail"]):
         return "kontakt"
@@ -412,6 +419,7 @@ def detect_info_intent(message: str) -> Optional[str]:
             "meniju",
             "menu",
             "kaj imate za jest",
+            "kaj imate za kosilo",
             "kaj ponujate",
             "kaj strežete",
             "kaj je za kosilo",
@@ -421,6 +429,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         ]
     ):
         return "jedilnik"
+    if any(w in text for w in ["zadnji prihod", "zadnji prihod na kosilo"]):
+        return "odpiralni_cas"
     if any(w in text for w in ["družin", "druzina", "druzino"]):
         return "druzina"
     if "kmetij" in text or "kmetijo" in text:
@@ -431,6 +441,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         return None
     if any(w in text for w in ["izdelk", "trgovin", "katalog", "prodajate"]):
         return None
+    if "priporoč" in text or "priporoc" in text:
+        return "priporocilo"
     return None
 
 
@@ -452,15 +464,13 @@ def detect_product_intent(message: str) -> Optional[str]:
         return "bunka"
     if any(w in text for w in ["paštet", "pastet", "namaz", "pesto"]):
         return "namaz"
-    if "sirup" in text or "sok" in text:
-        return "sirup"
-    if "čaj" in text or "caj" in text:
-        return "caj"
-    if "paket" in text or "daril" in text:
-        return "paket"
     if any(w in text for w in ["salam", "klobas", "mesnin"]):
         return "mesn"
-    if any(w in text for w in ["izdelk", "prodaj", "kupiti", "kaj imate", "trgovin"]):
+    if any(w in text for w in ["čaj", "caj"]):
+        return "caj"
+    if any(w in text for w in ["sirup", "sok"]):
+        return "sirup"
+    if any(w in text for w in ["izdelk", "prodaj", "kupiti", "kupim", "trgovin", "katalog"]):
         return "izdelki_splosno"
     return None
 
@@ -473,6 +483,7 @@ def get_product_response(key: str) -> str:
         "bucni_namaz": "bučni namaz",
         "jetrna_pastetka": "jetrna paštetka",
     }
+    # Use KB-driven product answer to return price + direct link
     return answer_product_question(key_map.get(key, key or ""))
 
 
@@ -581,6 +592,7 @@ def is_inquiry_trigger(message: str) -> bool:
         "vecja kolicina",
         "teambuilding",
         "poroka",
+        "porok",
         "pogrebščina",
         "pogrebscina",
         "pogostitev",

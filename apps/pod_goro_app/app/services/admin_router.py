@@ -325,7 +325,7 @@ def update_reservation(reservation_id: int, data: ReservationUpdate):
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
     res_type = existing.get("reservation_type")
     location = data.location
-    valid_rooms = {"", None, "POD_VRHOM", "PRI_POTOKU", "PRI_SADOVNJAKU", "ALJAZ", "JULIJA", "ANA"}
+    valid_rooms = {"", None, "GOZD", "RAZGLED", "SONCE"}
     valid_tables = {"Pri peči", "Pri vrtu"}
     if res_type == "room" and location is not None and location not in valid_rooms:
         raise HTTPException(status_code=400, detail="Neveljavna soba")
@@ -383,7 +383,7 @@ def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRe
         reservation_id,
         status="confirmed",
         confirmed_at=datetime.now().isoformat(),
-        confirmed_by=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+        confirmed_by=os.getenv("ADMIN_EMAIL", "info@kovacnik.com"),
         location=requested_room or requested_location,
     )
     res = service.get_reservation(reservation_id) or res
@@ -394,7 +394,7 @@ def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRe
         direction="outbound",
         subject=subject,
         body="Rezervacija potrjena.",
-        from_email=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+        from_email=os.getenv("ADMIN_EMAIL", "info@kovacnik.com"),
         to_email=res.get("email") or "",
         message_id=None,
     )
@@ -416,7 +416,7 @@ def reject_reservation(reservation_id: int):
         direction="outbound",
         subject=subject,
         body="Rezervacija zavrnjena.",
-        from_email=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+        from_email=os.getenv("ADMIN_EMAIL", "info@kovacnik.com"),
         to_email=res.get("email") or "",
         message_id=None,
     )
@@ -436,7 +436,7 @@ def send_message(data: SendMessageRequest):
             direction="outbound",
             subject=subject,
             body=data.body,
-            from_email=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+            from_email=os.getenv("ADMIN_EMAIL", "info@kovacnik.com"),
             to_email=data.email,
             message_id=None,
         )
@@ -649,7 +649,7 @@ def calendar_tables(month: int, year: int):
 def create_admin_reservation(data: AdminCreateReservation):
     """Ročno dodajanje rezervacije (admin)."""
     warning: Optional[str] = None
-    valid_rooms = {"", None, "POD_VRHOM", "PRI_POTOKU", "PRI_SADOVNJAKU", "ALJAZ", "JULIJA", "ANA"}
+    valid_rooms = {"", None, "GOZD", "RAZGLED", "SONCE"}
     valid_tables = {"Pri peči", "Pri vrtu"}
     location = _normalize_room_id(data.location) if data.reservation_type == "room" else data.location
 

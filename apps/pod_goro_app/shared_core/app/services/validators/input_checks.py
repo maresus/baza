@@ -34,7 +34,7 @@ def is_affirmative(message: str) -> bool:
 def is_negative(message: str) -> bool:
     """Check if message is a negative response (no, cancel, etc.)."""
     lowered = message.strip().lower()
-    if lowered in {"ne", "no", "ne hvala", "no thanks", "nič", "nima veze"}:
+    if lowered in {"ne", "no", "ne hvala", "no thanks", "nič", "nima veze", "ne, nič", "ne nic", "pustimo"}:
         return True
     return any(
         phrase in lowered
@@ -49,6 +49,9 @@ def is_negative(message: str) -> bool:
             "prekliči",
             "preklici",
             "stop",
+            "ne, nič",
+            "ne nic",
+            "pustimo",
         ]
     )
 

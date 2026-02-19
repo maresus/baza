@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from app.services.session.state_writer import set_state_field
 from app.services.intent_helpers import (
@@ -32,20 +32,24 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         if item.get("role") == "assistant":
             last_bot = item.get("content", "")
             break
+    # Pravilo 1: če je aktivna rezervacija, jo nadaljuj
     reservation_state = get_reservation_state(session_id)
     if reservation_state.get("step") is not None:
         return handle_reservation_flow(message, reservation_state)
 
+    # Pravilo 2: če je aktivno povpraševanje, nadaljuj
     inquiry_state = get_inquiry_state(session_id)
     if inquiry_state.get("step"):
         reply = handle_inquiry_flow(message, inquiry_state, session_id)
         if reply:
             return reply
 
+    # Pravilo 2b: kratki "ja" po ponudbi izdelkov -> daj link, ne reset
     if normalized in affirmatives and last_bot:
         if "naročil" in last_bot.lower() or "rezerviram ali pošljem" in last_bot.lower():
             return f"Tukaj je povezava do izdelkov: {SHOP_URL}"
 
+    # Pravilo 3: dogodki (poroka, teambuilding) -> povpraševanje
     if is_event_inquiry(message):
         set_state_field(inquiry_state, "details", message.strip())
         set_state_field(inquiry_state, "step", "awaiting_deadline")
@@ -55,6 +59,7 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
             "Do kdaj bi to potrebovali? (datum/rok ali 'ni pomembno')"
         )
 
+    # Pravilo 4: produkti -> odgovor + link
     product_key = detect_product_intent(message)
     if product_key:
         ctx["last_product_query"] = message
@@ -64,13 +69,16 @@ def orchestrate_message(message: str, session_id: str, ctx: Dict[str, Any]) -> s
         reply = get_product_response(product_key)
         return f"{reply}\n\nIzdelke {BRAND_NAME} najdete tukaj: {SHOP_URL}"
 
+    # Pravilo 5: info intent
     info_key = detect_info_intent(message)
     if info_key:
         return get_info_response(info_key)
 
+    # Pravilo 6: če uporabnik išče rezervacijo, začni flow
     if is_reservation_related(message):
         return handle_reservation_flow(message, reservation_state)
 
+    # Pravilo 7: inquiry trigger (catering, ponudba, ...)
     if is_inquiry_trigger(message):
         set_state_field(inquiry_state, "details", message.strip())
         set_state_field(inquiry_state, "step", "awaiting_deadline")

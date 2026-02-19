@@ -22,10 +22,10 @@ def answer_farm_info(message: str) -> str:
     # Sobe / število sob
     if any(phrase in lowered for phrase in ["koliko sob", "koliko soba", "kakšne sobe", "sobe imate"]):
         variants = [
-            "Imamo **3 sobe** (vse za do 4 osebe). Če želite, povem še podrobnosti ali začnemo z rezervacijo.",
-            "Na voljo so **3 družinske sobe** (do 4 osebe). Če želite, vam povem več ali uredimo rezervacijo.",
-            "Trenutno imamo **3 sobe**, primerne za družine. Želite še podrobnosti ali datum?",
-            "Pri nas so **3 sobe** (2+2). Če želite, nadaljujemo z rezervacijo.",
+            "Imamo **3 sobe**: GOZD, RAZGLED in SONCE (vse za do 4 osebe). Če želite, povem še podrobnosti ali začnemo z rezervacijo.",
+            "Na voljo so **3 družinske sobe** (GOZD, RAZGLED, SONCE), vsaka do 4 osebe. Če želite, vam povem več ali uredimo rezervacijo.",
+            "Trenutno imamo **3 sobe**: GOZD, RAZGLED in SONCE. Vse so družinske (2+2). Želite še podrobnosti ali datum?",
+            "Pri nas so **3 sobe** (GOZD, RAZGLED, SONCE), primerne za družine. Če želite, nadaljujemo z rezervacijo.",
         ]
         return random.choice(variants)
 
@@ -44,9 +44,11 @@ def answer_farm_info(message: str) -> str:
             "Če želite, vam povem še ceno ali uredimo rezervacijo sobe."
         )
 
-    # Zajčki / živali
+    # Zajčki / živali / psi
     if any(word in lowered for word in ["zajc", "zajček", "zajcka", "zajčki", "kunec", "zajce"]):
         return "Imamo prijazne zajčke, ki jih lahko obiskovalci božajo. Ob obisku povejte, pa vas usmerimo do njih."
+    if any(word in lowered for word in ["pes", "psa", "psi", "psov", "psom", "kuž", "kuz", "dog"]):
+        return "Hišni ljubljenčki / dog / psi so dobrodošli po predhodnem dogovoru. Na kmetiji imamo tudi druge živali."
 
     # Ogledi / ture
     if any(word in lowered for word in ["ogled", "tour", "voden", "vodenje", "guid", "sprehod po kmetiji"]):
@@ -77,7 +79,7 @@ def answer_farm_info(message: str) -> str:
             f"Kosila: {FARM_INFO['opening_hours']['restaurant']} | "
             f"Sobe: {FARM_INFO['opening_hours']['rooms']} | "
             f"Trgovina: {FARM_INFO['opening_hours']['shop']} | "
-            f"Zaprto: {FARM_INFO['opening_hours']['closed']}"
+            f"Zaprto: {FARM_INFO['opening_hours']['closed']} (ob ponedeljkih in torkih zaprto)"
         )
 
     # Parking

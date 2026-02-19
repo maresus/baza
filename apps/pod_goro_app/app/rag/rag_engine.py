@@ -62,7 +62,7 @@ class RAGEngine:
         if not results:
             return (
                 "Na to vprašanje trenutno nimam natančnega odgovora na podlagi podatkov, "
-                "ki jih imam. Predlagam, da nas kontaktirate na info@kmetijapodgoro.si ali po telefonu."
+                "ki jih imam. Predlagam, da nas kontaktirate na info@kovacnik.com ali po telefonu."
             )
 
         best = results[0]
@@ -70,7 +70,7 @@ class RAGEngine:
         if not content:
             return (
                 "Na to vprašanje trenutno nimam natančnega odgovora na podlagi podatkov, "
-                "ki jih imam. Predlagam, da nas kontaktirate na info@kmetijapodgoro.si ali po telefonu."
+                "ki jih imam. Predlagam, da nas kontaktirate na info@kovacnik.com ali po telefonu."
             )
 
         max_len = 800
