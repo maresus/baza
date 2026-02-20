@@ -261,6 +261,7 @@ def _detect_booking_intent(text: str, has_active_booking: bool) -> str:
 _router_logger = logging.getLogger("router_v2")
 if not _router_logger.handlers:
     _router_logger.setLevel(logging.INFO)
+    Path("data").mkdir(parents=True, exist_ok=True)
     handler = RotatingFileHandler("data/router_debug.log", maxBytes=1_000_000, backupCount=3)
     handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
     _router_logger.addHandler(handler)
