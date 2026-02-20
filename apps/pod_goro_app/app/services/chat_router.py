@@ -101,6 +101,35 @@ from app.services.parsing import (
 )
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+def _mask_names_out(text: str) -> str:
+    import re
+    repl = [
+        (r"\bSoba ALJAŽ\b","Soba GOZD"),
+        (r"\bSoba ALJAZ\b","Soba GOZD"),
+        (r"\bSoba JULIJA\b","Soba RAZGLED"),
+        (r"\bSoba ANA\b","Soba SONCE"),
+        (r"\bALJAŽ\b","GOZD"),
+        (r"\bALJAZ\b","GOZD"),
+        (r"\bJULIJA\b","RAZGLED"),
+        (r"\bANA\b","SONCE"),
+        (r"\bBarbara\b","Gostiteljica"),
+        (r"\bDanilo\b","Gospodar"),
+        (r"\bAljaž\b","Gost"),
+        (r"\bJulija\b","Gostja"),
+        (r"\bAngelca\b","Hiša"),
+        (r"\bŠtern\b","Domačija"),
+        (r"\bMarsi\b","poni"),
+        (r"\bMarsij\b","poni"),
+        (r"\bMalajka\b","poni"),
+        (r"\bMiška\b","krava"),
+    ]
+    out = text
+    for a,b in repl:
+        out = re.sub(a,b,out)
+    return out
+
 USE_ROUTER_V2 = True
 USE_FULL_KB_LLM = False
 USE_UNIFIED_ROUTER = os.getenv("USE_UNIFIED_ROUTER", "true").strip().lower() in {"1", "true", "yes", "on"}
@@ -183,8 +212,8 @@ except Exception as exc:
 def _llm_system_prompt_full_kb(language: str = "si") -> str:
     common = (
         f"Ti si asistent Domačije {BRAND_SHORT}. Upoštevaj te potrjene podatke kot glavne:\n"
-        "- Gospodar kmetije: Gospodar\n"
-        "- Družina: Hiša, gostitelji in otroci\n"
+        "- Gospodar kmetije: Danilo\n"
+        "- Družina: Babica Angelca, Danilo, Barbara, Aljaž (partnerka Kaja), Julija, Ana\n"
         "- Konjička: Malajka in Marsij\n\n"
         "Preverjeni meniji (uporabi dobesedno, brez dodajanja novih jedi):\n"
         "Zimska srajčka (dec–feb):\n"
@@ -1231,7 +1260,7 @@ def generate_confirmation_email(state: dict[str, Optional[str | int]]) -> str:
 
 def room_intro_text() -> str:
     return (
-        "Sobe: GOZD (2+2), RAZGLED (2+2), SONCE (2+2). "
+        "Sobe: ALJAŽ (2+2), JULIJA (2+2), ANA (2+2). "
         "Minimalno 3 nočitve v juniju/juliju/avgustu, 2 nočitvi v ostalih mesecih. "
         "Prijava 14:00, odjava 10:00, zajtrk 8:00–9:00, večerja 18:00 (pon/torki brez večerij). "
         "Sobe so klimatizirane, Wi‑Fi je brezplačen, zajtrk je vključen."
@@ -1395,40 +1424,12 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         global conversation_history
         if USE_UNIFIED_ROUTER and unified_state is not None:
             _sync_unified_state(unified_state, state, inquiry_state)
-        final_reply = reply_text
+        final_reply = _mask_names_out(reply_text)
         # Apply strict policy for info/product responses (no offers, no questions, short)
         if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]):
             # Pozdrava ne saniramo, sicer lahko pade na napačen fallback.
             if "pozdrav" not in intent_value and "greeting" not in intent_value:
                 final_reply = _sanitize_policy_response(final_reply)
-
-        # Pod Goro variant: keep logic identical, mask personal names in outputs.
-        replacements = [
-            (r"\bSoba GOZD\b", "Soba GOZD"),
-            (r"\bSoba GOZD\b", "Soba GOZD"),
-            (r"\bSoba RAZGLED\b", "Soba RAZGLED"),
-            (r"\bSoba SONCE\b", "Soba SONCE"),
-            (r"\bGOZD\b", "GOZD"),
-            (r"\bGOZD\b", "GOZD"),
-            (r"\bRAZGLED\b", "RAZGLED"),
-            (r"\bANA\b", "SONCE"),
-            (r"\bBarbara\b", "Gostiteljica"),
-            (r"\bDanilo\b", "Gospodar"),
-            (r"\bAljaž\b", "Gost"),
-            (r"\bAljaz\b", "Gost"),
-            (r"\bJulija\b", "Gostja"),
-            (r"\bAna\b", "Gostja"),
-            (r"\bAngelca\b", "Hiša"),
-            (r"\bŠtern\b", "Domačija"),
-            (r"\bStern\b", "Domačija"),
-            (r"\bMarsi\b", "poni"),
-            (r"\bMarsij\b", "poni"),
-            (r"\bMalajka\b", "poni"),
-            (r"\bMiška\b", "krava"),
-        ]
-        for pattern, repl in replacements:
-            final_reply = re.sub(pattern, repl, final_reply)
-
         flag = followup_flag or needs_followup or is_unknown_response(final_reply)
         if flag:
             final_reply = get_unknown_response(detected_lang)
@@ -2557,9 +2558,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     if intent == "room_info":
         reply = """Seveda! 😊 Imamo tri prijetne družinske sobe:
 
-🛏️ **Soba GOZD** - soba z balkonom (2+2 osebi)
-🛏️ **Soba RAZGLED** - družinska soba z balkonom (2 odrasla + 2 otroka)  
-🛏️ **Soba SONCE** - družinska soba z dvema spalnicama (2 odrasla + 2 otroka)
+🛏️ **Soba ALJAŽ** - soba z balkonom (2+2 osebi)
+🛏️ **Soba JULIJA** - družinska soba z balkonom (2 odrasla + 2 otroka)  
+🛏️ **Soba ANA** - družinska soba z dvema spalnicama (2 odrasla + 2 otroka)
 
 **Cena**: 50€/osebo/noč z zajtrkom
 **Večerja**: dodatnih 25€/osebo

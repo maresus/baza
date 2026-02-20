@@ -110,7 +110,7 @@ EMBEDDING_CACHE: Dict[str, list[float]] = {}
 
 # Load pre-computed embeddings if available
 EMBEDDINGS_PATH = BASE_DIR / "data" / "embeddings.json"
-if False and EMBEDDINGS_PATH.exists():
+if EMBEDDINGS_PATH.exists():
     try:
         _precomputed = json.loads(EMBEDDINGS_PATH.read_text(encoding="utf-8"))
         EMBEDDING_CACHE.update(_precomputed)
@@ -585,7 +585,7 @@ def _filter_chunks_by_category(question: str, chunks: list[KnowledgeChunk]) -> l
 
 
 SYSTEM_PROMPT = """
-Ti si prijazna gostiteljica na turistični kmetiji na Pohorju. Pomagaš gostom z informacijami o kmetiji, sobah, hrani in okolici.
+Ti si Barbara - prijazna gostiteljica na Turistični kmetiji Kovačnik na Pohorju. Pomagaš gostom z informacijami o kmetiji, sobah, hrani in okolici.
 
 TVOJA OSEBNOST:
 - Si topla, prijazna in pristna - kot da se pogovarjaš z gostom v jedilnici

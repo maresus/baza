@@ -1,85 +1,82 @@
 """
-Brand Configuration - Kmetija Pod Goro
+Brand Configuration - Turistična kmetija Kovačnik
 
 Vsi podatki specifični za to kmetijo. Logika bere iz tega configa,
 kar omogoča enostavno dodajanje novih kmetij.
-
-OPOMBA: To je demo/showcase verzija z anonimiziranimi podatki.
 """
 
 # =============================================================================
 # OSNOVNI PODATKI
 # =============================================================================
 
-BRAND_NAME = "Kmetija Pod Goro"
-BRAND_SHORT = "Pod Goro"
-DOMAIN = "kmetijapodgoro.si"
+BRAND_NAME = "Turistična kmetija Kovačnik"
+BRAND_SHORT = "Kovačnik"
+DOMAIN = "kovacnik.com"
 
 # =============================================================================
 # KONTAKTNI PODATKI
 # =============================================================================
 
 FARM_INFO = {
-    "name": "Kmetija Pod Goro",
-    "address": "Gorska cesta 7, 2315 Zeleno Polje",
-    "phone": "02 700 12 34",
-    "mobile": "031 777 888",
-    "email": "info@kmetijapodgoro.si",
-    "website": "www.kmetijapodgoro.si",
-    "location_description": "Na pohorski strani, nad Zelenim Poljem, približno 15 min iz doline",
+    "name": "Turistična kmetija Kovačnik",
+    "address": "Planica 9, 2313 Fram",
+    "phone": "02 601 54 00",
+    "mobile": "031 330 113",
+    "email": "info@kovacnik.com",
+    "website": "www.kovacnik.com",
+    "location_description": "Na pohorski strani, nad Framom, približno 15 min iz doline",
     "parking": "Brezplačen parking ob hiši za 10+ avtomobilov",
     "directions": {
         "from_maribor": (
-            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Zeleno Polje. Pri semaforju v Zeleno Poljeu proti cerkvi sv. Nike, "
-            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Pod Goro) "
-            "in nadaljujete še približno 10 minut. Od cerkve v Zeleno Poljeu do kmetije je slabih 15 minut."
+            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Ane, "
+            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Kovačnik) "
+            "in nadaljujete še približno 10 minut. Od cerkve v Framu do kmetije je slabih 15 minut."
         ),
-        "coordinates": "46.5234, 15.6123",
     },
 }
 
 # Spletna trgovina
-SHOP_URL = "https://kmetijapodgoro.si/katalog"
+SHOP_URL = "https://kovacnik.com/katalog"
 
 # =============================================================================
 # DRUŽINA IN OSEBNI PODATKI
 # =============================================================================
 
 FAMILY = {
-    "owner": "Jure",
-    "grandmother": "Ivanka",
-    "members": ["Jure", "Maja", "Tine", "Lara", "Nika"],
-    "partner": "Kaja",  # Tinetova partnerka
+    "owner": "Danilo",
+    "grandmother": "Angelca",
+    "members": ["Danilo", "Barbara", "Aljaž", "Julija", "Ana"],
+    "partner": "Kaja",  # Aljaževa partnerka
     "horses": ["Malajka", "Marsij"],
     "cow": "Miška",
 }
 
-# Primer imena za validacijo (npr. "Prosim napišite ime in priimek (npr. 'Lara Novak').")
-EXAMPLE_NAME = "Lara Novak"
+# Primer imena za validacijo (npr. "Prosim napišite ime in priimek (npr. 'Ana Kovačnik').")
+EXAMPLE_NAME = "Ana Kovačnik"
 
 # =============================================================================
 # SOBE
 # =============================================================================
 
 ROOMS = {
-    "POD_VRHOM": {
-        "name": "Soba POD VRHOM",
+    "ALJAZ": {
+        "name": "Soba ALJAŽ",
         "description": "soba z balkonom",
-        "capacity": "2 odrasla + 2 otroka",
+        "capacity": "2+2 osebi",
     },
-    "PRI_POTOKU": {
-        "name": "Soba PRI POTOKU",
+    "JULIJA": {
+        "name": "Soba JULIJA",
         "description": "družinska soba z balkonom",
         "capacity": "2 odrasla + 2 otroka",
     },
-    "PRI_SADOVNJAKU": {
-        "name": "Soba PRI SADOVNJAKU",
+    "ANA": {
+        "name": "Soba ANA",
         "description": "družinska soba z dvema spalnicama",
         "capacity": "2 odrasla + 2 otroka",
     },
 }
 
-ROOM_NAMES = list(ROOMS.keys())  # ['POD_VRHOM', 'PRI_POTOKU', 'PRI_SADOVNJAKU']
+ROOM_NAMES = list(ROOMS.keys())  # ['ALJAZ', 'JULIJA', 'ANA']
 
 # =============================================================================
 # POZDRAVI IN SPOROČILA
@@ -90,7 +87,7 @@ GREETINGS = [
     "Pozdravljeni! Kako vam lahko pomagam?",
     "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
     "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    f"Pozdravljeni pri Kmetiji {BRAND_SHORT}! Kaj vas zanima?",
+    f"Pozdravljeni pri {BRAND_SHORT}u! Kaj vas zanima?",
 ]
 
 # =============================================================================
@@ -111,7 +108,7 @@ def get_system_prompt_intro(language: str = "si") -> str:
     family_str = f"Babica {FAMILY['grandmother']}, {', '.join(FAMILY['members'])}"
     if FAMILY.get('partner'):
         family_str = family_str.replace(
-            FAMILY['members'][2],  # Tine
+            FAMILY['members'][2],  # Aljaž
             f"{FAMILY['members'][2]} (partnerka {FAMILY['partner']})"
         )
 
@@ -149,7 +146,7 @@ FEATURES = {
 
 # Za wine pairing in jedi
 FARM_SPECIFIC_DISHES = {
-    "kiblflajš": f"Kiblflajš s prelivom, zelenjava s {BRAND_SHORT}vega vrta, zorjen Frešerjev sir, hišni kruh z drožmi",
-    "štrukelj": f"Štrukelj s skuto naše krave {FAMILY['cow']}, goveje meso iz {BRAND_SHORT}e proste reje, rdeča pesa, rabarbara, naravna omaka",
+    "kiblflajš": f"Kiblflajš s prelivom, zelenjava s {BRAND_SHORT}ovega vrta, zorjen Frešerjev sir, hišni kruh z drožmi",
+    "štrukelj": f"Štrukelj s skuto naše krave {FAMILY['cow']}, goveje meso iz {BRAND_SHORT}ove proste reje, rdeča pesa, rabarbara, naravna omaka",
     "gibanica": f"Pohorska gibanica babice {FAMILY['grandmother']}",
 }

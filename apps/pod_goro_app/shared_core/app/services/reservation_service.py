@@ -14,24 +14,24 @@ from app.models.reservation import ReservationRecord
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 ROOMS = [
-    {"id": "GOZD", "name": "Soba GOZD - Soba z balkonom (2 + 2)", "capacity": 4},
+    {"id": "ALJAZ", "name": "Soba ALJAŽ - Soba z balkonom (2 + 2)", "capacity": 4},
     {
-        "id": "RAZGLED",
-        "name": "Soba RAZGLED - Družinska soba z balkonom (2 odrasla + 2 otroka)",
+        "id": "JULIJA",
+        "name": "Soba JULIJA - Družinska soba z balkonom (2 odrasla + 2 otroka)",
         "capacity": 4,
     },
     {
-        "id": "SONCE",
-        "name": "Soba SONCE - Družinska soba z dvema spalnicama (2 odrasla + 2 otroka)",
+        "id": "ANA",
+        "name": "Soba ANA - Družinska soba z dvema spalnicama (2 odrasla + 2 otroka)",
         "capacity": 4,
     },
 ]
 ROOM_NAME_MAP = {
-    "aljaž": "GOZD",
-    "aljaz": "GOZD",
-    "jULIJA".lower(): "RAZGLED",
-    "julija": "RAZGLED",
-    "ana": "SONCE",
+    "aljaž": "ALJAZ",
+    "aljaz": "ALJAZ",
+    "jULIJA".lower(): "JULIJA",
+    "julija": "JULIJA",
+    "ana": "ANA",
 }
 
 DINING_ROOMS = [

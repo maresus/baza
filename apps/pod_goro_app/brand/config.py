@@ -3,19 +3,19 @@ import os
 from shared_core.app.brand.schema import BrandConfig
 
 FARM_INFO = {
-    "name": "Kmetija Pod Goro",
-    "address": "Gorska cesta 7, 2315 Zeleno Polje",
-    "phone": "02 700 12 34",
-    "mobile": "031 777 888",
-    "email": "info@kmetijapodgoro.si",
-    "website": "www.kmetijapodgoro.si",
-    "location_description": "Na pohorski strani, nad Zelenim Poljem, približno 15 min iz doline",
+    "name": "Turistična kmetija Kovačnik",
+    "address": "Planica 9, 2313 Fram",
+    "phone": "02 601 54 00",
+    "mobile": "031 330 113",
+    "email": "info@kovacnik.com",
+    "website": "www.kovacnik.com",
+    "location_description": "Na pohorski strani, nad Framom, približno 15 min iz doline",
     "parking": "Brezplačen parking ob hiši za 10+ avtomobilov",
     "directions": {
         "from_maribor": (
-            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Zeleno Polje. Pri semaforju v Zeleno Poljeu proti cerkvi sv. Nike, "
-            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Pod Goro) "
-            "in nadaljujete še približno 10 minut. Od cerkve v Zeleno Poljeu do kmetije je slabih 15 minut."
+            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Ane, "
+            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Kovačnik) "
+            "in nadaljujete še približno 10 minut. Od cerkve v Framu do kmetije je slabih 15 minut."
         ),
         "coordinates": "46.5234, 15.6123",
     },
@@ -45,27 +45,27 @@ FARM_INFO = {
 # =============================================================================
 
 BRAND_NAME = FARM_INFO["name"]
-BRAND_SHORT = "Kmetija Pod Goro"
+BRAND_SHORT = "Kovačnik"
 
-SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kmetijapodgoro.si").rstrip("/")
+SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kovacnik.com").rstrip("/")
 SHOP_URL = os.getenv("SHOP_URL", f"{SHOP_BASE_URL}/katalog")
 INFO_EMAIL = os.getenv("INFO_EMAIL", FARM_INFO["email"])
 
-EXAMPLE_NAME = "Nika Kmetija Pod Goro"
+EXAMPLE_NAME = "Ana Kovačnik"
 
 FAMILY = {
-    "owner": "Jure",
-    "grandmother": "Meta",
-    "members": ["Jure", "Meta"],
-    "partner": None,
-    "horses": ["Marsij"],
+    "owner": "Danilo",
+    "grandmother": "Angelca",
+    "members": ["Danilo", "Barbara", "Aljaž", "Julija", "Ana"],
+    "partner": "Kaja",
+    "horses": ["Malajka", "Marsij"],
     "cow": "Miška",
 }
 
 ROOMS = {
-    "POD_VRHOM": {"name": "Soba POD VRHOM", "capacity": "2+2"},
-    "PRI_POTOKU": {"name": "Soba PRI POTOKU", "capacity": "2+2"},
-    "PRI_SADOVNJAKU": {"name": "Soba PRI SADOVNJAKU", "capacity": "2+2"},
+    "ALJAŽ": {"name": "Soba ALJAŽ", "capacity": "2+2"},
+    "JULIJA": {"name": "Soba JULIJA", "capacity": "2+2"},
+    "ANA": {"name": "Soba ANA", "capacity": "2+2"},
 }
 ROOM_NAMES = list(ROOMS.keys())
 ROOM_DISPLAY_NAMES = [room["name"].replace("Soba ", "") for room in ROOMS.values()]
@@ -74,7 +74,7 @@ GREETINGS = [
     "Pozdravljeni! Kako vam lahko pomagam?",
     "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
     "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    "Pozdravljeni pri Kmetiji Pod Goro! Kaj vas zanima?",
+    "Pozdravljeni pri Kovačniku! Kaj vas zanima?",
 ]
 
 THANKS_RESPONSES = [
@@ -104,7 +104,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci in jetrnimi rolicami, koprivna juhica s čemažem",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice z zelišči, mlado goveje meso z rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir, mini pita s porom, ocvrte hruške, pomladna solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
+            "Sladica: Pohorska gibanica babice Angelce",
             "Cena: 36 EUR odrasli, otroci 4-12 let -50%",
         ],
     },
@@ -116,7 +116,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci, kremna juha poletnega vrta",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rabarbaro in rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, mlad krompir z rožmarinom, mini pita z bučkami, ocvrte hruške, poletna solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
+            "Sladica: Pohorska gibanica babice Angelce",
             "Cena: 36 EUR odrasli, otroci 4-12 let -50%",
         ],
     },
@@ -140,7 +140,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci, krompirjeva juha s krvavico",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir iz pečice, mini pita z bučkami, ocvrte hruške, zimska solata",
-            "Sladica: Pohorska gibanica babice Ivanke",
+            "Sladica: Pohorska gibanica babice Angelce",
             "Cena: 36 EUR odrasli, otroci 4-12 let -50%",
         ],
     },
@@ -212,13 +212,13 @@ Za skupine (15+ oseb) pripravljamo tudi med tednom od srede do petka – poklič
 
 Kaj vas čaka? 🥐
 - Sveže pomolzeno mleko
-- Zeliščni čaj babice Ivanke
+- Zeliščni čaj babice Angelce
 - Kruh iz krušne peči
 - Pohorska bunka, salama, pašteta
 - Domača marmelada in med od čebelarja Pislak
 - Skuta, maslo, sir iz kravjega mleka
 - Jajca z domače reje
-- Kislo mleko, jogurt z malinami po receptu gospodinje Maje
+- Kislo mleko, jogurt z malinami po receptu gospodinje Barbare
 
 Vse domače, vse sveže! ☕""",
     "vecerja": """Večerja se streže ob **18:00** in stane **25 €/osebo**.
@@ -226,16 +226,16 @@ Vse domače, vse sveže! ☕""",
 Kaj dobite?
 - **Juha** – česnova, bučna, gobova, goveja, čemaževa ali topinambur
 - **Glavna jed** – meso s prilogami (skutni štruklji, narastki, krompir)
-- **Sladica** – specialiteta hiše: pohorska gibanica babice Ivanke
+- **Sladica** – specialiteta hiše: pohorska gibanica babice Angelce
 
 Prilagodimo za vegetarijance, vegane in celiakijo! 🌿
 
-⚠️ **Ob ponedeljkih in torkih večerje ne strežemo** – takrat priporočamo bližnji gostilni Zeleno Poljeski hram ali Karla.""",
+⚠️ **Ob ponedeljkih in torkih večerje ne strežemo** – takrat priporočamo bližnji gostilni Framski hram ali Karla.""",
     "sobe": """Imamo **3 sobe**, vse poimenovane po naših otrocih:
 
-🛏️ **POD VRHOM** – soba z balkonom (2+2)
-🛏️ **PRI POTOKU** – družinska soba z balkonom (2 odrasla + 2 otroka)  
-🛏️ **PRI SADOVNJAKU** – družinska soba z dvema spalnicama (2+2)
+🛏️ **ALJAŽ** – soba z balkonom (2+2)
+🛏️ **JULIJA** – družinska soba z balkonom (2 odrasla + 2 otroka)  
+🛏️ **ANA** – družinska soba z dvema spalnicama (2+2)
 
 Vsaka soba ima:
 ✅ Predprostor, spalnico, kopalnico s tušem
@@ -262,12 +262,15 @@ Zajtrk je vključen v ceno! 🥐""",
     "prijava_odjava": """**Prijava (check-in):** od 14:00
 **Odjava (check-out):** do 10:00""",
     "parking": """Parkirišče je brezplačno in na voljo neposredno pri domačiji.""",
-    "zivali": """Na kmetiji imamo domače živali, ki jih lahko ob obisku tudi vidite.""",
+    "zivali": """Ob 40‑glavi goveji čredi imamo na kmetiji še svinje, račke in kokoši.
+
+Najmlajši uživajo ob naših živalih: konjička Malajko in Marsi, pujska Pepa ter ovna Čarlija. Imamo tudi psičko Luno in mucke.""",
     "pets_policy": """Hišni ljubljenčki na naši domačiji niso dovoljeni.""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",
     "kontakt": f"""Kontakt: **{FARM_INFO['phone']}** / **{FARM_INFO['mobile']}**
 Email: **{FARM_INFO['email']}**""",
-    "lokacija": f"""Nahajamo se na: **{FARM_INFO['address']}**.""",
+    "lokacija": f"""Nahajamo se na: **{FARM_INFO['address']}** ({FARM_INFO['location_description']}). 
+Parking je brezplačen pri domačiji.""",
     "min_nocitve": """Minimalno bivanje je:
 - **3 nočitve** v juniju, juliju in avgustu
 - **2 nočitvi** v ostalih mesecih""",
@@ -374,10 +377,11 @@ Pohorska gibanica babice Angelce ali domac jabolcni strudl ali pita sezone, hisn
 CENA PO ODRASLI OSEBI: 53 EUR
 Cena vinske spremljave: 25 EUR za 6 kozarcev""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
-    "gospodar": """Gospodar kmetije je Jure.""",
-    "kmetija": """Kmetija Pod Goro je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
-    "gibanica": """Pohorska gibanica je naša specialiteta.""",
-    "izdelki": """V ponudbi imamo marmelade, likerje, mesnine, čaje, sirupe in darilne pakete.""",
+    "gospodar": """Gospodar kmetije je Danilo.""",
+    "kmetija": """Domačija Kovačnik je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
+    "gibanica": """Pohorska gibanica je naša specialiteta. Priporočam, da jo poskusite ob obisku!""",
+    "izdelki": """Imamo domače izdelke: marmelade, likerje/žganja, mesnine, čaje, sirupe in darilne pakete.""",
+    "priporocilo": """Trenutno nimam priporočil brez dodatnih informacij.""",
 }
 
 INFO_RESPONSES_VARIANTS = {key: [value] for key, value in INFO_RESPONSES.items()}

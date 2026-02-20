@@ -232,7 +232,7 @@ class TestAvailability:
         rooms = service.available_rooms(future_str, 3)
         assert isinstance(rooms, list)
         # Če so sobe, preveri imena
-        valid_rooms = {"GOZD", "RAZGLED", "SONCE", "GOZD"}
+        valid_rooms = {"ALJAZ", "JULIJA", "ANA", "ALJAŽ"}
         for room in rooms:
             room_upper = room.upper().replace("Ž", "Z")
             assert room_upper in valid_rooms or room in valid_rooms

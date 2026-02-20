@@ -261,7 +261,6 @@ def _detect_booking_intent(text: str, has_active_booking: bool) -> str:
 _router_logger = logging.getLogger("router_v2")
 if not _router_logger.handlers:
     _router_logger.setLevel(logging.INFO)
-    Path("data").mkdir(parents=True, exist_ok=True)
     handler = RotatingFileHandler("data/router_debug.log", maxBytes=1_000_000, backupCount=3)
     handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
     _router_logger.addHandler(handler)
@@ -306,11 +305,11 @@ def route_message(
     if people:
         entities["people_count"] = people
     if any(room in text for room in ["aljaz", "aljaž"]):
-        entities["room_name"] = "GOZD"
+        entities["room_name"] = "ALJAZ"
     elif "julija" in text:
-        entities["room_name"] = "RAZGLED"
+        entities["room_name"] = "JULIJA"
     elif "ana" in text:
-        entities["room_name"] = "SONCE"
+        entities["room_name"] = "ANA"
 
     # Če smo v koraku za telefon in dobimo številko, prisilimo nadaljevanje bookinga
     if booking_step == "awaiting_phone":
