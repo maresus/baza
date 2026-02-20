@@ -180,6 +180,10 @@ def is_menu_query(message: str) -> bool:
 
 def parse_reservation_type(message: str) -> Optional[str]:
     lowered = message.lower()
+    pricing_words = ["koliko stane", "cena", "cenik", "price", "koliko je"]
+    booking_hints = ["rezerv", "book", "booking", "reserve", "reservation", "rad bi", "rada bi", "želim", "zelim", "hočem", "hocem"]
+    if any(word in lowered for word in pricing_words) and not any(h in lowered for h in booking_hints):
+        return None
 
     def _has_term(term: str) -> bool:
         if " " in term:
@@ -244,7 +248,6 @@ def parse_reservation_type(message: str) -> Optional[str]:
         "essen",
         "speisen",
     ]
-    booking_hints = ["rezerv", "book", "booking", "reserve", "reservation"]
     if any(_has_term(word) for word in food_table_keywords) and any(hint in lowered for hint in booking_hints):
         return "table"
     return None

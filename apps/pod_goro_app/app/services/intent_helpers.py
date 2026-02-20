@@ -369,6 +369,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "smucisce"
     if any(w in text for w in ["terme", "termal", "spa", "wellness"]):
         return "terme"
+    if any(w in text for w in ["dež", "dez", "dezuje", "dežuje", "slabo vreme", "slabo vreme", "če dežuje", "ce dez"]):
+        return "dez"
     if any(
         w in text
         for w in [

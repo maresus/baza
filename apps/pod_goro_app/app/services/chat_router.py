@@ -1444,6 +1444,8 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         tourist_reply
         and not is_menu_query(payload.message)
         and not detect_info_intent(payload.message)
+        and not detect_product_intent(payload.message)
+        and not is_product_query(payload.message)
         and (state.get("step") is None or should_switch_from_reservation(payload.message, state))
     ):
         tourist_reply = maybe_translate(tourist_reply, detected_lang)
