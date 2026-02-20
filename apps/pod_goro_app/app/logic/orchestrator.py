@@ -218,27 +218,34 @@ def parse_reservation_type(message: str) -> Optional[str]:
         "mizo",
         "mize",
         "rezervacija mize",
+        "mizico",
+        "table",
+        "tisch",
+    ]
+    if any(_has_term(word) for word in table_keywords):
+        return "table"
+
+    # "kosilo/večerja" je lahko tudi informativno vprašanje (brez rezervacije).
+    # Rezervacijo mize sprožimo le ob rezervacijskem namigu.
+    food_table_keywords = [
         "kosilo",
         "večerja",
         "kosilu",
-        "mizico",
         "jest",
         "jesti",
-        "table",
         "lunch",
         "dinner",
         "meal",
         "eat",
         "dining",
         "restaurant",
-        "tisch",
         "mittagessen",
         "abendessen",
         "essen",
         "speisen",
-        "restaurant",
     ]
-    if any(_has_term(word) for word in table_keywords):
+    booking_hints = ["rezerv", "book", "booking", "reserve", "reservation"]
+    if any(_has_term(word) for word in food_table_keywords) and any(hint in lowered for hint in booking_hints):
         return "table"
     return None
 
