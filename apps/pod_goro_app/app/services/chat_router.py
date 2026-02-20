@@ -102,32 +102,33 @@ from app.services.parsing import (
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-
 def _mask_names_out(text: str) -> str:
-    import re
     repl = [
-        (r"\bSoba ALJAŽ\b","Soba GOZD"),
-        (r"\bSoba ALJAZ\b","Soba GOZD"),
-        (r"\bSoba JULIJA\b","Soba RAZGLED"),
-        (r"\bSoba ANA\b","Soba SONCE"),
-        (r"\bALJAŽ\b","GOZD"),
-        (r"\bALJAZ\b","GOZD"),
-        (r"\bJULIJA\b","RAZGLED"),
-        (r"\bANA\b","SONCE"),
-        (r"\bBarbara\b","Gostiteljica"),
-        (r"\bDanilo\b","Gospodar"),
-        (r"\bAljaž\b","Gost"),
-        (r"\bJulija\b","Gostja"),
-        (r"\bAngelca\b","Hiša"),
-        (r"\bŠtern\b","Domačija"),
-        (r"\bMarsi\b","poni"),
-        (r"\bMarsij\b","poni"),
-        (r"\bMalajka\b","poni"),
-        (r"\bMiška\b","krava"),
+        (r"\bSoba ALJAŽ\b", "Soba GOZD"),
+        (r"\bSoba ALJAZ\b", "Soba GOZD"),
+        (r"\bSoba JULIJA\b", "Soba RAZGLED"),
+        (r"\bSoba ANA\b", "Soba SONCE"),
+        (r"\bALJAŽ\b", "GOZD"),
+        (r"\bALJAZ\b", "GOZD"),
+        (r"\bJULIJA\b", "RAZGLED"),
+        (r"\bANA\b", "SONCE"),
+        (r"\bBarbara\b", "Gostiteljica"),
+        (r"\bDanilo\b", "Gospodar"),
+        (r"\bAljaž\b", "Gost"),
+        (r"\bAljaz\b", "Gost"),
+        (r"\bJulija\b", "Gostja"),
+        (r"\bAna\b", "Gostja"),
+        (r"\bAngelca\b", "Hiša"),
+        (r"\bŠtern\b", "Domačija"),
+        (r"\bStern\b", "Domačija"),
+        (r"\bMarsi\b", "poni"),
+        (r"\bMarsij\b", "poni"),
+        (r"\bMalajka\b", "poni"),
+        (r"\bMiška\b", "krava"),
     ]
     out = text
-    for a,b in repl:
-        out = re.sub(a,b,out)
+    for a, b in repl:
+        out = re.sub(a, b, out)
     return out
 
 USE_ROUTER_V2 = True
