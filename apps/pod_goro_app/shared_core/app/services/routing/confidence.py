@@ -22,6 +22,9 @@ def decide_action(confidence: float) -> SwitchAction:
 RESERVATION_KEYWORDS = {
     "rezerv",
     "rezervir",
+    "rezer",
+    "reser",
+    "reserv",
     "book",
     "booking",
     "reservation",
@@ -145,6 +148,7 @@ MENU_KEYWORDS = {
 }
 
 QUESTION_MARKERS = {"?", "ali", "a ", "a imate", "imate", "kaj", "koliko", "kdaj"}
+PRICING_MARKERS = {"koliko stane", "cena", "cenik", "price", "cost"}
 
 
 def _score_from_keywords(message: str, keywords: set[str]) -> float:
@@ -169,28 +173,41 @@ def compute_confidence(message: str, intent: str) -> float:
         return 1.0 if any(k in text for k in GOODBYE_KEYWORDS) else 0.0
 
     if intent == "BOOKING_TABLE":
-        base = _score_from_keywords(text, RESERVATION_KEYWORDS)
         has_table_kw = _contains_word(text, TABLE_KEYWORDS)
         has_booking_hint = any(k in text for k in RESERVATION_KEYWORDS) or any(k in text for k in BOOKING_HINTS)
-        if not (has_table_kw and has_booking_hint):
+        has_people_hint = any(p in text for p in ["oseb", "osebe", "oseba", "ljudi", "nas bo", "za 2", "za 3", "za 4", "za 5", "za 6"])
+        has_date_hint = any(d in text for d in ["sobot", "nedelj", "vikend", "danes", "jutri"]) or bool(
+            re.search(r"\b\d{1,2}[./]\d{1,2}([./]\d{2,4})?\b", text)
+        )
+        if not has_table_kw:
             return 0.0
-        base += 0.6 if has_table_kw else 0.0
+        # Cenovna/info vprašanja o kosilu naj ostanejo INFO.
+        if any(m in text for m in PRICING_MARKERS) and "rezerv" not in text and "book" not in text:
+            return 0.0
+        base = 0.45
+        if has_booking_hint:
+            base += 0.30
+        if has_people_hint:
+            base += 0.30
+        if has_date_hint:
+            base += 0.20
         base += _score_question_marker(text)
-        # Boost when people count mentioned (e.g., "za 4 osebe")
-        if has_table_kw and any(p in text for p in ["oseb", "osebe", "oseba", "ljudi", "nas bo"]):
-            base += 0.3
-        # Boost for intent expressions (rad bi, želim, prišli bi)
-        if has_table_kw and any(i in text for i in BOOKING_HINTS):
-            base += 0.3
         return min(base, 1.0)
 
     if intent == "BOOKING_ROOM":
-        base = _score_from_keywords(text, RESERVATION_KEYWORDS)
         has_room_kw = _contains_word(text, ROOM_KEYWORDS)
         has_booking_hint = any(k in text for k in RESERVATION_KEYWORDS) or any(k in text for k in BOOKING_HINTS)
-        if not (has_room_kw and has_booking_hint):
+        has_people_or_nights = any(p in text for p in ["oseb", "osebe", "za 2", "za 3", "za 4", "noč", "noc", "vikend", "prosto", "presp", "družin", "druz"])
+        if not has_room_kw:
             return 0.0
-        base += 0.6 if has_room_kw else 0.0
+        # Cenovna/info vprašanja o sobah naj ostanejo INFO.
+        if any(m in text for m in PRICING_MARKERS) and "rezerv" not in text and "book" not in text:
+            return 0.0
+        base = 0.45
+        if has_booking_hint:
+            base += 0.30
+        if has_people_or_nights:
+            base += 0.30
         base += _score_question_marker(text)
         return min(base, 1.0)
 
