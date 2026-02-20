@@ -283,7 +283,7 @@ Parking je brezplačen pri domačiji.""",
     "kolesa": """Izposoja koles je možna po dogovoru. Za več informacij nas kontaktirajte.""",
     "skalca": """Slap Skalca je prijeten izlet v bližini – priporočamo sprehod ob potočku.""",
     "darilni_boni": """Na voljo imamo darilne bone. Sporočite znesek in pripravimo bon za vas.""",
-    "jedilnik": """MAREC, APRIL, MAJ
+    "jedilnik": """AKTUALNI SEZONSKI MENI
 
 Pohorska bunka in zorjen Freserjev sir
 Hisna suha salama
