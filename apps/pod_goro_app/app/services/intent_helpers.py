@@ -323,7 +323,25 @@ def detect_info_intent(message: str) -> Optional[str]:
         w in text for w in ["mačk", "ljubljenč", "hišni ljubljen"]
     ):
         return "pets_policy"
-    if any(w in text for w in ["žival", "konj", "poni"]):
+    if any(w in text for w in ["jah", "jaha", "jahan", "jahanje", "jahamo", "jahati"]):
+        return "jahanje"
+    if any(
+        w in text
+        for w in [
+            "žival",
+            "zival",
+            "konj",
+            "poni",
+            "zajc",
+            "zajček",
+            "zajcek",
+            "zajčk",
+            "zajck",
+            "kunec",
+            "bož",
+            "boz",
+        ]
+    ):
         return "zivali"
     if any(w in text for w in ["gospodar", "gosp", "lastnik", "kdo vodi", "vodi kmetijo", "vodi domačijo"]):
         return "gospodar"

@@ -1618,6 +1618,20 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_unified", followup_flag=False)
 
+        # Safety net: keep high-value intents deterministic even if parser misses.
+        if re.search(r"\b(vino|vina|vinska|vinsko|wine|wein)\b", lowered):
+            reply = get_info_response("vina")
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "wine_keyword_unified", followup_flag=False)
+        if re.search(r"\b(jahamo|jahati|jahanje|jaha|jah)\b", lowered):
+            reply = get_info_response("jahanje")
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "riding_keyword_unified", followup_flag=False)
+        if re.search(r"\b(zajc|zajcek|zajce|kunec)\b", lowered) or any(tok in lowered for tok in ["zajčk", "božam", "bozamo", "božat", "bozat"]):
+            reply = get_info_response("zivali")
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "animals_keyword_unified", followup_flag=False)
+
         reply = "Trenutno nimam podatkov o tem."
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "fallback_unified", followup_flag=False)
@@ -2338,6 +2352,20 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = get_product_response(product_key) if product_key else answer_product_question(payload.message)
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "product_unified_terminal", followup_flag=False)
+
+        lowered = payload.message.lower().strip()
+        if re.search(r"\b(vino|vina|vinska|vinsko|wine|wein)\b", lowered):
+            reply = get_info_response("vina")
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "wine_keyword_unified_terminal", followup_flag=False)
+        if re.search(r"\b(jahamo|jahati|jahanje|jaha|jah)\b", lowered):
+            reply = get_info_response("jahanje")
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "riding_keyword_unified_terminal", followup_flag=False)
+        if re.search(r"\b(zajc|zajcek|zajce|kunec)\b", lowered) or any(tok in lowered for tok in ["zajčk", "božam", "bozamo", "božat", "bozat"]):
+            reply = get_info_response("zivali")
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "animals_keyword_unified_terminal", followup_flag=False)
 
         reply = "Trenutno nimam podatkov o tem."
         reply = maybe_translate(reply, detected_lang)
