@@ -190,16 +190,26 @@ def parse_reservation_type(message: str) -> Optional[str]:
             return term in lowered
         return re.search(rf"(?<!\w){re.escape(term)}(?!\w)", lowered) is not None
 
+    # "Bi prespali 2 noči" in podobno naj vedno šteje kot soba.
+    if re.search(r"\b(presp\w*|prenoč\w*|prenoc\w*)\b", lowered):
+        return "room"
+    if re.search(r"(?<!\w)noči(?!\w)", lowered):
+        return "room"
+
     room_keywords = [
         "soba",
         "sobe",
         "sobo",
         "sob",
         "nočitev",
+        "noči",
         "prenocitev",
         "noč",
         "prenočiti",
         "prespati",
+        "prespali",
+        "prespal",
+        "prenočili",
         "room",
         "rooms",
         "stay",

@@ -385,7 +385,7 @@ def detect_info_intent(message: str) -> Optional[str]:
         or re.search(r"\bski\b", text)
     ):
         return "smucisce"
-    if any(w in text for w in ["terme", "termal", "spa", "wellness"]):
+    if any(w in text for w in ["terme", "termal", "wellness"]) or re.search(r"(?<!\w)spa(?!\w)", text):
         return "terme"
     if any(w in text for w in ["dež", "dez", "dezuje", "dežuje", "slabo vreme", "slabo vreme", "če dežuje", "ce dez"]):
         return "dez"
@@ -634,12 +634,14 @@ def is_strong_inquiry_request(message: str) -> bool:
 
 def is_reservation_related(message: str) -> bool:
     lowered = message.lower()
+    if re.search(r"\b(presp\w*|prenoč\w*|prenoc\w*)\b", lowered):
+        return True
     reserv_tokens = ["rezerv", "book", "booking", "reserve", "reservation", "zimmer"]
     if any(t in lowered for t in reserv_tokens):
         return True
     # Type-only vprašanja ("koliko stane nočitev", "imate mize?") naj ne sprožijo bookinga.
     # Brez rezervacijskega glagola jih obravnavamo kot informativna.
-    type_tokens = ["soba", "sobo", "sobe", "room", "miza", "mizo", "table", "nočitev", "nocitev"]
+    type_tokens = ["soba", "sobo", "sobe", "room", "miza", "mizo", "table", "nočitev", "nocitev", "noči"]
     intent_verbs = ["rad bi", "rada bi", "želim", "zelim", "hočem", "hocem", "rezerviral", "rezervirala"]
     return any(t in lowered for t in type_tokens) and any(v in lowered for v in intent_verbs)
 
