@@ -101,36 +101,6 @@ from app.services.parsing import (
 )
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-def _mask_names_out(text: str) -> str:
-    repl = [
-        (r"\bSoba ALJAŽ\b", "Soba GOZD"),
-        (r"\bSoba ALJAZ\b", "Soba GOZD"),
-        (r"\bSoba JULIJA\b", "Soba RAZGLED"),
-        (r"\bSoba ANA\b", "Soba SONCE"),
-        (r"\bALJAŽ\b", "GOZD"),
-        (r"\bALJAZ\b", "GOZD"),
-        (r"\bJULIJA\b", "RAZGLED"),
-        (r"\bANA\b", "SONCE"),
-        (r"\bBarbara\b", "Gostiteljica"),
-        (r"\bDanilo\b", "Gospodar"),
-        (r"\bAljaž\b", "Gost"),
-        (r"\bAljaz\b", "Gost"),
-        (r"\bJulija\b", "Gostja"),
-        (r"\bAna\b", "Gostja"),
-        (r"\bAngelca\b", "Hiša"),
-        (r"\bŠtern\b", "Domačija"),
-        (r"\bStern\b", "Domačija"),
-        (r"\bMarsi\b", "poni"),
-        (r"\bMarsij\b", "poni"),
-        (r"\bMalajka\b", "poni"),
-        (r"\bMiška\b", "krava"),
-    ]
-    out = text
-    for a, b in repl:
-        out = re.sub(a, b, out)
-    return out
-
 USE_ROUTER_V2 = True
 USE_FULL_KB_LLM = False
 USE_UNIFIED_ROUTER = os.getenv("USE_UNIFIED_ROUTER", "true").strip().lower() in {"1", "true", "yes", "on"}
@@ -1425,7 +1395,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         global conversation_history
         if USE_UNIFIED_ROUTER and unified_state is not None:
             _sync_unified_state(unified_state, state, inquiry_state)
-        final_reply = _mask_names_out(reply_text)
+        final_reply = reply_text
         # Apply strict policy for info/product responses (no offers, no questions, short)
         if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]):
             # Pozdrava ne saniramo, sicer lahko pade na napačen fallback.
@@ -1463,11 +1433,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
 
     # Tourist override (allow outside booking flow when appropriate)
     tourist_reply = tourist_answer(payload.message)
-    if (
-        tourist_reply
-        and not is_menu_query(payload.message)
-        and (state.get("step") is None or should_switch_from_reservation(payload.message, state))
-    ):
+    if tourist_reply and (state.get("step") is None or should_switch_from_reservation(payload.message, state)):
         tourist_reply = maybe_translate(tourist_reply, detected_lang)
         return finalize(tourist_reply, "tourist_info", followup_flag=False)
 

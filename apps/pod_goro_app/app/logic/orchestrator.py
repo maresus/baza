@@ -168,15 +168,7 @@ def is_menu_query(message: str) -> bool:
     ]
     if any(indicator in lowered for indicator in weekly_indicators):
         return False
-    menu_keywords = [
-        "jedilnik",
-        "meni",
-        "meniju",
-        "jedo",
-        "kuhate",
-        "vikend ponudba",
-        "ponudba za vikend",
-    ]
+    menu_keywords = ["jedilnik", "meni", "meniju", "jedo", "kuhate"]
     if any(word in lowered for word in menu_keywords):
         return True
     if "vikend kosilo" in lowered or "vikend kosila" in lowered:
