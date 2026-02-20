@@ -914,7 +914,12 @@ def handle_reservation_flow(
                 prefilled_nights = extract_nights(message)
             if range_data and not prefilled_nights:
                 prefilled_nights = nights_from_range(range_data[0], range_data[1])
-            prefilled_people = parse_people_count(message)
+            people_hint = bool(
+                re.search(r"\b\d+\s*\+\s*\d+\b", message)
+                or re.search(r"\b\d+\s*(oseb|osebe|oseba|odrasl\w*|otrok\w*)\b", message.lower())
+                or any(tok in message.lower() for tok in ["odrasl", "otro", "družin", "druzin"])
+            )
+            prefilled_people = parse_people_count(message) if people_hint else {"total": None, "adults": None, "kids": None, "ages": None}
             if prefilled_people.get("total"):
                 set_state_field(reservation_state, "people", prefilled_people["total"])
                 set_state_field(reservation_state, "adults", prefilled_people["adults"])
