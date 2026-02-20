@@ -3,18 +3,18 @@ import os
 from shared_core.app.brand.schema import BrandConfig
 
 FARM_INFO = {
-    "name": "Turistična kmetija Kovačnik",
+    "name": "Kmetija Pod Goro",
     "address": "Planica 9, 2313 Fram",
     "phone": "02 601 54 00",
     "mobile": "031 330 113",
-    "email": "info@kovacnik.com",
-    "website": "www.kovacnik.com",
+    "email": "info@kmetijapodgoro.si",
+    "website": "www.kmetijapodgoro.si",
     "location_description": "Na pohorski strani, nad Framom, približno 15 min iz doline",
     "parking": "Brezplačen parking ob hiši za 10+ avtomobilov",
     "directions": {
         "from_maribor": (
-            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Ane, "
-            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Kovačnik) "
+            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Nike, "
+            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Pod Goro) "
             "in nadaljujete še približno 10 minut. Od cerkve v Framu do kmetije je slabih 15 minut."
         ),
         "coordinates": "46.5234, 15.6123",
@@ -45,19 +45,19 @@ FARM_INFO = {
 # =============================================================================
 
 BRAND_NAME = FARM_INFO["name"]
-BRAND_SHORT = "Kovačnik"
+BRAND_SHORT = "Kmetija Pod Goro"
 
-SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kovacnik.com").rstrip("/")
+SHOP_BASE_URL = os.getenv("SHOP_BASE_URL", "https://kmetijapodgoro.si").rstrip("/")
 SHOP_URL = os.getenv("SHOP_URL", f"{SHOP_BASE_URL}/katalog")
 INFO_EMAIL = os.getenv("INFO_EMAIL", FARM_INFO["email"])
 
-EXAMPLE_NAME = "Ana Kovačnik"
+EXAMPLE_NAME = "Nika Kmetija Pod Goro"
 
 FAMILY = {
-    "owner": "Danilo",
-    "grandmother": "Angelca",
-    "members": ["Danilo", "Barbara", "Aljaž", "Julija", "Ana"],
-    "partner": "Kaja",
+    "owner": "Marko",
+    "grandmother": "Marija",
+    "members": ["Marko", "Sara", "Jakob", "Lana", "Nika"],
+    "partner": "Maja",
     "horses": ["Malajka", "Marsij"],
     "cow": "Miška",
 }
@@ -74,7 +74,7 @@ GREETINGS = [
     "Pozdravljeni! Kako vam lahko pomagam?",
     "Lepo pozdravljeni s Pohorja! Kako vam lahko pomagam danes?",
     "Dober dan! Vesela sem, da ste nas obiskali. S čim vam lahko pomagam?",
-    "Pozdravljeni pri Kovačniku! Kaj vas zanima?",
+    "Pozdravljeni pri Kmetiji Pod Goro! Kaj vas zanima?",
 ]
 
 THANKS_RESPONSES = [
@@ -104,7 +104,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci in jetrnimi rolicami, koprivna juhica s čemažem",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice z zelišči, mlado goveje meso z rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir, mini pita s porom, ocvrte hruške, pomladna solata",
-            "Sladica: Pohorska gibanica babice Angelce",
+            "Sladica: Pohorska gibanica babice Marije",
             "Cena: 36 EUR odrasli, otroci 4-12 let -50%",
         ],
     },
@@ -116,7 +116,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci, kremna juha poletnega vrta",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rabarbaro in rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, mlad krompir z rožmarinom, mini pita z bučkami, ocvrte hruške, poletna solata",
-            "Sladica: Pohorska gibanica babice Angelce",
+            "Sladica: Pohorska gibanica babice Marije",
             "Cena: 36 EUR odrasli, otroci 4-12 let -50%",
         ],
     },
@@ -140,7 +140,7 @@ SEASONAL_MENUS = [
             "Juhe: goveja župca z rezanci, krompirjeva juha s krvavico",
             "Meso: pečenka iz pujskovega hrbta, hrustljavi piščanec, piščančje kroglice, mlado goveje meso z rdečim vinom",
             "Priloge: štukelj s skuto, ričota s pirino kašo, pražen krompir iz pečice, mini pita z bučkami, ocvrte hruške, zimska solata",
-            "Sladica: Pohorska gibanica babice Angelce",
+            "Sladica: Pohorska gibanica babice Marije",
             "Cena: 36 EUR odrasli, otroci 4-12 let -50%",
         ],
     },
@@ -212,13 +212,13 @@ Za skupine (15+ oseb) pripravljamo tudi med tednom od srede do petka – poklič
 
 Kaj vas čaka? 🥐
 - Sveže pomolzeno mleko
-- Zeliščni čaj babice Angelce
+- Zeliščni čaj babice Marije
 - Kruh iz krušne peči
 - Pohorska bunka, salama, pašteta
 - Domača marmelada in med od čebelarja Pislak
 - Skuta, maslo, sir iz kravjega mleka
 - Jajca z domače reje
-- Kislo mleko, jogurt z malinami po receptu gospodinje Barbare
+- Kislo mleko, jogurt z malinami po receptu gospodinje Sare
 
 Vse domače, vse sveže! ☕""",
     "vecerja": """Večerja se streže ob **18:00** in stane **25 €/osebo**.
@@ -226,7 +226,7 @@ Vse domače, vse sveže! ☕""",
 Kaj dobite?
 - **Juha** – česnova, bučna, gobova, goveja, čemaževa ali topinambur
 - **Glavna jed** – meso s prilogami (skutni štruklji, narastki, krompir)
-- **Sladica** – specialiteta hiše: pohorska gibanica babice Angelce
+- **Sladica** – specialiteta hiše: pohorska gibanica babice Marije
 
 Prilagodimo za vegetarijance, vegane in celiakijo! 🌿
 
@@ -304,7 +304,7 @@ Meso servirano na plosci
 Socna pecenka iz domacega pujskovega hrbta
 Hrustljavi piscanec s kmetije Pesek
 Piscancje kroglice z zelisci
-Mlado goveje meso iz Kovacnikove proste reje in jabolka z rdecim vinom
+Mlado goveje meso iz Kmetije Pod Goro proste reje in jabolka z rdecim vinom
 
 Priloge servirane loceno od mesa
 
@@ -313,11 +313,11 @@ Ricota s pirino kaso, jurcki in zelenjava
 Prazen krompir iz sporheta na drva
 Mini pita s porom
 Ocvrte hruske "Debeluske" z zdrobom
-Pomladna solatka iz vrta gospodinje Barbare
+Pomladna solatka iz vrta gospodinje Sare
 
 ***
 
-Pohorska gibanica babice Angelce s skuto
+Pohorska gibanica babice Marije s skuto
 
 CENA po ODRASLI osebi: 36 EUR
 Otroci (4 - 12 let): - 50 %
@@ -337,7 +337,7 @@ Penina Doppler, Diona 2017, zelo suho, 100 % chardonnay
 Pozdrav iz kuhinje
 ***
 Freser, sauvignon, suho, 2024
-Kiblflajs s prelivom, zelenjava s Kovacnikovega vrta, zorjen Freserjev sir, hisni kruh z drozmi
+Kiblflajs s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Freserjev sir, hisni kruh z drozmi
 ***
 Juha s kislim zeljem in krvavico
 ***
@@ -345,10 +345,10 @@ Freser, renski rizling, suho, 2019
 Ricotka pirine kase z jurcki in zelenjavo
 ***
 Sumenjak, Alter, suho, 2021
-Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Barbare
+Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Sare
 ***
 Greif, rumeni muskat, polsladko, 2024
-Pohorska gibanica babice Angelce ali domac jabolcni strudl ali pita sezone, hisni sladoled
+Pohorska gibanica babice Marije ali domac jabolcni strudl ali pita sezone, hisni sladoled
 
 CENA PO ODRASLI OSEBI: 43 EUR
 Cena vinske spremljave: 20 EUR za 5 kozarcev""",
@@ -358,7 +358,7 @@ Penina Doppler, Diona 2017, zelo suho, 100 % chardonnay
 Pozdrav iz kuhinje
 ***
 Freser, sauvignon, suho, 2024
-Kiblflajs s prelivom, zelenjava s Kovacnikovega vrta, zorjen Freserjev sir, hisni kruh z drozmi
+Kiblflajs s prelivom, zelenjava s Kmetije Pod Goro vrta, zorjen Freserjev sir, hisni kruh z drozmi
 ***
 Juha s kislim zeljem in krvavico
 ***
@@ -366,19 +366,19 @@ Freser, renski rizling, suho, 2019
 Ricotka pirine kase z jurcki in zelenjavo
 ***
 Sumenjak, Alter, suho, 2021
-Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Barbare
+Krompir iz nase njive, zelenjavni pire, pohan pisek s kmetije Pesek, solatka iz vrta gospodinje Sare
 ***
 Greif, modra frankinja, suho, 2020
-Strukelj s skuto nase krave Miske, goveje meso iz Kovacnikove proste reje, rdeca pesa, rabarbara, naravna omaka
+Strukelj s skuto nase krave Miske, goveje meso iz Kmetije Pod Goro proste reje, rdeca pesa, rabarbara, naravna omaka
 ***
 Greif, rumeni muskat, polsladko, 2024
-Pohorska gibanica babice Angelce ali domac jabolcni strudl ali pita sezone, hisni sladoled
+Pohorska gibanica babice Marije ali domac jabolcni strudl ali pita sezone, hisni sladoled
 
 CENA PO ODRASLI OSEBI: 53 EUR
 Cena vinske spremljave: 25 EUR za 6 kozarcev""",
     "druzina": """Pri nas smo družinska domačija in radi sprejmemo družine. Imamo tudi igrala za otroke.""",
-    "gospodar": """Gospodar kmetije je Danilo.""",
-    "kmetija": """Domačija Kovačnik je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
+    "gospodar": """Gospodar kmetije je Marko.""",
+    "kmetija": """Kmetija Pod Goro je turistična kmetija na Pohorju z nastanitvijo, kosili in domačimi izdelki.""",
     "gibanica": """Pohorska gibanica je naša specialiteta. Priporočam, da jo poskusite ob obisku!""",
     "izdelki": """Imamo domače izdelke: marmelade, likerje/žganja, mesnine, čaje, sirupe in darilne pakete.""",
     "priporocilo": """Trenutno nimam priporočil brez dodatnih informacij.""",

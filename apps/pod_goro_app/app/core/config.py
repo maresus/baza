@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     )
     
     # Ime projekta (ni nujno v .env, ima default)
-    project_name: str = Field(default="Kovačnik AI")
+    project_name: str = Field(default="Kmetija Pod Goro AI")
     
     # OpenAI ključ
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")

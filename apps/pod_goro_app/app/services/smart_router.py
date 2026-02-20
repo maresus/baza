@@ -25,7 +25,7 @@ from app.core.config import Settings
 logger = logging.getLogger("smart_router")
 
 # Prompt za routing - kratek in jasen
-ROUTER_SYSTEM_PROMPT = """Ti si intent classifier za turistično kmetijo Kovačnik.
+ROUTER_SYSTEM_PROMPT = """Ti si intent classifier za turistično kmetijo Kmetija Pod Goro.
 
 Analiziraj uporabnikovo sporočilo in vrni JSON z naslednjimi polji:
 
@@ -55,7 +55,7 @@ PRAVILA:
 VRNI SAMO VELJAVEN JSON, BREZ RAZLAGE."""
 
 
-ANSWER_SYSTEM_PROMPT = """Ti si prijazen asistent turistične kmetije Kovačnik.
+ANSWER_SYSTEM_PROMPT = """Ti si prijazen asistent turistične kmetije Kmetija Pod Goro.
 
 Odgovori na uporabnikovo vprašanje kratko in prijazno (1-2 stavka).
 Če je to interrupt med rezervacijo, na koncu dodaj nadaljevanje rezervacije.
@@ -67,7 +67,7 @@ Kontekst kmetije:
 - Sobe: ALJAŽ, JULIJA, ANA (vse 2+2)
 - Izdelki: čemažev pesto, marmelade, likerji, pohorska bunka
 - Živali: konja Malajka in Marsij, zajčki
-- Družina: gospodar Danilo, babica Angelca
+- Družina: gospodar Marko, babica Marija
 
 Ton: topel, domač, brez pretiranih emojijev."""
 

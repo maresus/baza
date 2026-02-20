@@ -29,7 +29,7 @@ def health_check() -> dict[str, str]:
 @app.get("/", response_class=HTMLResponse)
 def chat_ui() -> HTMLResponse:
     """
-    Preprost UI za testiranje Kovačnik AI chata.
+    Preprost UI za testiranje Kmetija Pod Goro AI chata.
     Streže datoteko static/chat.html iz root mape projekta.
     """
     html_path = Path("static/chat.html")

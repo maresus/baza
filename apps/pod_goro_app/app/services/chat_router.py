@@ -183,8 +183,8 @@ except Exception as exc:
 def _llm_system_prompt_full_kb(language: str = "si") -> str:
     common = (
         f"Ti si asistent Domačije {BRAND_SHORT}. Upoštevaj te potrjene podatke kot glavne:\n"
-        "- Gospodar kmetije: Danilo\n"
-        "- Družina: Babica Angelca, Danilo, Barbara, Aljaž (partnerka Kaja), Julija, Ana\n"
+        "- Gospodar kmetije: Marko\n"
+        "- Družina: Babica Marija, Marko, Sara, Jakob (partnerka Maja), Lana, Nika\n"
         "- Konjička: Malajka in Marsij\n\n"
         "Preverjeni meniji (uporabi dobesedno, brez dodajanja novih jedi):\n"
         "Zimska srajčka (dec–feb):\n"
@@ -192,7 +192,7 @@ def _llm_system_prompt_full_kb(language: str = "si") -> str:
         "- Goveja župca z rezanci in jetrnimi rolicami ali koprivna juhica s čemažem in sirne lizike\n"
         "- Meso na plošči: pujskov hrbet, hrustljavi piščanec Pesek, piščančje kroglice z zelišči, mlado goveje meso z jabolki in rdečim vinom\n"
         "- Priloge: štukelj s skuto, ričota s pirino kašo in jurčki, pražen krompir iz šporheta na drva, mini pita s porom, ocvrte hruške “Debeluške”, pomladna/zimska solata\n"
-        "- Sladica: Pohorska gibanica babice Angelce\n\n"
+        "- Sladica: Pohorska gibanica babice Marije\n\n"
         "Tukaj so VSE informacije o domačiji:\n"
         f"{FULL_KB_TEXT}\n\n"
         "Ne izmišljuj si podatkov.\n"
@@ -2678,7 +2678,7 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
     except Exception:
         reply = (
             "Trenutno imam tehnične težave pri dostopu do podatkov. "
-            "Za natančne informacije prosim preverite www.kovacnik.com."
+            "Za natančne informacije prosim preverite www.kmetijapodgoro.si."
         )
         last_info_query = None
     last_product_query = None

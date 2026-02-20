@@ -1,5 +1,5 @@
 """
-Brand Configuration - Turistična kmetija Kovačnik
+Brand Configuration - Kmetija Pod Goro
 
 Vsi podatki specifični za to kmetijo. Logika bere iz tega configa,
 kar omogoča enostavno dodajanje novih kmetij.
@@ -9,50 +9,50 @@ kar omogoča enostavno dodajanje novih kmetij.
 # OSNOVNI PODATKI
 # =============================================================================
 
-BRAND_NAME = "Turistična kmetija Kovačnik"
-BRAND_SHORT = "Kovačnik"
-DOMAIN = "kovacnik.com"
+BRAND_NAME = "Kmetija Pod Goro"
+BRAND_SHORT = "Kmetija Pod Goro"
+DOMAIN = "kmetijapodgoro.si"
 
 # =============================================================================
 # KONTAKTNI PODATKI
 # =============================================================================
 
 FARM_INFO = {
-    "name": "Turistična kmetija Kovačnik",
+    "name": "Kmetija Pod Goro",
     "address": "Planica 9, 2313 Fram",
     "phone": "02 601 54 00",
     "mobile": "031 330 113",
-    "email": "info@kovacnik.com",
-    "website": "www.kovacnik.com",
+    "email": "info@kmetijapodgoro.si",
+    "website": "www.kmetijapodgoro.si",
     "location_description": "Na pohorski strani, nad Framom, približno 15 min iz doline",
     "parking": "Brezplačen parking ob hiši za 10+ avtomobilov",
     "directions": {
         "from_maribor": (
-            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Ane, "
-            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Kovačnik) "
+            "Iz avtoceste A1 (smer Maribor/Ljubljana) izvoz Fram. Pri semaforju v Framu proti cerkvi sv. Nike, "
+            "naravnost skozi vas proti Kopivniku. V Kopivniku na glavni cesti zavijete desno (tabla Kmetija Pod Goro) "
             "in nadaljujete še približno 10 minut. Od cerkve v Framu do kmetije je slabih 15 minut."
         ),
     },
 }
 
 # Spletna trgovina
-SHOP_URL = "https://kovacnik.com/katalog"
+SHOP_URL = "https://kmetijapodgoro.si/katalog"
 
 # =============================================================================
 # DRUŽINA IN OSEBNI PODATKI
 # =============================================================================
 
 FAMILY = {
-    "owner": "Danilo",
-    "grandmother": "Angelca",
-    "members": ["Danilo", "Barbara", "Aljaž", "Julija", "Ana"],
-    "partner": "Kaja",  # Aljaževa partnerka
+    "owner": "Marko",
+    "grandmother": "Marija",
+    "members": ["Marko", "Sara", "Jakob", "Lana", "Nika"],
+    "partner": "Maja",  # Jakobeva partnerka
     "horses": ["Malajka", "Marsij"],
     "cow": "Miška",
 }
 
-# Primer imena za validacijo (npr. "Prosim napišite ime in priimek (npr. 'Ana Kovačnik').")
-EXAMPLE_NAME = "Ana Kovačnik"
+# Primer imena za validacijo (npr. "Prosim napišite ime in priimek (npr. 'Nika Kmetija Pod Goro').")
+EXAMPLE_NAME = "Nika Kmetija Pod Goro"
 
 # =============================================================================
 # SOBE
@@ -108,7 +108,7 @@ def get_system_prompt_intro(language: str = "si") -> str:
     family_str = f"Babica {FAMILY['grandmother']}, {', '.join(FAMILY['members'])}"
     if FAMILY.get('partner'):
         family_str = family_str.replace(
-            FAMILY['members'][2],  # Aljaž
+            FAMILY['members'][2],  # Jakob
             f"{FAMILY['members'][2]} (partnerka {FAMILY['partner']})"
         )
 

@@ -2,5 +2,5 @@ POST http://127.0.0.1:8000/chat
 Content-Type: application/json
 
 {
-  "message": "Živjo, Kovačnik!"
+  "message": "Živjo, Kmetija Pod Goro!"
 }

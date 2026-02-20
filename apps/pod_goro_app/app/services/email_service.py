@@ -1,5 +1,5 @@
 """
-Email Service za Kovačnik AI Chatbot
+Email Service za Kmetija Pod Goro AI Chatbot
 
 STANJE: PRIPRAVLJEN, NEAKTIVEN
 - Koda je pripravljena za pošiljanje emailov
@@ -13,11 +13,11 @@ AKTIVACIJA:
 SMTP NASTAVITVE (.env):
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=info@kovacnik.com
+SMTP_USER=info@kmetijapodgoro.si
 SMTP_PASSWORD=your_app_password
-SMTP_FROM_EMAIL=info@kovacnik.com
-SMTP_FROM_NAME=Domačija Kovačnik
-ADMIN_EMAIL=info@kovacnik.com
+SMTP_FROM_EMAIL=info@kmetijapodgoro.si
+SMTP_FROM_NAME=Kmetija Pod Goro
+ADMIN_EMAIL=info@kmetijapodgoro.si
 """
 
 import os
@@ -36,9 +36,9 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "info@kovacnik.com")
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Domačija Kovačnik")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "info@kovacnik.com")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "info@kmetijapodgoro.si")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Kmetija Pod Goro")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si")
 SMTP_SSL = os.getenv("SMTP_SSL", "").strip().lower() in {"1", "true", "yes"}
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
@@ -63,13 +63,13 @@ def _email_wrapper(content: str) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domačija Kovačnik</title>
+    <title>Kmetija Pod Goro</title>
 </head>
 <body style="margin:0; padding:0; background:#faf9f7; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
     <div style="max-width:620px; margin:0 auto; padding:24px 16px;">
         <!-- Header -->
         <div style="background:{BRAND_COLOR}; color:#fff; padding:18px 24px; border-radius:14px 14px 0 0; font-size:18px; font-weight:700; letter-spacing:.3px;">
-            Domačija Kovačnik
+            Kmetija Pod Goro
         </div>
         
         <!-- Content -->
@@ -79,7 +79,7 @@ def _email_wrapper(content: str) -> str:
         
         <!-- Footer -->
         <div style="background:{BG_COLOR}; border:1px solid {BORDER_COLOR}; border-top:none; border-radius:0 0 14px 14px; padding:16px 24px; color:{MUTED_COLOR}; font-size:12px;">
-            Domačija Kovačnik • <a href="https://kovacnik.com" style="color:{BRAND_COLOR}; text-decoration:none;">kovacnik.com</a>
+            Kmetija Pod Goro • <a href="https://kmetijapodgoro.si" style="color:{BRAND_COLOR}; text-decoration:none;">kmetijapodgoro.si</a>
             <br>Planica 9, 2313 Fram • 02 601 54 00 • 031 330 113
         </div>
     </div>
@@ -156,7 +156,7 @@ def _guest_room_confirmation_html(data: Dict[str, Any]) -> str:
     
     <p style="margin-top:18px; color:{MUTED_COLOR};">
         Rezervacijo bomo potrdili po preverjanju razpoložljivosti.<br>
-        Za spremembe ali preklic nas kontaktirajte na 02 601 54 00 ali info@kovacnik.com
+        Za spremembe ali preklic nas kontaktirajte na 02 601 54 00 ali info@kmetijapodgoro.si
     </p>
     """
     return _email_wrapper(content)
@@ -195,7 +195,7 @@ def _guest_table_confirmation_html(data: Dict[str, Any]) -> str:
     </p>
     
     <p style="margin-top:18px;">
-        Več o naši ponudbi: <a href="https://kovacnik.com/vikend-ponudba/" style="color:{BRAND_COLOR};">kovacnik.com/vikend-ponudba</a>
+        Več o naši ponudbi: <a href="https://kmetijapodgoro.si/vikend-ponudba/" style="color:{BRAND_COLOR};">kmetijapodgoro.si/vikend-ponudba</a>
     </p>
     
     <p><strong>POMEMBNO:</strong> To je povpraševanje, ne potrjena rezervacija.<br>
@@ -283,7 +283,7 @@ def _guest_confirmed_html(data: Dict[str, Any]) -> str:
     </p>
     
     <p style="color:{MUTED_COLOR};">
-        Za morebitne spremembe nas kontaktirajte na 02 601 54 00 ali info@kovacnik.com
+        Za morebitne spremembe nas kontaktirajte na 02 601 54 00 ali info@kmetijapodgoro.si
     </p>
     """
     return _email_wrapper(content)
@@ -304,7 +304,7 @@ def _guest_rejected_html(data: Dict[str, Any]) -> str:
     
     <p style="margin-top:24px;">
         Lepo vas pozdravljamo,<br>
-        <strong>Domačija Kovačnik</strong>
+        <strong>Kmetija Pod Goro</strong>
     </p>
     """
     return _email_wrapper(content)
@@ -359,7 +359,7 @@ def _send_email(to: str, subject: str, html_body: str) -> bool:
         msg['Reply-To'] = SMTP_FROM_EMAIL
         
         # Plain text verzija
-        text_body = f"Sporočilo od Domačije Kovačnik. Za ogled odprite v brskalniku."
+        text_body = f"Sporočilo od Domačije Kmetija Pod Goro. Za ogled odprite v brskalniku."
         msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
         
         # HTML verzija
