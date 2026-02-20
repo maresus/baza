@@ -110,7 +110,7 @@ EMBEDDING_CACHE: Dict[str, list[float]] = {}
 
 # Load pre-computed embeddings if available
 EMBEDDINGS_PATH = BASE_DIR / "data" / "embeddings.json"
-if EMBEDDINGS_PATH.exists():
+if False and EMBEDDINGS_PATH.exists():
     try:
         _precomputed = json.loads(EMBEDDINGS_PATH.read_text(encoding="utf-8"))
         EMBEDDING_CACHE.update(_precomputed)
