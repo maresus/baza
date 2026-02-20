@@ -106,8 +106,6 @@ RESERVATION_START_PHRASES = {
     "rezerviram mizo",
     "rezervirala bi mizo",
     "rezerviral bi mizo",
-    "kosilo",
-    "večerja",
     "book a room",
     "booking",
     "i want to book",
@@ -204,6 +202,9 @@ def get_info_response(key: str) -> str:
             "tedenski_5hodni",
             "tedenski_6hodni",
         }:
+            return chosen
+        # Keep manual formatting (lists/line-breaks) for info texts.
+        if "\n" in chosen or "•" in chosen or "- **" in chosen or "***" in chosen:
             return chosen
         return maybe_shorten_response(_apply_policy(chosen))
     return maybe_shorten_response(_apply_policy(INFO_RESPONSES.get(key, "Kako vam lahko pomagam?")))
@@ -614,8 +615,13 @@ def is_strong_inquiry_request(message: str) -> bool:
 def is_reservation_related(message: str) -> bool:
     lowered = message.lower()
     reserv_tokens = ["rezerv", "book", "booking", "reserve", "reservation", "zimmer"]
+    if any(t in lowered for t in reserv_tokens):
+        return True
+    # Type-only vprašanja ("koliko stane nočitev", "imate mize?") naj ne sprožijo bookinga.
+    # Brez rezervacijskega glagola jih obravnavamo kot informativna.
     type_tokens = ["soba", "sobo", "sobe", "room", "miza", "mizo", "table", "nočitev", "nocitev"]
-    return any(t in lowered for t in reserv_tokens + type_tokens)
+    intent_verbs = ["rad bi", "rada bi", "želim", "zelim", "hočem", "hocem", "rezerviral", "rezervirala"]
+    return any(t in lowered for t in type_tokens) and any(v in lowered for v in intent_verbs)
 
 
 def is_bulk_order_request(message: str) -> bool:

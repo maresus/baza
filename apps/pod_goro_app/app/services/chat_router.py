@@ -1397,7 +1397,14 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             _sync_unified_state(unified_state, state, inquiry_state)
         final_reply = reply_text
         # Apply strict policy for info/product responses (no offers, no questions, short)
-        if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]):
+        is_structured = (
+            "\n" in final_reply
+            or "•" in final_reply
+            or "***" in final_reply
+            or "📅" in final_reply
+            or "👥" in final_reply
+        )
+        if STRICT_POLICY and any(k in intent_value for k in ["product", "info", "menu", "wine", "farm", "food"]) and not is_structured:
             # Pozdrava ne saniramo, sicer lahko pade na napačen fallback.
             if "pozdrav" not in intent_value and "greeting" not in intent_value:
                 final_reply = _sanitize_policy_response(final_reply)
@@ -1436,6 +1443,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     if (
         tourist_reply
         and not is_menu_query(payload.message)
+        and not detect_info_intent(payload.message)
         and (state.get("step") is None or should_switch_from_reservation(payload.message, state))
     ):
         tourist_reply = maybe_translate(tourist_reply, detected_lang)
