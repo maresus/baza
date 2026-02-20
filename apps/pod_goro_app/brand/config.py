@@ -265,6 +265,7 @@ Zajtrk je vključen v ceno! 🥐""",
     "zivali": """Ob 40‑glavi goveji čredi imamo na kmetiji še svinje, račke in kokoši.
 
 Najmlajši uživajo ob naših živalih: konjička Malajko in Marsi, pujska Pepa ter ovna Čarlija. Imamo tudi psičko Luno in mucke.""",
+    "traktor": """Da, na kmetiji imamo traktor in drugo kmetijsko mehanizacijo za delo na posestvu.""",
     "jahanje": """Jahanje je možno po dogovoru in ob primernem vremenu. Običajno nudimo krajši krog s ponijem za otroke (5 € / krog). Pred obiskom priporočamo predhodno najavo.""",
     "pets_policy": """Hišni ljubljenčki na naši domačiji niso dovoljeni.""",
     "placilo": """Sprejemamo gotovino in večino plačilnih kartic.""",

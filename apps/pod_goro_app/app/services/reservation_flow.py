@@ -249,6 +249,12 @@ def _handle_room_reservation_impl(
         nights_candidate = extract_nights(message)
         if not date_candidate:
             set_state_field(reservation_state, "date", None)
+            if nights_candidate:
+                set_state_field(reservation_state, "nights", nights_candidate)
+                return (
+                    f"Super, zabeležila sem {nights_candidate} nočitvi. "
+                    "Prosim še za datum prihoda (DD.MM ali DD.MM.YYYY)."
+                )
             return "Z veseljem uredim sobo. 😊 Sporočite datum prihoda (DD.MM ali DD.MM.YYYY) in približno število nočitev (nočitv)?"
         if not nights_candidate:
             set_state_field(reservation_state, "date", date_candidate)
@@ -921,8 +927,10 @@ def handle_reservation_flow(
                 set_state_field(reservation_state, "date", prefilled_date)
             reply_prefix = "Super, z veseljem uredim rezervacijo sobe. 😊"
             if prefilled_nights:
+                set_state_field(reservation_state, "nights", prefilled_nights)
+            if reservation_state.get("date") and reservation_state.get("nights"):
                 ok, error_message, _ = validate_reservation_rules_fn(
-                    reservation_state["date"] or "", prefilled_nights
+                    reservation_state["date"] or "", int(reservation_state["nights"] or 0)
                 )
                 if not ok:
                     set_state_field(reservation_state, "step", "awaiting_room_date")
@@ -932,9 +940,13 @@ def handle_reservation_flow(
                         f"{error_message} Na voljo imamo najmanj 2 nočitvi (oz. 3 v poletnih mesecih). "
                         "Mi pošljete nov datum prihoda (DD.MM ali DD.MM.YYYY) in število nočitev (nočitv)?"
                     )
-                set_state_field(reservation_state, "nights", prefilled_nights)
             if not reservation_state.get("date"):
                 set_state_field(reservation_state, "step", "awaiting_room_date")
+                if reservation_state.get("nights"):
+                    return _tr(
+                        f"{reply_prefix} Zabeleženo imam {reservation_state['nights']} nočitvi. "
+                        "Prosim še za datum prihoda (DD.MM ali DD.MM.YYYY)."
+                    )
                 return _tr(
                     f"{reply_prefix} Za kateri datum prihoda? (DD.MM ali DD.MM.YYYY)\n{room_intro_text()}"
                 )

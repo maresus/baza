@@ -414,6 +414,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "turizem"
     if any(w in text for w in ["kolo", "koles", "kolesar", "bike", "e-kolo", "ekolo", "bicikl"]):
         return "kolesa"
+    if "traktor" in text:
+        return "traktor"
     if "skalca" in text or ("slap" in text and "skalc" in text):
         return "skalca"
     if "darilni bon" in text or ("bon" in text and "daril" in text):
