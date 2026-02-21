@@ -367,7 +367,9 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "zivali"
     if any(w in text for w in ["gospodar", "gosp", "lastnik", "kdo vodi", "vodi kmetijo", "vodi domačijo"]):
         return "gospodar"
-    if any(w in text for w in ["otrok", "otroci", "druzina", "družina", "sin", "hcer", "hči"]):
+    if any(w in text for w in ["otrok", "otroci", "druzina", "družina", "sin", "hcer", "hči"]) and not any(
+        w in text for w in ["dež", "dez", "dezuje", "dežuje", "ce dez", "če dežuje", "smuči", "terme", "izlet", "kaj ce"]
+    ):
         return "druzina"
     if any(w in text for w in ["nogomet", "fuzbal", "football", "igrišče", "igrisce", "igrat"]):
         return "turizem"

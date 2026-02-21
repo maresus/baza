@@ -549,8 +549,8 @@ def answer_product_question(message: str) -> str:
                 title = c.title or "Izdelek"
                 link = _product_link_from_url(c.url, title)
                 if price:
-                    return f"{title} ({price}). Najdete ga tukaj: {link}."
-                return f"{title}. Najdete ga tukaj: {link}."
+                    return f"Seveda, imamo to na voljo:\n\n- {title} ({price})\n  Povezava: {link}"
+                return f"Seveda, imamo to na voljo:\n\n- {title}\n  Povezava: {link}"
     category = None
     if "marmelad" in lowered or "džem" in lowered or "dzem" in lowered:
         category = "marmelad"
@@ -637,7 +637,7 @@ def answer_product_question(message: str) -> str:
             return f"Prodajamo domače izdelke v spletni trgovini: {SHOP_URL}."
         return f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
 
-    sentences: list[str] = []
+    lines: list[str] = ["Seveda, tukaj je nekaj izdelkov iz te kategorije:", ""]
     for c in unique[:3]:
         text = c.paragraph.strip() if c.paragraph else ""
         price = ""
@@ -647,8 +647,10 @@ def answer_product_question(message: str) -> str:
         title = c.title or "Izdelek"
         link = _product_link_from_url(c.url, title)
         if price:
-            sentences.append(f"{title} ({price}). Najdete ga tukaj: {link}.")
+            lines.append(f"- {title} ({price})")
         else:
-            sentences.append(f"{title}. Najdete ga tukaj: {link}.")
-
-    return " ".join(sentences)
+            lines.append(f"- {title}")
+        lines.append(f"  Povezava: {link}")
+    lines.append("")
+    lines.append(f"Celotna trgovina: {SHOP_URL}")
+    return "\n".join(lines).strip()

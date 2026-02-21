@@ -181,7 +181,23 @@ def is_menu_query(message: str) -> bool:
 def parse_reservation_type(message: str) -> Optional[str]:
     lowered = message.lower()
     pricing_words = ["koliko stane", "cena", "cenik", "price", "koliko je"]
-    booking_hints = ["rezerv", "book", "booking", "reserve", "reservation", "rad bi", "rada bi", "želim", "zelim", "hočem", "hocem"]
+    booking_hints = [
+        "rezerv",
+        "book",
+        "booking",
+        "reserve",
+        "reservation",
+        "rad bi",
+        "rada bi",
+        "želim",
+        "zelim",
+        "hočem",
+        "hocem",
+        "rabim",
+        "iščem",
+        "iscem",
+        "prosim",
+    ]
     if any(word in lowered for word in pricing_words) and not any(h in lowered for h in booking_hints):
         return None
 
@@ -224,6 +240,22 @@ def parse_reservation_type(message: str) -> Optional[str]:
         "schlafen",
         "unterkunft",
     ]
+    # Informativna vprašanja o sobah (brez jasnega booking namiga) ne smejo
+    # avtomatsko odpreti reservation flow.
+    is_room_info_question = (
+        ("?" in lowered or any(tok in lowered for tok in ["koliko", "kakšne", "kaksne", "katere", "ali imate", "imate"]))
+        and any(_has_term(word) for word in room_keywords)
+        and not any(hint in lowered for hint in booking_hints)
+        and not (
+            extract_date(message)
+            or extract_date_range(message)
+            or extract_time(message)
+            or re.search(r"\b\d+\s*(noč|noc|noci|noči|oseb)\b", lowered)
+        )
+    )
+    if is_room_info_question:
+        return None
+
     if any(_has_term(word) for word in room_keywords):
         return "room"
 
