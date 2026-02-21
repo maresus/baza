@@ -349,6 +349,11 @@ def detect_info_intent(message: str) -> Optional[str]:
             "zival",
             "konj",
             "poni",
+            "krav",
+            "krave",
+            "koza",
+            "koze",
+            "goved",
             "zajc",
             "zajček",
             "zajcek",
@@ -362,6 +367,10 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "zivali"
     if any(w in text for w in ["gospodar", "gosp", "lastnik", "kdo vodi", "vodi kmetijo", "vodi domačijo"]):
         return "gospodar"
+    if any(w in text for w in ["otrok", "otroci", "druzina", "družina", "sin", "hcer", "hči"]):
+        return "druzina"
+    if any(w in text for w in ["nogomet", "fuzbal", "football", "igrišče", "igrisce", "igrat"]):
+        return "turizem"
     if any(w in text for w in ["plačilo", "kartic", "gotovina"]):
         return "placilo"
     if any(w in text for w in ["kontakt", "telefon", "telefonsko", "številka", "stevilka", "gsm", "mobitel", "mobile", "phone"]):
@@ -498,8 +507,12 @@ def detect_product_intent(message: str) -> Optional[str]:
         return "jetrna_pastetka"
     if any(w in text for w in ["liker", "žgan", "zgan", "borovnič", "orehov", "alkohol"]):
         return "liker"
+    if any(w in text for w in ["snops", "šnops", "snopc", "šnopc", "zganje", "žganje"]):
+        return "liker"
     if any(w in text for w in ["marmelad", "džem", "dzem", "jagod", "marelič"]):
         return "marmelada"
+    if re.search(r"(?<!\w)sir(?!\w)", text) or any(w in text for w in ["sir ", " sir", "sirek", "sircek", "sirček"]):
+        return "sir"
     if "gibanic" in text:
         return "gibanica_narocilo"
     if any(w in text for w in ["bunka", "bunko", "bunke"]):
@@ -520,10 +533,13 @@ def detect_product_intent(message: str) -> Optional[str]:
 def get_product_response(key: str) -> str:
     if key == "gibanica_narocilo":
         return f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
+    if key == "izdelki_splosno":
+        return PRODUCT_RESPONSES["izdelki_splosno"][0]
     key_map = {
         "cemazev_pesto": "čemažev pesto",
         "bucni_namaz": "bučni namaz",
         "jetrna_pastetka": "jetrna paštetka",
+        "sir": "sir",
     }
     # Use KB-driven product answer to return price + direct link
     return answer_product_question(key_map.get(key, key or ""))

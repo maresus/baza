@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Optional
 
-from app.brand.config import FARM_INFO, INFO_EMAIL, SHOP_BASE_URL
+from app.brand.config import FARM_INFO, INFO_EMAIL, SHOP_BASE_URL, SHOP_URL
 from app.rag.knowledge_base import KNOWLEDGE_CHUNKS
 
 # ----- Wine list -----
@@ -568,6 +568,8 @@ def answer_product_question(message: str) -> str:
         category = "liker"
     elif "bunk" in lowered:
         category = "bunka"
+    elif re.search(r"(?<!\w)sir(?!\w)", lowered) or "sircek" in lowered or "sirček" in lowered:
+        category = "sir"
     elif "salam" in lowered or "klobas" in lowered or "mesn" in lowered:
         category = "mesn"
     elif "namaz" in lowered or "pašteta" in lowered or "pasteta" in lowered:
@@ -594,11 +596,18 @@ def answer_product_question(message: str) -> str:
                     continue
                 results.append(c)
             elif category == "liker" and ("liker" in url_lower or "tepkovec" in url_lower):
-                results.append(c)
+                if "paket" not in url_lower:
+                    results.append(c)
             elif category == "bunka" and "bunka" in url_lower:
                 results.append(c)
             elif category == "mesn" and ("salama" in url_lower or "klobas" in url_lower):
                 results.append(c)
+            elif category == "sir":
+                has_cheese_token = bool(re.search(r"(?<![a-z])sir(?![a-z])", url_lower)) or bool(
+                    re.search(r"(?<![a-z])sir(?![a-z])", title_lower)
+                )
+                if has_cheese_token and "sirup" not in url_lower and "sirup" not in title_lower and "paket" not in url_lower:
+                    results.append(c)
             elif category == "namaz" and ("namaz" in url_lower or "pastet" in url_lower):
                 results.append(c)
             elif category == "sirup" and ("sirup" in url_lower or "sok" in url_lower):
@@ -625,27 +634,7 @@ def answer_product_question(message: str) -> str:
 
     if not unique:
         if category is None:
-            fallback = []
-            for c in KNOWLEDGE_CHUNKS:
-                if "/izdelek/" in (c.url or ""):
-                    fallback.append(c)
-                if len(fallback) >= 3:
-                    break
-            if fallback:
-                sentences = []
-                for c in fallback:
-                    text = c.paragraph.strip() if c.paragraph else ""
-                    price = ""
-                    price_match = re.match(r'^(\d+[,\.]\d+\s*€)', text)
-                    if price_match:
-                        price = price_match.group(1)
-                    title = c.title or "Izdelek"
-                    link = _product_link_from_url(c.url, title)
-                    if price:
-                        sentences.append(f"{title} ({price}). Najdete ga tukaj: {link}.")
-                    else:
-                        sentences.append(f"{title}. Najdete ga tukaj: {link}.")
-                return " ".join(sentences)
+            return f"Prodajamo domače izdelke v spletni trgovini: {SHOP_URL}."
         return f"Tega izdelka ni v spletni trgovini. Pišite na {INFO_EMAIL}."
 
     sentences: list[str] = []
