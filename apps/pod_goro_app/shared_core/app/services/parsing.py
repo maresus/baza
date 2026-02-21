@@ -145,7 +145,8 @@ def parse_kids_response(message: str) -> dict[str, Optional[str | int]]:
 
 def extract_nights(message: str) -> Optional[int]:
     """Ekstraktira število nočitev iz sporočila."""
-    cleaned = re.sub(r"\d{1,2}\.\d{1,2}\.\d{2,4}", " ", message)
+    cleaned = re.sub(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", " ", message)
+    cleaned = re.sub(r"\d{1,2}[./-]\d{1,2}(?![./-]\d{2,4})", " ", cleaned)
     cleaned = re.sub(r"(vikend|weekend|sobota|nedelja)", " ", cleaned, flags=re.IGNORECASE)
 
     # 1) številka ob besedi noč/nočitev

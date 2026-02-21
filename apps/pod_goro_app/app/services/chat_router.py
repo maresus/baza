@@ -474,7 +474,7 @@ class ChatRequestWithSession(ChatRequest):
 
 last_wine_query: Optional[str] = None
 SESSION_TIMEOUT_HOURS = 48
-GREETING_KEYWORDS = {"živjo", "zdravo", "hej", "hello", "dober dan", "pozdravljeni"}
+GREETING_KEYWORDS = {"živjo", "zdravo", "hej", "hello", "dober dan", "pozdravljeni", "/start", "start"}
 GREETINGS = BRAND_GREETINGS
 THANKS_RESPONSES = BRAND_THANKS
 UNKNOWN_RESPONSES = BRAND_UNKNOWN
@@ -991,14 +991,13 @@ def detect_language(message: str) -> str:
     ]
     english_count = english_pronoun + sum(1 for word in english_words if word in lowered)
 
-    if german_count >= 2:
+    if german_count >= 3:
         return "de"
-    if english_count >= 2:
+    if english_count >= 3:
         return "en"
-    if german_count == 1 and english_count == 0:
-        return "de"
-    if english_count == 1 and german_count == 0:
-        return "en"
+    # Keep mixed/short messages in Slovenian to avoid expensive translation churn.
+    if german_count <= 1 and english_count <= 1:
+        return "si"
 
     return "si"
 

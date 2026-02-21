@@ -272,6 +272,14 @@ def _product_link_from_url(url: str, title: str | None) -> str:
 def detect_info_intent(message: str) -> Optional[str]:
     text = message.lower().strip()
     text = text.replace("‑", "-").replace("–", "-").replace("—", "-")
+    # common leetspeak/typo normalization for robust intent matching
+    norm = (
+        text.replace("0", "o")
+        .replace("1", "i")
+        .replace("3", "e")
+        .replace("4", "a")
+        .replace("5", "s")
+    )
     if "hvala" in text:
         return "smalltalk"
     if any(w in text for w in ["zmeden", "zmedena", "zmeden sem", "help", "pomoč", "pomoc"]):
@@ -300,7 +308,7 @@ def detect_info_intent(message: str) -> Optional[str]:
     if any(w in text for w in ["koliko stane večerja", "cena večerje", "večerja", "vecerja", "večerjo"]):
         return "vecerja"
     if any(
-        w in text
+        w in norm
         for w in [
             "cena sobe",
             "cena nočit",
@@ -435,12 +443,12 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "tedenski_6hodni"
     if any(w in text for w in ["čez teden", "cez teden", "med tednom", "tedenska ponudba", "tedenski meni", "tedenski", "degustacijski", "degustacija", "4-hodni", "5-hodni", "6-hodni", "7-hodni", "koliko hodov"]):
         return "tedenska_ponudba"
-    if ("vikend" in text or "ponudba" in text) and any(
-        w in text for w in ["vikend", "ponudba", "kosilo", "meni", "menu", "jedil"]
+    if ("vikend" in norm or "ponudba" in norm) and any(
+        w in norm for w in ["vikend", "ponudba", "kosilo", "kosl", "meni", "menu", "jedil"]
     ):
         return "jedilnik"
     if any(
-        w in text
+        w in norm
         for w in [
             "jedilnik",
             "jedilnk",
@@ -458,6 +466,8 @@ def detect_info_intent(message: str) -> Optional[str]:
             "kaj je za večerjo",
             "kaj je za vecerjo",
             "koslo",
+            "kosl",
+            "viknd",
         ]
     ):
         return "jedilnik"

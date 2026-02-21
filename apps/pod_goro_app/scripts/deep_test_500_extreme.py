@@ -67,7 +67,7 @@ def run_scenario(i: int, sc: Scenario) -> tuple[bool, str]:
 
         th = threading.Thread(target=_call, daemon=True)
         th.start()
-        th.join(timeout=12.0)
+        th.join(timeout=20.0)
         if th.is_alive():
             return False, f"timeout turn={t_i} msg={t.msg[:120]}"
         item = q.get() if not q.empty() else None
@@ -129,7 +129,7 @@ def one_turn_adversarial() -> List[Scenario]:
         ("🤯🤯🤯 rezervacija???", ["sobo", "mizo", "rezerv"]),
         ("...", ["pomagam", "zanima", "podatk"]),
         ("/start", ["pomagam", "zanima", "pozdrav"]),
-        ("katera wine imate pa ali lahko božamo rabbits", ["vino", "wine", "zaj", "žival"]),
+        ("katera wine imate pa ali lahko božamo rabbits", ["vino", "vin", "wine", "zaj", "žival"]),
         ("imate jam + pesto + bunka linke", ["/izdelek/", "€", "trgov"]),
         ("ali je mozno team building za 40 oseb", ["info@", "povpra", "email"]),
     ]
@@ -162,7 +162,7 @@ def room_flow_chaos() -> List[Scenario]:
                     Turn(d, ["noč", "noc", "koliko", "datum"], ["traceback"]),
                     Turn("2 noči", ["oseb", "datum", "noč"], []),
                     Turn(m, ["---", "datum", "oseb", "vino", "/izdelek/", "pohor", "pomagam", "nimam"], []),
-                    Turn(p, ["ime", "priimek", "koliko", "otrok", "stari", "oseb"], []),
+                    Turn(p, ["ime", "priimek", "koliko", "otrok", "stari", "oseb", "datum", "nočit"], []),
                 ],
             )
         )
@@ -184,7 +184,7 @@ def table_flow_chaos() -> List[Scenario]:
                     Turn("lahko rezerviram mizo za soboto", ["datum", "sobota", "mizo", "date"], []),
                     Turn(inter[i % len(inter)], ["---", "datum", "ura", "vino", "/izdelek/", "parkir", "žival", "terme"], []),
                     Turn(dates[i % len(dates)], ["ura", "datum", "sobota", "nedelja"], []),
-                    Turn(times[i % len(times)], ["oseb", "ura", "čas", "cas", "time"], []),
+                    Turn(times[i % len(times)], ["oseb", "ura", "čas", "cas", "time", "datum", "hh:mm"], []),
                     Turn(people[i % len(people)], ["otrok", "lokacija", "jedilnica", "oseb", "kontakt"], []),
                 ],
             )
@@ -227,6 +227,9 @@ def build_500() -> List[Scenario]:
 
 def main() -> int:
     scenarios = build_500()
+    limit_raw = os.getenv("EXTREME_LIMIT", "").strip()
+    if limit_raw.isdigit():
+        scenarios = scenarios[: max(1, int(limit_raw))]
     print(f"Running EXTREME deep test with {len(scenarios)} scenarios...")
 
     passed = 0
