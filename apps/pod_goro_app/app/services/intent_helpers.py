@@ -272,6 +272,10 @@ def _product_link_from_url(url: str, title: str | None) -> str:
 def detect_info_intent(message: str) -> Optional[str]:
     text = message.lower().strip()
     text = text.replace("‑", "-").replace("–", "-").replace("—", "-")
+    if "hvala" in text:
+        return "smalltalk"
+    if any(w in text for w in ["zmeden", "zmedena", "zmeden sem", "help", "pomoč", "pomoc"]):
+        return "pozdrav"
     if text in {"zdravo", "živjo", "hej", "hello", "dober dan", "pozdrav", "pozdravljeni"}:
         return "pozdrav"
     if any(w in text for w in ["kako ste", "kako si", "kako gre", "kako vam gre", "kako vam grejo stvari"]):
@@ -303,9 +307,14 @@ def detect_info_intent(message: str) -> Optional[str]:
             "cena nocit",
             "koliko stane noč",
             "koliko stane noc",
+            "kolko stane noc",
             "cenik",
             "koliko stane soba",
             "koliko stane nočitev",
+            "koliko stane nocitev",
+            "kolko stane nočitev",
+            "kolko stane nocitev",
+            "nocitev",
         ]
     ):
         return "cena_sobe"
