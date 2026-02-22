@@ -479,6 +479,13 @@ GREETINGS = BRAND_GREETINGS
 THANKS_RESPONSES = BRAND_THANKS
 UNKNOWN_RESPONSES = BRAND_UNKNOWN
 
+
+def _unknown_reply() -> str:
+    try:
+        return random.choice(UNKNOWN_RESPONSES)
+    except Exception:
+        return "Trenutno nimam podatkov o tem."
+
 reservation_service = ReservationService()
 
 # Spletna trgovina (policy)
@@ -1557,7 +1564,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                     answer = get_product_response(product_key) if product_key else answer_product_question(payload.message)
                     last_product_query = payload.message
                 else:
-                    answer = "Trenutno nimam podatkov o tem."
+                    answer = _unknown_reply()
 
                 cont = reservation_prompt_for_state(state, room_intro_text, table_intro_text)
                 reply = f"{answer}\n\n---\n\n{cont}"
@@ -1639,13 +1646,13 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "animals_keyword_unified", followup_flag=False)
 
-        reply = "Trenutno nimam podatkov o tem."
+        reply = _unknown_reply()
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "fallback_unified", followup_flag=False)
 
     # Hard safety gate: with unified router enabled we must never execute legacy paths below.
     if USE_UNIFIED_ROUTER:
-        reply = "Trenutno nimam podatkov o tem."
+        reply = _unknown_reply()
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "unified_hard_gate", followup_flag=False)
 
@@ -2097,7 +2104,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             return finalize(reply, "goodbye", followup_flag=False)
 
         # conservative fallback in unified mode
-        fallback_reply = "Trenutno nimam podatkov o tem."
+        fallback_reply = _unknown_reply()
         fallback_reply = maybe_translate(fallback_reply, detected_lang)
         return finalize(fallback_reply, "unified_fallback", followup_flag=False)
 
@@ -2316,7 +2323,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             # Če še vedno nič, priznaj neznano in ponudi email
             if state.get("step") is None:
                 if STRICT_POLICY:
-                    reply = "Trenutno nimam podatkov o tem."
+                    reply = _unknown_reply()
                     reply = maybe_translate(reply, detected_lang)
                     return finalize(reply, "info_unknown", followup_flag=False)
                 inquiry_reply = start_inquiry_consent(inquiry_state)
@@ -2374,7 +2381,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "animals_keyword_unified_terminal", followup_flag=False)
 
-        reply = "Trenutno nimam podatkov o tem."
+        reply = _unknown_reply()
         reply = maybe_translate(reply, detected_lang)
         return finalize(reply, "unified_terminal_fallback", followup_flag=False)
 

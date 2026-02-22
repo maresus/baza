@@ -345,7 +345,7 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "wifi"
     if any(w in text for w in ["prijava", "odjava", "check in", "check out"]):
         return "prijava_odjava"
-    if any(w in text for w in ["parkir", "parking"]):
+    if any(w in text for w in ["parkir", "parking", "parkng"]):
         return "parking"
     if re.search(r"(?<!\w)(pes|psa|psi|psov|kuž|kuz|dog)(?!\w)", text) or any(
         w in text for w in ["mačk", "ljubljenč", "hišni ljubljen"]
@@ -364,6 +364,9 @@ def detect_info_intent(message: str) -> Optional[str]:
             "krave",
             "koza",
             "koze",
+            "ovca",
+            "ovce",
+            "ovc",
             "goved",
             "zajc",
             "zajček",

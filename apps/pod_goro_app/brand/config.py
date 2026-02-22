@@ -86,6 +86,9 @@ THANKS_RESPONSES = [
 
 UNKNOWN_RESPONSES = [
     "Tega žal ne vem. Če želite, mi pustite e-pošto in preverim.",
+    "Trenutno nimam podatkov o tem.",
+    "Za to trenutno nimam zanesljivega podatka.",
+    "Tega podatka trenutno nimam pri roki.",
 ]
 
 MENU_INTROS = [
