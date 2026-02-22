@@ -326,7 +326,18 @@ def detect_info_intent(message: str) -> Optional[str]:
         ]
     ):
         return "cena_sobe"
-    if any(w in text for w in ["koliko sob", "kakšne sobe", "koliko oseb v sobo", "kolko oseb v sobo", "kapaciteta sob"]):
+    if any(
+        w in text
+        for w in [
+            "koliko sob",
+            "kakšne sobe",
+            "katere sobe",
+            "katere sobe imate",
+            "koliko oseb v sobo",
+            "kolko oseb v sobo",
+            "kapaciteta sob",
+        ]
+    ):
         return "sobe"
     if "klim" in text:
         return "klima"
