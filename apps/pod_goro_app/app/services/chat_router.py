@@ -486,6 +486,41 @@ def _unknown_reply() -> str:
     except Exception:
         return "Trenutno nimam podatkov o tem."
 
+
+def _is_wine_followup_message(message: str) -> bool:
+    lowered = (message or "").strip().lower()
+    if not lowered:
+        return False
+    # direct follow-up choices after a wine list answer
+    if any(
+        token in lowered
+        for token in [
+            "rdeč",
+            "rdeca",
+            "rdeče",
+            "rdece",
+            "bela",
+            "belo",
+            "bel ",
+            "peneč",
+            "penec",
+            "penina",
+            "polslad",
+            "suha",
+            "suho",
+            "muškat",
+            "muskat",
+            "frankinja",
+            "pinot",
+            "rizling",
+            "sauvignon",
+        ]
+    ):
+        return True
+    # short answer style followups: "rdeča?", "bela?", "suha?"
+    cleaned = re.sub(r"[^\wčšžćđČŠŽĆĐ]+", "", lowered)
+    return cleaned in {"rdeca", "rdece", "bela", "belo", "suha", "suho", "peneca", "polsladka"}
+
 reservation_service = ReservationService()
 
 # Spletna trgovina (policy)
@@ -1602,6 +1637,13 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "tourist_followup_unified", followup_flag=False)
 
+        if last_wine_query and _is_wine_followup_message(payload.message):
+            # Direct category follow-ups like "rdeča?", "bela?" should not be
+            # concatenated with previous wine query, otherwise "rdeča" can stick.
+            reply = answer_wine_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "wine_followup_unified", followup_flag=False)
+
         info_key = detect_info_intent(payload.message)
         if info_key == "vina":
             reply = answer_wine_question(payload.message)
@@ -2372,6 +2414,10 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             reply = get_info_response("vina")
             reply = maybe_translate(reply, detected_lang)
             return finalize(reply, "wine_keyword_unified_terminal", followup_flag=False)
+        if last_wine_query and _is_wine_followup_message(payload.message):
+            reply = answer_wine_question(payload.message)
+            reply = maybe_translate(reply, detected_lang)
+            return finalize(reply, "wine_followup_unified_terminal", followup_flag=False)
         if re.search(r"\b(jahamo|jahati|jahanje|jaha|jah)\b", lowered):
             reply = get_info_response("jahanje")
             reply = maybe_translate(reply, detected_lang)

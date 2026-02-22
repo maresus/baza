@@ -247,7 +247,7 @@ def answer_wine_question(message: str) -> str:
         "🥂 **Bela** (suha): Sauvignon (19€), Laški rizling (18–23€), Renski rizling (22€)\n"
         "🍾 **Peneča**: Doppler Diona brut (30€), Opok27 rose (26€), Muškatna penina (26€)\n"
         "🍯 **Polsladka**: Rumeni muškat (17€), Muškat ottonel (17€)\n\n"
-        "Povejte, kaj vas zanima – rdeče, belo, peneče ali polsladko?"
+        "Po želji lahko napišete samo kategorijo (npr. rdeča, bela, peneča, polsladka)."
     )
 
 
