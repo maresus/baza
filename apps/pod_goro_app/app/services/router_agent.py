@@ -305,11 +305,11 @@ def route_message(
     people = _extract_people(text)
     if people:
         entities["people_count"] = people
-    if any(room in text for room in ["aljaz", "aljaž"]):
+    if any(room in text for room in ["aljaz", "aljaž", "gozd"]):
         entities["room_name"] = "ALJAZ"
-    elif "julija" in text:
+    elif "julija" in text or "razgled" in text:
         entities["room_name"] = "JULIJA"
-    elif "ana" in text:
+    elif "ana" in text or "sonce" in text:
         entities["room_name"] = "ANA"
 
     # Če smo v koraku za telefon in dobimo številko, prisilimo nadaljevanje bookinga

@@ -1238,7 +1238,7 @@ def generate_confirmation_email(state: dict[str, Optional[str | int]]) -> str:
 
 def room_intro_text() -> str:
     return (
-        "Sobe: ALJAŽ (2+2), JULIJA (2+2), ANA (2+2). "
+        "Sobe: GOZD (2+2), RAZGLED (2+2), SONCE (2+2). "
         "Minimalno 3 nočitve v juniju/juliju/avgustu, 2 nočitvi v ostalih mesecih. "
         "Prijava 14:00, odjava 10:00, zajtrk 8:00–9:00, večerja 18:00 (pon/torki brez večerij). "
         "Sobe so klimatizirane, Wi‑Fi je brezplačen, zajtrk je vključen."
@@ -2578,9 +2578,9 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
     if intent == "room_info":
         reply = """Seveda! 😊 Imamo tri prijetne družinske sobe:
 
-🛏️ **Soba ALJAŽ** - soba z balkonom (2+2 osebi)
-🛏️ **Soba JULIJA** - družinska soba z balkonom (2 odrasla + 2 otroka)  
-🛏️ **Soba ANA** - družinska soba z dvema spalnicama (2 odrasla + 2 otroka)
+🛏️ **Soba GOZD** - soba z balkonom (2+2 osebi)
+🛏️ **Soba RAZGLED** - družinska soba z balkonom (2 odrasla + 2 otroka)  
+🛏️ **Soba SONCE** - družinska soba z dvema spalnicama (2 odrasla + 2 otroka)
 
 **Cena**: 50€/osebo/noč z zajtrkom
 **Večerja**: dodatnih 25€/osebo

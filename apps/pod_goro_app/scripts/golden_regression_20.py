@@ -57,7 +57,7 @@ def build_cases() -> List[Case]:
             [
                 Step(
                     "koliko sob imate?",
-                    any_of=["Imamo **3 sobe**", "ALJAŽ", "JULIJA", "ANA"],
+                    any_of=["Imamo **3 sobe**", "GOZD", "RAZGLED", "SONCE"],
                     none_of=["Za kateri datum prihoda", "z veseljem uredim rezervacijo"],
                 )
             ],

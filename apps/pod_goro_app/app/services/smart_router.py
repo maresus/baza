@@ -64,7 +64,7 @@ Kontekst kmetije:
 - Lokacija: Planica 9, 2313 Fram (Pohorje)
 - Telefon: 02 601 54 00, 031 330 113
 - Odprto: sobota/nedelja 12:00-20:00
-- Sobe: ALJAŽ, JULIJA, ANA (vse 2+2)
+- Sobe: GOZD, RAZGLED, SONCE (vse 2+2)
 - Izdelki: čemažev pesto, marmelade, likerji, pohorska bunka
 - Živali: konja Malajka in Marsij, zajčki
 - Družina: gospodar Marko, babica Marija

@@ -63,9 +63,9 @@ FAMILY = {
 }
 
 ROOMS = {
-    "ALJAŽ": {"name": "Soba ALJAŽ", "capacity": "2+2"},
-    "JULIJA": {"name": "Soba JULIJA", "capacity": "2+2"},
-    "ANA": {"name": "Soba ANA", "capacity": "2+2"},
+    "GOZD": {"name": "Soba GOZD", "capacity": "2+2"},
+    "RAZGLED": {"name": "Soba RAZGLED", "capacity": "2+2"},
+    "SONCE": {"name": "Soba SONCE", "capacity": "2+2"},
 }
 ROOM_NAMES = list(ROOMS.keys())
 ROOM_DISPLAY_NAMES = [room["name"].replace("Soba ", "") for room in ROOMS.values()]
@@ -233,9 +233,9 @@ Prilagodimo za vegetarijance, vegane in celiakijo! 🌿
 ⚠️ **Ob ponedeljkih in torkih večerje ne strežemo** – takrat priporočamo bližnji gostilni Framski hram ali Karla.""",
     "sobe": """Imamo **3 sobe**, vse poimenovane po naših otrocih:
 
-🛏️ **ALJAŽ** – soba z balkonom (2+2)
-🛏️ **JULIJA** – družinska soba z balkonom (2 odrasla + 2 otroka)  
-🛏️ **ANA** – družinska soba z dvema spalnicama (2+2)
+🛏️ **GOZD** – soba z balkonom (2+2)
+🛏️ **RAZGLED** – družinska soba z balkonom (2 odrasla + 2 otroka)  
+🛏️ **SONCE** – družinska soba z dvema spalnicama (2+2)
 
 Vsaka soba ima:
 ✅ Predprostor, spalnico, kopalnico s tušem

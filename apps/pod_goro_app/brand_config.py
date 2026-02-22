@@ -60,17 +60,17 @@ EXAMPLE_NAME = "Nika Kmetija Pod Goro"
 
 ROOMS = {
     "ALJAZ": {
-        "name": "Soba ALJAŽ",
+        "name": "Soba GOZD",
         "description": "soba z balkonom",
         "capacity": "2+2 osebi",
     },
     "JULIJA": {
-        "name": "Soba JULIJA",
+        "name": "Soba RAZGLED",
         "description": "družinska soba z balkonom",
         "capacity": "2 odrasla + 2 otroka",
     },
     "ANA": {
-        "name": "Soba ANA",
+        "name": "Soba SONCE",
         "description": "družinska soba z dvema spalnicama",
         "capacity": "2 odrasla + 2 otroka",
     },
