@@ -1233,7 +1233,6 @@ def reset_conversation_context(session_id: Optional[str] = None) -> None:
     last_wine_query = None
     last_info_query = None
     last_menu_query = False
-    reset_info_state()
     chat_session_id = str(uuid.uuid4())[:8]
     last_interaction = None
 
