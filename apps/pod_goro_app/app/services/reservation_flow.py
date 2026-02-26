@@ -101,10 +101,8 @@ def reservation_prompt_for_state(
             return "Za koliko oseb bi bilo bivanje (odrasli + otroci)?"
         if step == "awaiting_room_location":
             return f"Katero sobo želite ({ROOMS_INLINE})?"
-    return (
-        f"Sobe: {room_intro_text()}\n"
-        f"Mize: {table_intro_text()}"
-    )
+    # Kratek fallback, da ne lepimo dolgih info blokov v pogovor.
+    return "Kako vam lahko pomagam z rezervacijo?"
 
 
 def validate_reservation_rules(
@@ -1032,8 +1030,7 @@ def handle_reservation_flow(
         choice = parse_reservation_type(message)
         if not choice:
             return _tr(
-                "Mi zaupate, ali rezervirate sobo ali mizo za kosilo? "
-                f"{room_intro_text()} / {table_intro_text()}"
+                "Mi zaupate, ali rezervirate sobo ali mizo za kosilo?"
             )
         set_state_field(reservation_state, "type", choice)
         if choice == "room":

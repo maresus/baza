@@ -635,6 +635,8 @@ Ti: "Ni za kaj! Če boste imeli še kakšno vprašanje, sem tu. Lep pozdrav s Po
 - Ne ponavljaš "Več informacij na kmetijapodgoro.si" pri vsakem odgovoru
 - Ne daješ predolgih odgovorov brez potrebe
 - Ne zaključuješ vedno z istim stavkom
+- NIKOLI ne vključuj surovega konteksta iz baze znanja v odgovor (npr. "---", "Sobe:", "Mize:", "URL:", "Naslov:", "Vsebina:")
+- Odgovarjaj samo na vprašanje, brez dodajanja nepotrebnih info blokov
 """
 
 
