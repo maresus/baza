@@ -142,7 +142,7 @@
         <p>Vprašajte me karkoli o kmetiji</p>
       </div>
       <div class="header-actions">
-        <button class="clear-btn" id="clearBtn" title="Počisti zgodovino">Sara – pomoč</button>
+        <button class="clear-btn" id="clearBtn" title="Počisti zgodovino">Gostiteljica – pomoč</button>
         <button class="clear-btn secondary" id="newSessionBtn" title="Nova seja">Nova seja</button>
       </div>
     </div>
@@ -163,7 +163,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'kovacnik_chat_history';
+    const STORAGE_KEY = 'podgoro_chat_history';
     const MAX_MESSAGES = 50;
     
     const messagesEl = document.getElementById('messages');
@@ -209,16 +209,19 @@
     function clearHistory() {
       localStorage.removeItem(STORAGE_KEY);
       messagesEl.innerHTML = '';
-      addMessageToDOM('Pozdravljeni! 👋 Kako vam lahko pomagam?\n\nVprašajte me o:\n• Sobah in nastanitvah\n• Vikend kosilih\n• Naših izdelkih\n• Izletih v okolici', 'bot', false);
+      addMessageToDOM('Pozdravljeni! Kako vam lahko pomagam?', 'bot', false);
       quickBtns.style.display = 'flex';
     }
-    
-    function addMessageToDOM(text, who, save = true) {
+
+    function addMessageToDOM(text, who, save = true, scrollToThis = false) {
       const div = document.createElement('div');
       div.className = 'msg ' + who;
       div.textContent = text;
       messagesEl.appendChild(div);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      // Scroll to user message (not to bottom) so user can read response top-down
+      if (scrollToThis || who === 'user') {
+        div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       if (save) saveHistory();
       return div;
     }
@@ -229,7 +232,7 @@
       div.id = 'typing';
       div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
       messagesEl.appendChild(div);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      // Don't scroll - user message stays visible at top
     }
     
     function hideTyping() {
@@ -278,7 +281,7 @@
               if (done) break;
               const chunk = decoder.decode(value, { stream: true });
               botEl.textContent += chunk;
-              messagesEl.scrollTop = messagesEl.scrollHeight;
+              // Don't auto-scroll during streaming - user reads top-down
             }
             saveHistory();
           }
@@ -320,7 +323,7 @@
     // Initialize
     const hasHistory = loadHistory();
     if (!hasHistory) {
-      addMessageToDOM('Pozdravljeni! 👋 Kako vam lahko pomagam?\n\nVprašajte me o:\n• Sobah in nastanitvah\n• Vikend kosilih\n• Naših izdelkih\n• Izletih v okolici', 'bot', false);
+      addMessageToDOM('Pozdravljeni! Kako vam lahko pomagam?', 'bot', false);
     }
   </script>
 </body>
