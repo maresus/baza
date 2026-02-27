@@ -364,7 +364,6 @@
     <div class="tabs equal">
       <button class="tab active" id="tab-room" onclick="setTab('room')">🛏️ Sobe</button>
       <button class="tab" id="tab-table" onclick="setTab('table')">🍽️ Mize</button>
-      <a class="tab" id="tab-inquiries" href="/admin/inquiries">📝 Povpraševanja</a>
     </div>
 
     <div id="view-tools" style="display:none;">
@@ -382,7 +381,6 @@
         <button class="btn secondary" onclick="exportCsv()">📥 Izvozi CSV</button>
         <button class="btn" onclick="loadAll()">🔄 Osveži podatke</button>
         <a class="btn secondary" href="/admin/conversations">💬 Pogovori</a>
-        <a class="btn secondary" href="/admin/inquiries">📝 Povpraševanja</a>
       </div>
 
       <div class="card list-card">
@@ -406,22 +404,6 @@
         </div>
       </div>
 
-      <div class="card list-card">
-        <div style="font-weight:700; margin-bottom:6px;">Rezervacijski funnel (zadnjih 30 dni)</div>
-        <div class="muted" style="margin-bottom:10px;">Začetek → dokončana rezervacija</div>
-        <div id="funnel-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px;"></div>
-      </div>
-
-      <div class="card list-card">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-          <div>
-            <div style="font-weight:700;">Top 5 zgrešenih odgovorov</div>
-            <div class="muted">Hitro izboljševanje baze znanja</div>
-          </div>
-          <button class="btn secondary" id="refreshMissedBtn">Osveži</button>
-        </div>
-        <ol id="missed-questions-list" style="margin-top:10px;"></ol>
-      </div>
     </div>
 
     <div id="view-reservations">
@@ -637,9 +619,9 @@
                 <label>Soba</label>
                 <select id="room-edit-location">
                   <option value="">Nedoločeno (dodeli ob potrditvi)</option>
-                  <option value="ALJAZ">ALJAŽ</option>
-                  <option value="JULIJA">JULIJA</option>
-                  <option value="ANA">ANA</option>
+                  <option value="GOZD">GOZD</option>
+                  <option value="RAZGLED">RAZGLED</option>
+                  <option value="SONCE">SONCE</option>
                 </select>
               </div>
               <div class="form-group">
@@ -849,9 +831,9 @@
             <label>Soba</label>
             <select id="new-room-location">
               <option value="">Nedoločeno</option>
-              <option value="ALJAZ">ALJAŽ</option>
-              <option value="JULIJA">JULIJA</option>
-              <option value="ANA">ANA</option>
+              <option value="GOZD">GOZD</option>
+              <option value="RAZGLED">RAZGLED</option>
+              <option value="SONCE">SONCE</option>
             </select>
           </div>
           <div class="form-group">
@@ -1825,14 +1807,14 @@
       } else {
         qs('confirm-label').textContent = 'Izberi sobo';
         hint.textContent = r.location ? `Gost je izbral: ${(r.location || '').toUpperCase()}` : 'Gost ni izbral sobe.';
-        ['', 'ALJAZ', 'JULIJA', 'ANA'].forEach(opt => {
+        ['', 'GOZD', 'RAZGLED', 'SONCE'].forEach(opt => {
           const o = document.createElement('option');
           o.value = opt;
           o.textContent = opt ? opt : '-- izberi --';
           select.appendChild(o);
         });
         const currentRoom = (r.location || '').toUpperCase();
-        select.value = currentRoom && ['ALJAZ','JULIJA','ANA'].includes(currentRoom) ? currentRoom : '';
+        select.value = currentRoom && ['GOZD','RAZGLED','SONCE'].includes(currentRoom) ? currentRoom : '';
       }
       qs('confirm-modal').classList.add('active');
     }
@@ -2511,9 +2493,9 @@
     function normalizeRoom(location) {
       if (!location) return '';
       const upper = String(location).toUpperCase();
-      if (upper.includes('ALJAZ') || upper.includes('ALJAŽ')) return 'ALJAZ';
-      if (upper.includes('JULIJA')) return 'JULIJA';
-      if (upper.includes('ANA')) return 'ANA';
+      if (upper.includes('GOZD') || upper.includes('GOZD')) return 'GOZD';
+      if (upper.includes('RAZGLED')) return 'RAZGLED';
+      if (upper.includes('SONCE')) return 'SONCE';
       return '';
     }
     function normalizeTable(location) {
