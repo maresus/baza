@@ -217,6 +217,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      position: relative;
     }
 
     .msg {
@@ -507,8 +508,8 @@
 
       if (who === "user") {
         lastUserMsg = div;
-        // Scroll user message to TOP of messages area
-        messagesEl.scrollTop = div.offsetTop - messagesEl.offsetTop;
+        // Scroll user message to TOP of messages area (position:relative makes offsetTop work)
+        messagesEl.scrollTop = div.offsetTop;
       }
       localStorage.setItem("last_chat_activity", Date.now().toString());
       return div;
@@ -522,7 +523,7 @@
       messagesEl.appendChild(div);
       // Keep user message at top, typing visible below
       if (lastUserMsg) {
-        messagesEl.scrollTop = lastUserMsg.offsetTop - messagesEl.offsetTop;
+        messagesEl.scrollTop = lastUserMsg.offsetTop;
       }
       return div;
     }
