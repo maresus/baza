@@ -612,7 +612,11 @@
             const botEl = document.createElement("div");
             botEl.className = "msg bot";
             messagesEl.appendChild(botEl);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            // Keep user message at top, bot response appears below
+            if (lastUserMsg) {
+              messagesEl.scrollTop = lastUserMsg.offsetTop;
+            }
+            updateScrollIndicator();
 
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
@@ -621,6 +625,11 @@
               if (done) break;
               const chunk = decoder.decode(value, { stream: true });
               botEl.textContent += chunk;
+              // Keep user message at top during streaming
+              if (lastUserMsg) {
+                messagesEl.scrollTop = lastUserMsg.offsetTop;
+              }
+              updateScrollIndicator();
             }
             statusEl.textContent = "OK";
           }
