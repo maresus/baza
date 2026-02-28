@@ -253,6 +253,21 @@
       padding: 0;
     }
 
+    .msg.typing .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+    .msg.typing .dot:nth-child(1) { animation-delay: 0s; }
+    .msg.typing .dot:nth-child(2) { animation-delay: 0.2s; }
+    .msg.typing .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-6px); }
+    }
+
     .composer {
       background: var(--paper);
       border: 1px solid var(--line);
@@ -487,12 +502,25 @@
       div.className = "msg " + who;
       div.textContent = text;
       messagesEl.appendChild(div);
-      // Scroll to user message so it stays at top - user scrolls down to read response
-      if (who === "user") {
-        div.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      // Scroll to bottom so user sees their message and upcoming response
+      messagesEl.scrollTop = messagesEl.scrollHeight;
       localStorage.setItem("last_chat_activity", Date.now().toString());
       return div;
+    }
+
+    function showTyping() {
+      const div = document.createElement("div");
+      div.className = "msg bot typing";
+      div.id = "typing";
+      div.innerHTML = '<div style="display:flex;gap:4px;"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    function hideTyping() {
+      const el = document.getElementById("typing");
+      if (el) el.remove();
     }
 
     async function sendMessage() {
@@ -504,7 +532,8 @@
       inputEl.focus();
 
       sendBtn.disabled = true;
-      statusEl.textContent = "Pošiljam zahtevo na /chat/stream ...";
+      statusEl.textContent = "Pošiljam ...";
+      showTyping();
 
       try {
         const res = await fetch(apiUrl, {
@@ -513,16 +542,22 @@
           body: JSON.stringify({ message: text, session_id: sessionId })
         });
 
+        hideTyping();
+
         if (!res.ok) {
-          addMessage("Napaka pri klicu /chat/stream (status " + res.status + ")", "bot");
-          statusEl.textContent = "Napaka pri klicu /chat/stream.";
+          addMessage("Napaka pri klicu strežnika.", "bot");
+          statusEl.textContent = "Napaka.";
         } else {
           if (!res.body) {
             const data = await res.json();
             addMessage(data.reply ?? "[Prazen odgovor]", "bot");
-            statusEl.textContent = "OK – odgovor prejet.";
+            statusEl.textContent = "OK";
           } else {
-            const botEl = addMessage("", "bot");
+            const botEl = document.createElement("div");
+            botEl.className = "msg bot";
+            messagesEl.appendChild(botEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             while (true) {
@@ -530,16 +565,16 @@
               if (done) break;
               const chunk = decoder.decode(value, { stream: true });
               botEl.textContent += chunk;
-              // Don't auto-scroll during streaming - user reads top-down
             }
-            statusEl.textContent = "OK – odgovor prejet.";
+            statusEl.textContent = "OK";
           }
           localStorage.setItem("last_chat_activity", Date.now().toString());
         }
       } catch (err) {
         console.error(err);
-        addMessage("Prišlo je do napake pri povezavi s strežnikom.", "bot");
-        statusEl.textContent = "Napaka pri povezavi.";
+        hideTyping();
+        addMessage("Prišlo je do napake pri povezavi.", "bot");
+        statusEl.textContent = "Napaka.";
       } finally {
         sendBtn.disabled = false;
       }
