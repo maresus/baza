@@ -108,11 +108,18 @@ def _room_conflicts(reservation_id: int, room_id: str, date_str: str, nights: Op
 class ReservationUpdate(BaseModel):
     status: Optional[str] = None
     date: Optional[str] = None
+    time: Optional[str] = None
     people: Optional[int] = None
     nights: Optional[int] = None
     location: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    event_type: Optional[str] = None
+    special_needs: Optional[str] = None
     admin_notes: Optional[str] = None
     kids: Optional[str] = None
+    kids_small: Optional[str] = None
 
 
 class SendMessageRequest(BaseModel):
@@ -335,11 +342,18 @@ def update_reservation(reservation_id: int, data: ReservationUpdate):
         reservation_id,
         status=data.status,
         date=data.date,
+        time=data.time,
         people=data.people,
         nights=data.nights,
         location=data.location,
+        name=data.name,
+        email=data.email,
+        phone=data.phone,
+        event_type=data.event_type,
+        special_needs=data.special_needs,
         admin_notes=data.admin_notes,
         kids=data.kids,
+        kids_small=data.kids_small,
     )
     if not ok:
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")

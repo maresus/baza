@@ -130,8 +130,23 @@ class ReservationService:
                         kids_small TEXT,
                         confirm_via TEXT,
                         event_type TEXT,
-                        special_needs TEXT
+                        special_needs TEXT,
+                        gdpr_consent TEXT
                     )
+                    """
+                )
+                # Migration: add gdpr_consent column if missing
+                cur.execute(
+                    """
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name='reservations' AND column_name='gdpr_consent'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN gdpr_consent TEXT;
+                        END IF;
+                    END $$;
                     """
                 )
                 cur.execute(
@@ -233,10 +248,16 @@ class ReservationService:
                     kids_small TEXT,
                     confirm_via TEXT,
                     event_type TEXT,
-                    special_needs TEXT
+                    special_needs TEXT,
+                    gdpr_consent TEXT
                 )
                 """
             )
+            # Migration: add gdpr_consent column if missing
+            try:
+                conn.execute("ALTER TABLE reservations ADD COLUMN gdpr_consent TEXT")
+            except Exception:
+                pass  # Column already exists
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS conversations (
@@ -662,6 +683,7 @@ class ReservationService:
         confirm_via: Optional[str] = None,
         event_type: Optional[str] = None,
         special_needs: Optional[str] = None,
+        gdpr_consent: Optional[str] = None,
     ) -> int:
         created_at = datetime.now().isoformat()
         # Admin / telefon / API vnosi se avtomatsko potrdijo
@@ -669,11 +691,11 @@ class ReservationService:
             status = "confirmed"
         conn = self._conn()
         ph = self._placeholder()
-        placeholders = ", ".join([ph] * 24)
+        placeholders = ", ".join([ph] * 25)  # 25 fields including gdpr_consent
         sql = (
             f"INSERT INTO reservations "
             f"(date, nights, rooms, people, reservation_type, time, location, name, phone, email, note, status, created_at, source, "
-            f"admin_notes, confirmed_at, confirmed_by, guest_message, country, kids, kids_small, confirm_via, event_type, special_needs) "
+            f"admin_notes, confirmed_at, confirmed_by, guest_message, country, kids, kids_small, confirm_via, event_type, special_needs, gdpr_consent) "
             f"VALUES ({placeholders})"
         )
         if self.use_postgres:
@@ -707,6 +729,7 @@ class ReservationService:
                     confirm_via,
                     event_type,
                     special_needs,
+                    gdpr_consent,
                 ),
             )
             if self.use_postgres:

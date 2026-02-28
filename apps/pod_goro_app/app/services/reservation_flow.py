@@ -41,6 +41,7 @@ def _blank_reservation_state_fallback() -> dict[str, Optional[str | int]]:
         "dinner_people": None,
         "note": None,
         "availability": None,
+        "gdpr_consent": None,
     }
 
 
@@ -65,6 +66,7 @@ def get_booking_continuation(step: str, state: dict) -> str:
         "awaiting_dinner": "Želite **večerje**? (Da/Ne)",
         "awaiting_dinner_count": "Za koliko oseb želite **večerje**?",
         "awaiting_note": "Želite še kaj **sporočiti**? (ali 'ne')",
+        "awaiting_gdpr": "Soglašate z obdelavo osebnih podatkov za namen rezervacije? (da/ne)",
         "awaiting_time": "Katera **ura** vam ustreza?",
         "awaiting_table_date": "Za kateri **datum** bi rezervirali mizo?",
         "awaiting_table_time": "Katera **ura** vam ustreza?",
@@ -456,27 +458,42 @@ def _handle_room_reservation_impl(
         skip_words = {"ne", "nic", "nič", "nimam", "brez"}
         note_text = "" if any(word in message.lower() for word in skip_words) else message.strip()
         set_state_field(reservation_state, "note", note_text)
-        set_state_field(reservation_state, "step", "awaiting_confirmation")
-        chosen_location = reservation_state.get("location") or "Sobe (dodelimo ob potrditvi)"
-        dinner_note = (
-            f"Večerje: {reservation_state.get('dinner_people')} oseb (25€/oseba)"
-            if reservation_state.get("dinner_people")
-            else "Večerje: ne"
-        )
-        lines = [
-            "Prosimo, preverite podatke:",
-            f"📅 Datum: {reservation_state.get('date')}, {reservation_state.get('nights')} noči",
-            f"👥 Osebe: {reservation_state.get('people')}",
-            f"🛏️ Soba: {chosen_location}",
-            f"👤 Ime: {reservation_state.get('name')}",
-            f"📞 Telefon: {reservation_state.get('phone')}",
-            f"📧 Email: {reservation_state.get('email')}",
-            f"🍽️ {dinner_note}",
-        ]
-        if note_text:
-            lines.append(f"📝 Opombe: {note_text}")
-        lines.append("Potrdite rezervacijo? (da/ne)")
-        return "\n".join(lines)
+        set_state_field(reservation_state, "step", "awaiting_gdpr")
+        return """Za obdelavo vaše rezervacije potrebujemo vaše soglasje:
+
+**Soglašam z obdelavo osebnih podatkov za namen rezervacije v skladu z Uredbo GDPR.**
+
+Ali soglašate? (da/ne)"""
+
+    if step == "awaiting_gdpr":
+        if is_affirmative(message):
+            from datetime import datetime as dt
+            set_state_field(reservation_state, "gdpr_consent", dt.now().isoformat())
+            set_state_field(reservation_state, "step", "awaiting_confirmation")
+            chosen_location = reservation_state.get("location") or "Sobe (dodelimo ob potrditvi)"
+            dinner_note = (
+                f"Večerje: {reservation_state.get('dinner_people')} oseb (25€/oseba)"
+                if reservation_state.get("dinner_people")
+                else "Večerje: ne"
+            )
+            lines = [
+                "Prosimo, preverite podatke:",
+                f"📅 Datum: {reservation_state.get('date')}, {reservation_state.get('nights')} noči",
+                f"👥 Osebe: {reservation_state.get('people')}",
+                f"🛏️ Soba: {chosen_location}",
+                f"👤 Ime: {reservation_state.get('name')}",
+                f"📞 Telefon: {reservation_state.get('phone')}",
+                f"📧 Email: {reservation_state.get('email')}",
+                f"🍽️ {dinner_note}",
+            ]
+            if reservation_state.get("note"):
+                lines.append(f"📝 Opombe: {reservation_state.get('note')}")
+            lines.append("Potrdite rezervacijo? (da/ne)")
+            return "\n".join(lines)
+        if message.strip().lower() in {"ne", "no"}:
+            reset_reservation_state(state)
+            return "Brez soglasja GDPR žal ne moremo nadaljevati z rezervacijo. Če imate vprašanja, nas kontaktirajte po telefonu ali e-pošti."
+        return "Prosim odgovorite z 'da' ali 'ne'."
 
     if step == "awaiting_confirmation":
         if message.strip().lower() in {"ne", "no"}:
@@ -502,6 +519,7 @@ def _handle_room_reservation_impl(
                 note=(reservation_state.get("note") or "") or dinner_note,
                 kids=str(reservation_state.get("kids") or ""),
                 kids_small=str(reservation_state.get("kids_ages") or ""),
+                gdpr_consent=reservation_state.get("gdpr_consent"),
             )
             email_data = {
                 "id": res_id,
@@ -657,20 +675,35 @@ def _handle_table_reservation_impl(
         skip_words = {"ne", "nic", "nič", "nimam", "brez"}
         note_text = "" if any(word in message.lower() for word in skip_words) else message.strip()
         set_state_field(reservation_state, "note", note_text)
-        set_state_field(reservation_state, "step", "awaiting_confirmation")
-        lines = [
-            "Prosimo, preverite podatke:",
-            f"📅 Datum: {reservation_state.get('date')} ob {reservation_state.get('time')}",
-            f"👥 Osebe: {reservation_state.get('people')}",
-            f"🍽️ Jedilnica: {reservation_state.get('location')}",
-            f"👤 Ime: {reservation_state.get('name')}",
-            f"📞 Telefon: {reservation_state.get('phone')}",
-            f"📧 Email: {reservation_state.get('email')}",
-        ]
-        if note_text:
-            lines.append(f"📝 Opombe: {note_text}")
-        lines.append("Potrdite rezervacijo? (da/ne)")
-        return "\n".join(lines)
+        set_state_field(reservation_state, "step", "awaiting_gdpr")
+        return """Za obdelavo vaše rezervacije potrebujemo vaše soglasje:
+
+**Soglašam z obdelavo osebnih podatkov za namen rezervacije v skladu z Uredbo GDPR.**
+
+Ali soglašate? (da/ne)"""
+
+    if step == "awaiting_gdpr":
+        if is_affirmative(message):
+            from datetime import datetime as dt
+            set_state_field(reservation_state, "gdpr_consent", dt.now().isoformat())
+            set_state_field(reservation_state, "step", "awaiting_confirmation")
+            lines = [
+                "Prosimo, preverite podatke:",
+                f"📅 Datum: {reservation_state.get('date')} ob {reservation_state.get('time')}",
+                f"👥 Osebe: {reservation_state.get('people')}",
+                f"🍽️ Jedilnica: {reservation_state.get('location')}",
+                f"👤 Ime: {reservation_state.get('name')}",
+                f"📞 Telefon: {reservation_state.get('phone')}",
+                f"📧 Email: {reservation_state.get('email')}",
+            ]
+            if reservation_state.get("note"):
+                lines.append(f"📝 Opombe: {reservation_state.get('note')}")
+            lines.append("Potrdite rezervacijo? (da/ne)")
+            return "\n".join(lines)
+        if message.strip().lower() in {"ne", "no"}:
+            reset_reservation_state(state)
+            return "Brez soglasja GDPR žal ne moremo nadaljevati z rezervacijo. Če imate vprašanja, nas kontaktirajte po telefonu ali e-pošti."
+        return "Prosim odgovorite z 'da' ali 'ne'."
 
     if step == "awaiting_confirmation":
         if message.strip().lower() in {"ne", "no"}:
@@ -692,6 +725,7 @@ def _handle_table_reservation_impl(
                 kids=str(reservation_state.get("kids") or ""),
                 kids_small=str(reservation_state.get("kids_ages") or ""),
                 event_type=reservation_state.get("event_type"),
+                gdpr_consent=reservation_state.get("gdpr_consent"),
             )
             email_data = {
                 "id": res_id,
