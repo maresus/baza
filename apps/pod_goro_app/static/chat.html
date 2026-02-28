@@ -497,13 +497,19 @@
     }
     renderWelcome();
 
+    let lastUserMsg = null;
+
     function addMessage(text, who = "bot") {
       const div = document.createElement("div");
       div.className = "msg " + who;
       div.textContent = text;
       messagesEl.appendChild(div);
-      // Scroll to bottom so user sees their message and upcoming response
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      if (who === "user") {
+        lastUserMsg = div;
+        // Scroll user message to TOP of messages area
+        messagesEl.scrollTop = div.offsetTop - messagesEl.offsetTop;
+      }
       localStorage.setItem("last_chat_activity", Date.now().toString());
       return div;
     }
@@ -514,7 +520,10 @@
       div.id = "typing";
       div.innerHTML = '<div style="display:flex;gap:4px;"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
       messagesEl.appendChild(div);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      // Keep user message at top, typing visible below
+      if (lastUserMsg) {
+        messagesEl.scrollTop = lastUserMsg.offsetTop - messagesEl.offsetTop;
+      }
       return div;
     }
 
