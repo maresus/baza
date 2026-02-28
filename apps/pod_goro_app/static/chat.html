@@ -269,6 +269,35 @@
       40% { transform: translateY(-6px); }
     }
 
+    .scroll-indicator {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 36px;
+      background: var(--green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10;
+    }
+    .scroll-indicator.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .scroll-indicator svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+
     .composer {
       background: var(--paper);
       border: 1px solid var(--line);
@@ -441,7 +470,12 @@
       </div>
 
       <div class="grid">
-        <div id="messages" class="messages"></div>
+        <div class="messages-wrapper" style="position:relative;">
+          <div id="messages" class="messages"></div>
+          <div id="scrollIndicator" class="scroll-indicator">
+            <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+          </div>
+        </div>
 
         <div class="composer">
           <textarea
@@ -476,6 +510,18 @@
     const inputEl = document.getElementById("input");
     const sendBtn = document.getElementById("sendBtn");
     const statusEl = document.getElementById("status");
+    const scrollIndicator = document.getElementById("scrollIndicator");
+
+    // Scroll indicator logic
+    function updateScrollIndicator() {
+      const threshold = 50;
+      const isNearBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < threshold;
+      scrollIndicator.classList.toggle("visible", !isNearBottom);
+    }
+    messagesEl.addEventListener("scroll", updateScrollIndicator);
+    scrollIndicator.addEventListener("click", () => {
+      messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: "smooth" });
+    });
 
     const ONE_HOUR = 3600 * 1000;
 
