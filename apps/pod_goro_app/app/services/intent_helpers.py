@@ -288,6 +288,8 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "pozdrav"
     if any(w in text for w in ["kako ste", "kako si", "kako gre", "kako vam gre", "kako vam grejo stvari"]):
         return "smalltalk"
+    if any(w in text for w in ["zgodovina", "nasa zgodba", "naša zgodba", "zgodba kmetije", "od kdaj", "od katerega leta"]):
+        return "zgodovina"
     if any(
         w in text
         for w in [

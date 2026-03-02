@@ -276,6 +276,9 @@ Najmlajši uživajo ob naših živalih: konjička Malajko in Marsi, pujska Pepa 
 Email: **{FARM_INFO['email']}**""",
     "lokacija": f"""Nahajamo se na: **{FARM_INFO['address']}** ({FARM_INFO['location_description']}). 
 Parking je brezplačen pri domačiji.""",
+    "zgodovina": """Naša domačija ima dolgo tradicijo na Planici nad Framom. Prvi zapisi o rodu segajo v 19. stoletje (po nekaterih virih celo v 1770), današnja družina pa je kmetijo prevzela in jo močno razvila po letu 2008.
+
+Če želite, vam lahko napišem tudi daljšo zgodbo po obdobjih (začetki, razvoj turizma, današnja ponudba).""",
     "min_nocitve": """Minimalno bivanje je:
 - **3 nočitve** v juniju, juliju in avgustu
 - **2 nočitvi** v ostalih mesecih""",
