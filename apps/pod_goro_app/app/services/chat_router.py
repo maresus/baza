@@ -522,6 +522,17 @@ def _is_wine_followup_message(message: str) -> bool:
     cleaned = re.sub(r"[^\wčšžćđČŠŽĆĐ]+", "", lowered)
     return cleaned in {"rdeca", "rdece", "bela", "belo", "suha", "suho", "peneca", "polsladka"}
 
+
+def _has_wine_context_terms(text: str) -> bool:
+    lowered = (text or "").strip().lower()
+    # Word-boundary check prevents false positives like "zgodovina" -> "...vina"
+    return bool(
+        re.search(
+            r"\b(vino|vina|vinsk[ao]|penina|frankinja|pinot|rizling|sauvignon|muskat|muškat)\b",
+            lowered,
+        )
+    )
+
 reservation_service = ReservationService()
 
 # Spletna trgovina (policy)
@@ -1740,7 +1751,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
                 or "so to" in lowered
                 or "ta vina" in lowered
             )
-            wine_context = any(tok in lowered for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"])
+            wine_context = _has_wine_context_terms(lowered)
             info_key = detect_info_intent(payload.message)
             if info_key == "vina" or (last_wine_query and wine_followup_hint and wine_context):
                 combined = f"{last_wine_query} {payload.message}" if last_wine_query else payload.message
@@ -2018,10 +2029,7 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
         or "so to" in wine_followup_message
         or "ta vina" in wine_followup_message
     )
-    wine_context_now = any(
-        tok in wine_followup_message
-        for tok in ["vino", "vina", "vin", "penina", "frankinja", "pinot", "rizling"]
-    )
+    wine_context_now = _has_wine_context_terms(wine_followup_message)
     info_key_now = detect_info_intent(payload.message)
     # Wine questions/followups have priority over generic info routing.
     if info_key_now == "vina" or (last_wine_query and wine_followup_hint and wine_context_now):

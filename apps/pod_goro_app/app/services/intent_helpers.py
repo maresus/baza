@@ -420,7 +420,7 @@ def detect_info_intent(message: str) -> Optional[str]:
         return "alergije"
     if text.strip() in {"katera", "katere", "katera vina", "katere vina"}:
         return "vina"
-    if any(w in text for w in ["vino", "vina", "vinsko", "vinska", "wine", "wein", "vinci"]):
+    if re.search(r"\b(vino|vina|vinsk[ao]|wine|wein|vinci)\b", text):
         return "vina"
     if (
         any(w in text for w in ["smučišče", "smucisce", "smučišč", "smucisc", "smučanje", "smucanje"])
