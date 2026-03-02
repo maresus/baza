@@ -107,6 +107,7 @@ from app.services.flows.info_flow import (
     parse_month_from_text,
     parse_relative_month,
 )
+from app.services.ood_policy import check_ood as ood_check
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 USE_ROUTER_V2 = True
@@ -1485,6 +1486,16 @@ def chat_endpoint(payload: ChatRequestWithSession) -> ChatResponse:
             intent=intent_value,
             session_id=session_id,
         )
+
+    # ── OOD Policy Guard ────────────────────────────────────────────────────
+    # Check for out-of-domain messages early in the pipeline
+    _ood_result = ood_check(
+        payload.message,
+        rag_similarity=None,
+        session_data={"flow": state.get("flow"), "reservation": state},
+    )
+    if _ood_result.is_ood and _ood_result.response:
+        return finalize(_ood_result.response, "ood_rejected", followup_flag=False)
 
     # Tourist override (allow outside booking flow when appropriate)
     tourist_reply = tourist_answer(payload.message)
