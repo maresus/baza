@@ -2732,7 +2732,8 @@ Bi želeli rezervirati? Povejte mi datum in število oseb! 🗓️"""
         return finalize(reply, "product_followup")
 
     if intent == "farm_info":
-        reply = answer_farm_info(payload.message)
+        key = detect_info_intent(payload.message)
+        reply = get_info_response(key) if key else answer_farm_info(payload.message)
         last_product_query = None
         last_wine_query = None
         last_info_query = payload.message

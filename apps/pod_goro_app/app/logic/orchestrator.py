@@ -461,6 +461,8 @@ def classify_intent(
     if re.search(r"\b[4-7]\s*-?\s*hodn", lower_message):
         return "weekly_menu"
 
+    if detect_info_intent(message):
+        return "farm_info"
     if any(keyword in lower_message for keyword in FARM_INFO_KEYWORDS):
         return "farm_info"
 
