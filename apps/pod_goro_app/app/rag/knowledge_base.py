@@ -216,7 +216,7 @@ def _rerank_with_llm(query: str, chunks: list[KnowledgeChunk]) -> list[Knowledge
         "Items:\n" + "\n\n".join(items)
     )
     response = client.responses.create(
-        model="gpt-4.1-mini",
+        model="gpt-5-mini",
         input=prompt,
         max_output_tokens=200,
         temperature=0,
@@ -676,7 +676,7 @@ def generate_llm_answer(question: str, top_k: int = 6, history: list[dict[str, s
     convo.append({"role": "user", "content": f"Vprašanje gosta: {question}"})
 
     response = client.responses.create(
-        model="gpt-4.1-mini",
+        model="gpt-5-mini",
         input=convo,
         max_output_tokens=400,
         temperature=0.7,

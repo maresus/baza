@@ -259,7 +259,7 @@ def _llm_route_reservation(message: str) -> dict:
     ]
     try:
         response = client.responses.create(
-            model=getattr(settings, "openai_model", "gpt-4.1-mini"),
+            model=getattr(settings, "openai_model", "gpt-5-mini"),
             input=[
                 {"role": "system", "content": "Ugotovi, ali uporabnik želi rezervacijo sobe ali mize."},
                 {"role": "user", "content": message},
@@ -296,7 +296,7 @@ def _llm_answer_full_kb(message: str, language: str = "si") -> str:
     settings = Settings()
     try:
         response = client.responses.create(
-            model=getattr(settings, "openai_model", "gpt-4.1-mini"),
+            model=getattr(settings, "openai_model", "gpt-5-mini"),
             input=[
                 {"role": "system", "content": _llm_system_prompt_full_kb(language)},
                 {"role": "user", "content": message},
@@ -333,7 +333,7 @@ def _llm_answer_full_kb_stream(message: str, settings: Settings, language: str =
     client = get_llm_client()
     try:
         stream = client.responses.create(
-            model=getattr(settings, "openai_model", "gpt-4.1-mini"),
+            model=getattr(settings, "openai_model", "gpt-5-mini"),
             input=[
                 {"role": "system", "content": _llm_system_prompt_full_kb(language)},
                 {"role": "user", "content": message},

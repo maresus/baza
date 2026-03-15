@@ -134,7 +134,7 @@ Vrni JSON klasifikacijo:"""
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt}
@@ -229,7 +229,7 @@ def generate_smart_response(
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
