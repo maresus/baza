@@ -714,3 +714,31 @@ def create_admin_reservation(data: AdminCreateReservation):
         special_needs=data.special_needs,
     )
     return {"success": True, "id": new_id, "warning": warning}
+
+
+# ============================================================
+# CRON ENDPOINTS - Railway scheduled tasks
+# ============================================================
+
+@router.post("/api/cron/daily-report")
+def trigger_daily_report():
+    """
+    Sproži dnevno poročilo. Railway kliče ta endpoint ob 7:00.
+    """
+    from app.services.daily_report_service import generate_and_send_daily_report
+
+    _log("daily_report_triggered")
+    success = generate_and_send_daily_report()
+    return {"success": success}
+
+
+@router.post("/api/cron/weekly-reminder")
+def trigger_weekly_reminder():
+    """
+    Sproži tedenski reminder rezervacij. Railway kliče ta endpoint ob četrtkih ob 18:00.
+    """
+    from app.services.daily_report_service import generate_and_send_weekly_reminder
+
+    _log("weekly_reminder_triggered")
+    success = generate_and_send_weekly_reminder()
+    return {"success": success}
