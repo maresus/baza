@@ -418,22 +418,32 @@ def send_guest_confirmation(data: Dict[str, Any]) -> bool:
 def send_admin_notification(data: Dict[str, Any], confirm_url: str = "", reject_url: str = "") -> bool:
     """
     Pošlje obvestilo adminu o novi rezervaciji.
-    
+    Podpira več prejemnikov ločenih z vejico v ADMIN_EMAIL.
+
     Args:
         data: Podatki rezervacije
         confirm_url: URL za potrditev (opcijsko)
         reject_url: URL za zavrnitev (opcijsko)
-    
+
     Returns:
-        True če uspešno poslano
+        True če uspešno poslano vsem prejemnikom
     """
     res_type = "sobe" if data.get('reservation_type') == 'room' else "mize"
     rid = data.get('id')
     tag = f"Rezervacija #{rid}" if rid else "Rezervacija"
     subject = f"{tag} - Nova rezervacija {res_type} – {data.get('name', 'Neznano')}"
-    
+
     html = _admin_new_reservation_html(data, confirm_url, reject_url)
-    return _send_email(ADMIN_EMAIL, subject, html)
+
+    # Podpora za več prejemnikov (ločeni z vejico)
+    recipients = [email.strip() for email in ADMIN_EMAIL.split(",") if email.strip()]
+
+    success_count = 0
+    for recipient in recipients:
+        if _send_email(recipient, subject, html):
+            success_count += 1
+
+    return success_count > 0
 
 
 def send_reservation_confirmed(data: Dict[str, Any]) -> bool:
