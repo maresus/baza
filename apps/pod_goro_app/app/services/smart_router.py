@@ -30,12 +30,11 @@ ROUTER_SYSTEM_PROMPT = """Ti si intent classifier za turistično kmetijo Kmetija
 Analiziraj uporabnikovo sporočilo in vrni JSON z naslednjimi polji:
 
 {
-  "intent": "INFO|PRODUCT|BOOKING|GREETING|GOODBYE|UNCLEAR",
+  "intent": "INFO|PRODUCT|BOOKING_ROOM|BOOKING_TABLE|GREETING|GOODBYE|UNCLEAR",
   "is_interrupt": true/false,
   "info_topic": "lokacija|ura|zivali|druzina|splosno|null",
   "product_topic": "pesto|marmelada|liker|sir|salama|izdelki|null",
   "booking_data": {
-    "type": "room|table|null",
     "date": "DD.MM.YYYY ali null",
     "time": "HH:MM ali null",
     "guests": число ali null,
@@ -51,6 +50,8 @@ PRAVILA:
 2. Če sporočilo vsebuje OBOJE (npr. "2 gosta, a mate pesto?"), nastavi intent="COMPOSITE"
 3. Izvleci booking podatke tudi če so v "interrupt" sporočilu
 4. Pri nejasnih sporočilih (npr. samo "ja", "ok") nastavi intent="UNCLEAR"
+5. Uporabi "BOOKING_ROOM" za rezervacije sob/nastanitev (prenočišče, soba, spanje)
+6. Uporabi "BOOKING_TABLE" za rezervacije miz/obeda/kosila (miza, kosilo, večerja)
 
 VRNI SAMO VELJAVEN JSON, BREZ RAZLAGE."""
 
