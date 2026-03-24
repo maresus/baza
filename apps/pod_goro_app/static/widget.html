@@ -2,7 +2,7 @@
 <html lang="sl">
 <head>
   <meta charset="UTF-8" />
-  <title>Kmetija Pod Goro AI</title>
+  <title>Pod Goro AI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -138,11 +138,11 @@
     <div class="header">
       <div class="header-icon">🏡</div>
       <div class="header-text">
-        <h1>Kmetija Pod Goro</h1>
+        <h1>Domačija Pod Goro</h1>
         <p>Vprašajte me karkoli o kmetiji</p>
       </div>
       <div class="header-actions">
-        <button class="clear-btn" id="clearBtn" title="Počisti zgodovino">Gostiteljica – pomoč</button>
+        <button class="clear-btn" id="clearBtn" title="Počisti zgodovino">Barbara – pomoč</button>
         <button class="clear-btn secondary" id="newSessionBtn" title="Nova seja">Nova seja</button>
       </div>
     </div>
@@ -159,11 +159,11 @@
         <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
     </div>
-    <div class="powered">Ustvaril <a href="https://kmetijapodgoro.si" target="_blank">Kmetija Pod Goro</a></div>
+    <div class="powered">Ustvaril <a href="https://kovacnik.com" target="_blank">Turistična kmetija Pod Goro</a></div>
   </div>
 
   <script>
-    const STORAGE_KEY = 'podgoro_chat_history';
+    const STORAGE_KEY = 'kovacnik_chat_history';
     const MAX_MESSAGES = 50;
     
     const messagesEl = document.getElementById('messages');
@@ -212,14 +212,14 @@
       addMessageToDOM('Pozdravljeni! Kako vam lahko pomagam?', 'bot', false);
       quickBtns.style.display = 'flex';
     }
-
-    function addMessageToDOM(text, who, save = true, scrollToThis = false) {
+    
+    function addMessageToDOM(text, who, save = true) {
       const div = document.createElement('div');
       div.className = 'msg ' + who;
       div.textContent = text;
       messagesEl.appendChild(div);
-      // Scroll to user message (not to bottom) so user can read response top-down
-      if (scrollToThis || who === 'user') {
+      // Scroll to user message so it stays at top - user scrolls down to read response
+      if (who === 'user') {
         div.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       if (save) saveHistory();
@@ -262,29 +262,15 @@
       quickBtns.style.display = 'none';
       showTyping();
       try {
-        const res = await fetch('/chat/stream', {
+        const res = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, session_id: sessionId })
-      });
+          body: JSON.stringify({ message: text, session_id: sessionId })
+        });
         hideTyping();
         if (res.ok) {
-          if (!res.body) {
-            const data = await res.json();
-            addMessageToDOM(data.reply || 'Oprostite, prišlo je do napake.', 'bot');
-          } else {
-            const botEl = addMessageToDOM('', 'bot');
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            while (true) {
-              const { value, done } = await reader.read();
-              if (done) break;
-              const chunk = decoder.decode(value, { stream: true });
-              botEl.textContent += chunk;
-              // Don't auto-scroll during streaming - user reads top-down
-            }
-            saveHistory();
-          }
+          const data = await res.json();
+          addMessageToDOM(data.reply || 'Oprostite, prišlo je do napake.', 'bot');
         } else {
           addMessageToDOM('Oprostite, strežnik ni dosegljiv.', 'bot');
         }

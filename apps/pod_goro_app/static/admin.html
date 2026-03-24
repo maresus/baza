@@ -9,11 +9,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --brand: #7b5e3b;
-      --bg: #f5f4f1;
+      --brand: #3a6b35;
+      --bg: #f4f9f3;
       --card: #fff;
       --muted: #7a7a7a;
-      --border: #e6e2da;
+      --border: #c8dfc5;
       --shadow: 0 10px 30px rgba(0,0,0,0.06);
       --radius: 14px;
     }
@@ -44,7 +44,7 @@
     }
     .title { font-size: 1.3rem; font-weight: 700; display: flex; gap: 10px; align-items: center; }
     .subtitle { color: var(--muted); font-size: 0.95rem; }
-    .chip { background: #f2ede6; color: #5b4327; padding: 6px 10px; border-radius: 999px; font-weight: 600; }
+    .chip { background: #e8f0e7; color: #2d5229; padding: 6px 10px; border-radius: 999px; font-weight: 600; }
     .btn {
       border: none;
       cursor: pointer;
@@ -57,10 +57,10 @@
       transition: transform 0.05s ease, box-shadow 0.2s ease;
       background: var(--brand);
       color: #fff;
-      box-shadow: 0 8px 20px rgba(123,94,59,0.25);
+      box-shadow: 0 8px 20px rgba(58,107,53,0.25);
     }
     .btn.large { padding: 12px 18px; font-size: 14px; }
-    .btn.secondary { background: #f1ede5; color: #4b3a28; box-shadow: none; }
+    .btn.secondary { background: #f1ede5; color: #2d5229; box-shadow: none; }
     .btn:hover { transform: translateY(-1px); }
 
     /* Stats */
@@ -112,7 +112,7 @@
     .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
     /* Date grouping */
-    .date-group { margin-bottom: 12px; border: 1px solid #e6e2da; border-radius: 10px; overflow: hidden; background: #fff; box-shadow: var(--shadow); }
+    .date-group { margin-bottom: 12px; border: 1px solid #c8dfc5; border-radius: 10px; overflow: hidden; background: #fff; box-shadow: var(--shadow); }
     .date-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #faf8f4; cursor: pointer; font-weight: 600; }
     .date-header:hover { background: #f5f2ec; }
     .date-count { color: #7a7a7a; font-weight: 400; }
@@ -147,6 +147,8 @@
     .status-processing { background: #e3ecff; color: #2f54a3; }
     .type-room { color: #50351e; }
     .type-table { color: #134f2b; }
+    .type-bike { color: #1a4d7a; }
+    .type-animals { color: #5a3a00; }
     .muted { color: var(--muted); font-size: 12px; }
     .tooltip { max-width: 240px; }
     .btn-inline {
@@ -158,7 +160,7 @@
       font-weight: 700;
       font-size: 18px;
       line-height: 1.2;
-      color: #4b3a28;
+      color: #2d5229;
     }
     .btn-inline.danger { color: #b3261e; border-color: #f3c7c2; }
     .btn-inline.success { color: #1f7a3c; border-color: #b7e3c6; }
@@ -255,7 +257,7 @@
     }
     .message-thread {
       background: #faf8f3;
-      border: 1px solid #e6e2da;
+      border: 1px solid #c8dfc5;
       border-radius: 8px;
       padding: 10px;
       max-height: 340px;
@@ -264,7 +266,7 @@
       color: #1f2937;
     }
     .message-thread .msg {
-      border-bottom: 1px dashed #e6e2da;
+      border-bottom: 1px dashed #c8dfc5;
       padding: 8px 0;
     }
     .message-thread .msg:last-child { border-bottom: 0; }
@@ -275,7 +277,7 @@
     }
     .msg-refresh {
       margin-left: 8px;
-      border: 1px solid #e6e2da;
+      border: 1px solid #c8dfc5;
       background: #fff;
       border-radius: 999px;
       padding: 4px 8px;
@@ -297,7 +299,7 @@
     .tab {
       border: 1px solid var(--border);
       background: #fff;
-      color: #4b3a28;
+      color: #2d5229;
       padding: 10px 14px;
       border-radius: 10px;
       cursor: pointer;
@@ -362,8 +364,9 @@
     </div>
 
     <div class="tabs equal">
-      <button class="tab active" id="tab-room" onclick="setTab('room')">🛏️ Sobe</button>
-      <button class="tab" id="tab-table" onclick="setTab('table')">🍽️ Mize</button>
+      <button class="tab" id="tab-room" onclick="setTab('room')">🛏️ Sobe</button>
+      <button class="tab active" id="tab-table" onclick="setTab('table')">🍽️ Mize</button>
+      <button class="tab" id="tab-bike" onclick="setTab('bike')">🚲 Kolesa</button>
     </div>
 
     <div id="view-tools" style="display:none;">
@@ -415,6 +418,8 @@
       <div class="stat"><div class="label">Čaka</div><div class="value" id="stat-pending">0</div></div>
       <div class="stat"><div class="label">🛏️ Sobe</div><div class="value" id="stat-room">0</div></div>
       <div class="stat"><div class="label">🍽️ Mize</div><div class="value" id="stat-table">0</div></div>
+      <div class="stat"><div class="label">🚲 Kolesa</div><div class="value" id="stat-bike">0</div></div>
+      <div class="stat"><div class="label">🦌 Živali</div><div class="value" id="stat-animals">0</div></div>
       <div class="stat"><div class="label">🤖 AI danes</div><div class="value" id="stat-ai-today">0</div></div>
       <div class="stat"><div class="label">🤖 AI ta mesec</div><div class="value" id="stat-ai-month">0</div></div>
       <div class="stat"><div class="label">🤖 AI letos</div><div class="value" id="stat-ai-year">0</div></div>
@@ -512,6 +517,7 @@
     <div class="filters">
       <div class="filter-row">
         <select id="filter-status">
+          <option value="active" selected>Aktivni (brez zavrnjenih)</option>
           <option value="">Vsi statusi</option>
           <option value="pending">Čaka</option>
           <option value="processing">V obdelavi</option>
@@ -522,12 +528,12 @@
           <option value="">Vsi tipi</option>
           <option value="room">Sobe</option>
           <option value="table">Mize</option>
+          <option value="bike">Kolesa</option>
         </select>
         <select id="filter-source">
           <option value="">Vsi viri</option>
-          <option value="chat">Chatbot</option>
-          <option value="wordpress_room">WP Sobe</option>
-          <option value="wordpress_table">WP Mize</option>
+          <option value="chatbot">Chatbot</option>
+          <option value="admin">Admin</option>
         </select>
         <input type="date" id="filter-date-from" />
         <input type="date" id="filter-date-to" />
@@ -564,7 +570,7 @@
         </div>
         <div class="form-group">
           <label>Zadeva</label>
-          <input type="text" id="email-subject" value="Povpraševanje - Kmetija Pod Goro">
+          <input type="text" id="email-subject" value="Povpraševanje - Domačija Kmetija Pod Goro">
         </div>
         <div class="form-group">
           <label>Predloga</label>
@@ -945,7 +951,7 @@
 
   <script>
     const API_BASE = '/api/admin';
-    let currentTab = 'room';
+    let currentTab = 'table';
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth(); // 0-indexed
     const TABLE_CAP = { 'Pri peči': 15, 'Pri vrtu': 35 };
@@ -960,7 +966,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       setViewTab('reservations');
-      setTab('room', true);
+      setTab('table', true);
       setInterval(loadStats, 60000);
       qs('month-select').value = calendarMonth.toString();
       qs('year-input').value = calendarYear.toString();
@@ -983,6 +989,7 @@
       currentTab = tab;
       qs('tab-room').classList.toggle('active', tab === 'room');
       qs('tab-table').classList.toggle('active', tab === 'table');
+      if (qs('tab-bike')) qs('tab-bike').classList.toggle('active', tab === 'bike');
       qs('filter-type').value = tab;
       qs('room-overview').style.display = tab === 'room' ? '' : 'none';
       qs('table-overview').style.display = tab === 'table' ? '' : 'none';
@@ -1088,7 +1095,7 @@
     }
 
     function resetFilters() {
-      qs('filter-status').value = '';
+      qs('filter-status').value = 'active';
       qs('filter-type').value = currentTab;
       qs('filter-source').value = '';
       qs('filter-date-from').value = '';
@@ -1114,7 +1121,8 @@
       const date_to = qs('filter-date-to').value.replace(/\s+/g, '');
       const params = new URLSearchParams();
       params.set('limit', '200');
-      if (status) params.set('status', status);
+      // "active" = brez zavrnjenih, filtriramo na client strani
+      if (status && status !== 'active') params.set('status', status);
       if (type) params.set('type', type);
       if (source) params.set('source', source);
       if (date_from) params.set('date_from', date_from);
@@ -1133,6 +1141,8 @@
         qs('stat-pending').textContent = data.po_statusu?.pending ?? 0;
         qs('stat-room').textContent = data.po_tipu?.room ?? 0;
         qs('stat-table').textContent = data.po_tipu?.table ?? 0;
+        if (qs('stat-bike')) qs('stat-bike').textContent = data.po_tipu?.bike ?? 0;
+        if (qs('stat-animals')) qs('stat-animals').textContent = data.po_tipu?.animals ?? 0;
       } catch (e) {
         console.error('Stats error', e);
       }
@@ -1392,7 +1402,7 @@
           <div class="reservation-row" style="grid-template-columns: 120px 150px 120px 100px 1fr 160px;">
             <span class="res-date">${r.date || '-'}</span>
             <span class="res-guest">${r.name || 'Gost'} ${renderGuestBadges(r)}</span>
-            <span class="res-room">${r.reservation_type === 'table' ? 'Miza' : 'Soba'}</span>
+            <span class="res-room">${r.reservation_type === 'table' ? 'Miza' : r.reservation_type === 'bike' ? 'Kolesa' : r.reservation_type === 'animals' ? 'Živali' : 'Soba'}</span>
             <span class="res-people">${r.people || '-'} oseb</span>
             <span class="res-room">${r.location || '-'}</span>
             <span class="res-actions">
@@ -1423,9 +1433,12 @@
       const dateFrom = dfVal ? new Date(dfVal) : null;
       const dateTo = dtVal ? new Date(dtVal) : null;
 
+      const statusFilter = qs('filter-status').value;
       const filtered = expanded.filter(r => {
         const d = parseDDMMYYYY(r.date);
         if (!d) return false;
+        // "active" = skrij zavrnjene rezervacije
+        if (statusFilter === 'active' && r.status === 'rejected') return false;
         if (dateFrom && d < dateFrom) return false;
         if (dateTo && d > dateTo) return false;
         // če ni range filtrov, filtriramo na trenutno izbran mesec/let
@@ -1473,7 +1486,7 @@
         const d = parseDDMMYYYY(dateStr);
         const monthKey = d ? `${d.getFullYear()}-${d.getMonth()}` : 'unknown';
         if (monthKey !== lastMonthKey && monthKeys.length > 1) {
-          html += `<h4 style="margin:10px 0 6px; color:#4b3a28;">${d ? monthNames[d.getMonth()] + ' ' + d.getFullYear() : 'Brez datuma'}</h4>`;
+          html += `<h4 style="margin:10px 0 6px; color:#2d5229;">${d ? monthNames[d.getMonth()] + ' ' + d.getFullYear() : 'Brez datuma'}</h4>`;
           lastMonthKey = monthKey;
         }
         html += `
@@ -2035,7 +2048,7 @@
 
         const cell = document.createElement('div');
         const isToday = dateKey === todayISO();
-        const outline = isToday ? '2px solid #e74c3c' : (hasLast ? '2px dashed #8e8e8e' : '1px solid #e6e2da');
+        const outline = isToday ? '2px solid #e74c3c' : (hasLast ? '2px dashed #8e8e8e' : '1px solid #c8dfc5');
         const effectiveBg = hasMid ? '#fef9f2' : bg;
         cell.style.cssText = `min-height: 80px; border: ${outline}; border-radius: 8px; padding: 6px; cursor: pointer; background: ${effectiveBg};`;
         cell.onmouseover = () => cell.style.background = '#f9f7f2';
@@ -2124,7 +2137,7 @@
 
         const cell = document.createElement('div');
         const isToday = dateKey === todayISO();
-        const outline = isToday ? '2px solid #e74c3c' : '1px solid #e6e2da';
+        const outline = isToday ? '2px solid #e74c3c' : '1px solid #c8dfc5';
         cell.style.cssText = `min-height: 80px; border: ${outline}; border-radius: 8px; padding: 6px; cursor: pointer; background: ${bg};`;
         cell.onmouseover = () => cell.style.outline = '1px solid #c9b99f';
         cell.onmouseout = () => cell.style.outline = 'none';
@@ -2136,7 +2149,7 @@
         cell.appendChild(dayNum);
 
         const info = document.createElement('div');
-        info.style.cssText = 'font-size: 12px; color: #4b3a28; display:grid; gap:2px;';
+        info.style.cssText = 'font-size: 12px; color: #2d5229; display:grid; gap:2px;';
         info.innerHTML = `
           <span>Pri peči: ${pece}/${TABLE_CAP['Pri peči']}</span>
           <span>Pri vrtu: ${vrtu}/${TABLE_CAP['Pri vrtu']}</span>
@@ -2217,7 +2230,7 @@
         }
         const sorted = reservations.sort((a,b) => (a.created_at || '').localeCompare(b.created_at || ''));
         content.innerHTML = sorted.map(r => `
-          <div class="day-item" style="border: 1px solid #e6e2da; border-radius: 8px;">
+          <div class="day-item" style="border: 1px solid #c8dfc5; border-radius: 8px;">
             <div style="font-weight: 600;">${r.name || 'Gost'}</div>
             <div style="color: #7a7a7a; font-size: 13px;">
               ${r.people || '-'} oseb ${r.kids ? '(' + r.kids + ' otrok)' : ''}<br>
@@ -2258,7 +2271,7 @@
       content.innerHTML = reservations
         .sort((a,b) => (a.time || '').localeCompare(b.time || ''))
         .map(r => `
-          <div class="day-item" style="border: 1px solid #e6e2da; border-radius: 8px;">
+          <div class="day-item" style="border: 1px solid #c8dfc5; border-radius: 8px;">
             <div style="font-weight: 600;">${r.name || 'Gost'} (${r.people || 0} oseb)</div>
             <div style="color:#7a7a7a;font-size:13px;">${r.time || '-'} | ${r.location || ''} | ${r.status || ''}</div>
             <div style="color:#7a7a7a;font-size:13px;">${[r.email, r.phone].filter(Boolean).join(' | ')}</div>
@@ -2289,13 +2302,19 @@
 
     function openEdit(dataStr) {
       const r = JSON.parse(decodeURIComponent(dataStr));
+      console.log('[DEBUG] openEdit called with:', r);
+      console.log('[DEBUG] reservation_type:', r.reservation_type);
+      console.log('[DEBUG] id:', r.id);
+
       if (!r.id) {
         toast('Rezervacije ni mogoče odpreti (manjka ID).', 'warning');
         return;
       }
-      if (r.reservation_type === 'table') {
+      if (r.reservation_type === 'table' || r.reservation_type === 'bike' || r.reservation_type === 'animals') {
+        console.log('[DEBUG] Opening TABLE modal for type:', r.reservation_type);
         openTableEditModal(r);
       } else {
+        console.log('[DEBUG] Opening ROOM modal (type:', r.reservation_type, ')');
         openRoomEditModal(r);
       }
     }
@@ -2493,7 +2512,7 @@
     function normalizeRoom(location) {
       if (!location) return '';
       const upper = String(location).toUpperCase();
-      if (upper.includes('GOZD') || upper.includes('GOZD')) return 'GOZD';
+      if (upper.includes('GOZD') || upper.includes('ALJAŽ')) return 'GOZD';
       if (upper.includes('RAZGLED')) return 'RAZGLED';
       if (upper.includes('SONCE')) return 'SONCE';
       return '';

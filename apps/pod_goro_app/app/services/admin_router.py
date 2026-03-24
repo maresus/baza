@@ -1,9 +1,12 @@
+"""
+Admin Router za Kmetija Pod Goro V2
+"""
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header, Query
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel
 
@@ -13,22 +16,28 @@ from app.services.email_service import (
     send_reservation_rejected,
 )
 from app.services.reservation_service import ROOMS, TOTAL_TABLE_CAPACITY, ReservationService
-from app.services.imap_poll_service import load_state, preview_last_messages, resync_last_messages
 
 router = APIRouter(tags=["admin"])
 service = ReservationService()
 
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 ROOM_IDS = {r["id"] for r in ROOMS}
 
 
+def verify_admin(token: str = Header(None, alias="X-Admin-Token"), t: str = Query(None)):
+    if not ADMIN_TOKEN:
+        return
+    provided = token or t
+    if provided != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Neveljaven admin token")
+
+
 def _log(event: str, **kwargs) -> None:
-    """Preprost log za admin API klice."""
     try:
         ts = datetime.now().isoformat(timespec="seconds")
         extras = " ".join([f"{k}={v}" for k, v in kwargs.items() if v is not None])
         print(f"[ADMIN API] {ts} {event} {extras}")
     except Exception:
-        # Logging nesme prekiniti requesta
         pass
 
 
@@ -38,9 +47,7 @@ def _ensure_subject_tag(reservation_id: Optional[int], subject: str) -> str:
     tag = f"Rezervacija #{reservation_id}"
     if tag.lower() in (subject or "").lower():
         return subject
-    if subject:
-        return f"{tag} - {subject}"
-    return tag
+    return f"{tag} - {subject}" if subject else tag
 
 
 def _normalize_room_id(room: Optional[str]) -> Optional[str]:
@@ -61,19 +68,10 @@ def _parse_ddmmyyyy(date_str: str) -> Optional[datetime]:
 
 
 def _reservation_days(date_str: str, nights: Optional[int]) -> list[datetime]:
-    nights_int = 1
     try:
         nights_int = int(nights or 1)
     except Exception:
-        # poskusi izvleči prvo število iz niza (npr. "5 noči")
-        import re
-
-        m = re.search(r"\d+", str(nights or ""))
-        if m:
-            try:
-                nights_int = int(m.group(0))
-            except Exception:
-                nights_int = 1
+        nights_int = 1
     if nights_int <= 0:
         nights_int = 1
     start = _parse_ddmmyyyy(date_str)
@@ -83,7 +81,6 @@ def _reservation_days(date_str: str, nights: Optional[int]) -> list[datetime]:
 
 
 def _room_conflicts(reservation_id: int, room_id: str, date_str: str, nights: Optional[int]) -> list[str]:
-    """Vrne seznam datumov (dd.mm.yyyy) kjer je soba že zasedena."""
     occupied: list[str] = []
     days = _reservation_days(date_str, nights)
     if not days:
@@ -92,8 +89,7 @@ def _room_conflicts(reservation_id: int, room_id: str, date_str: str, nights: Op
     for r in other_reservations:
         if r.get("id") == reservation_id:
             continue
-        status = r.get("status")
-        if status not in {"confirmed", "processing"}:
+        if r.get("status") not in {"confirmed", "processing"}:
             continue
         other_room = _normalize_room_id(r.get("location"))
         if other_room != room_id:
@@ -104,6 +100,10 @@ def _room_conflicts(reservation_id: int, room_id: str, date_str: str, nights: Op
             occupied.extend(sorted({d.strftime("%d.%m.%Y") for d in overlaps}))
     return occupied
 
+
+# ============================================================
+# PYDANTIC MODELS
+# ============================================================
 
 class ReservationUpdate(BaseModel):
     status: Optional[str] = None
@@ -140,7 +140,7 @@ class AdminCreateReservation(BaseModel):
     people: int
     reservation_type: str
     source: str = "admin"
-    status: Optional[str] = None  # pending, confirmed, etc. - default confirmed za admin, pending za wordpress
+    status: Optional[str] = None
     nights: Optional[int] = None
     rooms: Optional[int] = None
     time: Optional[str] = None
@@ -161,111 +161,51 @@ class KnowledgeFeedbackRequest(BaseModel):
     suggestion: str
 
 
+# ============================================================
+# STATIC FILE ROUTES
+# ============================================================
+
 @router.get("/admin", response_class=HTMLResponse)
 def admin_page() -> HTMLResponse:
-    """Postreže statično datoteko admin UI (static/admin.html)."""
     html_path = Path("static/admin.html")
     if not html_path.exists():
         return HTMLResponse("<h1>Admin UI manjka (static/admin.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
-
-@router.get("/admin/new", response_class=HTMLResponse)
-def admin_page_new() -> HTMLResponse:
-    """Postreže testno različico admin UI (static/admin_new.html)."""
-    html_path = Path("static/admin_new.html")
-    if not html_path.exists():
-        return HTMLResponse("<h1>Admin UI manjka (static/admin_new.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
 
 
 @router.get("/admin/conversations", response_class=HTMLResponse)
 def admin_conversations_page() -> HTMLResponse:
-    """Postreže statično datoteko za pogovore (static/conversations.html)."""
     html_path = Path("static/conversations.html")
     if not html_path.exists():
-        return HTMLResponse("<h1>Conversations UI manjka (static/conversations.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
+        return HTMLResponse("<h1>Conversations UI manjka</h1>", status_code=500)
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
 
 
-@router.get("/admin/inquiries", response_class=HTMLResponse)
-def admin_inquiries_page() -> HTMLResponse:
-    """Postreže statično datoteko za povpraševanja (static/inquiries.html)."""
-    html_path = Path("static/inquiries.html")
-    if not html_path.exists():
-        return HTMLResponse("<h1>Inquiries UI manjka (static/inquiries.html)</h1>", status_code=500)
-    html = html_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
+# ============================================================
+# CONVERSATIONS API
+# ============================================================
 
 @router.get("/api/admin/conversations")
 def get_conversations(limit: int = 200, needs_followup_only: bool = False):
-    """Vrne zadnje pogovore za admin pregled."""
-    _log("conversations", limit=limit, needs_followup_only=needs_followup_only)
-    conversations = service.get_conversations(limit=limit, needs_followup_only=needs_followup_only)
-    stats = {
-        "total": len(conversations),
-        "followup": len([c for c in conversations if c.get("needs_followup")]),
-    }
-    return {"conversations": conversations, "stats": stats}
+    _log("conversations", limit=limit)
+    conversations = service.get_conversations(limit=limit)
+    return {"conversations": conversations, "stats": {"total": len(conversations)}}
 
 
 @router.get("/api/admin/conversations/session/{session_id}")
 def get_conversations_by_session(session_id: str, limit: int = 200):
-    """Vrne pogovor za posamezen session_id."""
-    _log("conversations_session", session_id=session_id, limit=limit)
     conversations = service.get_conversations_by_session(session_id=session_id, limit=limit)
     return {"session_id": session_id, "conversations": conversations, "total": len(conversations)}
 
 
-@router.get("/api/admin/inquiries")
-def get_inquiries(limit: int = 200, status: Optional[str] = None):
-    _log("inquiries", limit=limit, status=status)
-    inquiries = service.get_inquiries(limit=limit, status=status)
-    return {"inquiries": inquiries}
-
-
 @router.get("/api/admin/usage_stats")
 def get_usage_stats():
-    _log("usage_stats")
     return service.get_usage_stats()
 
 
-@router.get("/api/admin/question_stats")
-def get_question_stats(limit: int = 10):
-    _log("question_stats", limit=limit)
-    return {"questions": service.get_top_questions(limit=limit)}
-
-
-@router.get("/api/admin/lost_intents")
-def get_lost_intents(limit: int = 10):
-    _log("lost_intents", limit=limit)
-    return {"items": service.get_lost_intents(limit=limit)}
-
-
-@router.get("/api/admin/funnel_stats")
-def get_funnel_stats(days: int = 30):
-    _log("funnel_stats", days=days)
-    return service.get_funnel_stats(days=days)
-
-
-@router.get("/api/admin/missed_questions")
-def get_missed_questions(limit: int = 5):
-    _log("missed_questions", limit=limit)
-    return {"items": service.get_lost_intents(limit=limit)}
-
-
-@router.post("/api/admin/knowledge_feedback")
-def create_knowledge_feedback(payload: KnowledgeFeedbackRequest):
-    _log("knowledge_feedback", question=payload.question[:60] if payload.question else "")
-    feedback_id = service.create_knowledge_feedback(payload.question.strip(), payload.suggestion.strip())
-    if not feedback_id:
-        raise HTTPException(status_code=400, detail="Neveljaven predlog.")
-    return {"ok": True, "id": feedback_id}
-
+# ============================================================
+# RESERVATIONS API
+# ============================================================
 
 @router.get("/api/admin/reservations")
 def get_reservations(
@@ -276,17 +216,15 @@ def get_reservations(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
 ):
-    """Vrne seznam rezervacij s filtri ter osnovno statistiko."""
-    _log("reservations", limit=limit, status=status, type=type, source=source, date_from=date_from, date_to=date_to)
+    _log("reservations", limit=limit, status=status, type=type)
     reservations = service.read_reservations(limit=limit, status=status, reservation_type=type, source=source)
 
     def _parse_date(date_str: str) -> Optional[datetime]:
         if not date_str:
             return None
-        date_str = date_str.replace(" ", "")
         for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d.%m.%y"):
             try:
-                return datetime.strptime(date_str, fmt)
+                return datetime.strptime(date_str.strip(), fmt)
             except (ValueError, TypeError):
                 continue
         return None
@@ -298,19 +236,15 @@ def get_reservations(
         for r in reservations:
             days = _reservation_days(r.get("date", ""), r.get("nights"))
             if not days:
-                # če ni datuma, ga obdržimo (ne izločimo)
                 filtered.append(r)
                 continue
-            overlaps = False
             for d in days:
                 if start and d < start:
                     continue
                 if end and d > end:
                     continue
-                overlaps = True
-                break
-            if overlaps:
                 filtered.append(r)
+                break
         reservations = filtered
 
     all_res = service.read_reservations(limit=1000)
@@ -321,40 +255,17 @@ def get_reservations(
         "confirmed": len([r for r in all_res if r.get("status") == "confirmed"]),
         "today": len([r for r in all_res if str(r.get("created_at", "")).startswith(today_prefix)]),
     }
-
     return {"reservations": reservations, "stats": stats}
 
 
 @router.put("/api/admin/reservations/{reservation_id}")
 def update_reservation(reservation_id: int, data: ReservationUpdate):
-    """Posodobi rezervacijo."""
     existing = service.get_reservation(reservation_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
-    res_type = existing.get("reservation_type")
-    location = data.location
-    valid_rooms = {"", None, "GOZD", "RAZGLED", "SONCE"}
-    valid_tables = {"Pri peči", "Pri vrtu"}
-    if res_type == "room" and location is not None and location not in valid_rooms:
-        raise HTTPException(status_code=400, detail="Neveljavna soba")
-    if res_type == "table" and location is not None and location not in valid_tables:
-        raise HTTPException(status_code=400, detail="Neveljavna jedilnica")
     ok = service.update_reservation(
         reservation_id,
-        status=data.status,
-        date=data.date,
-        time=data.time,
-        people=data.people,
-        nights=data.nights,
-        location=data.location,
-        name=data.name,
-        email=data.email,
-        phone=data.phone,
-        event_type=data.event_type,
-        special_needs=data.special_needs,
-        admin_notes=data.admin_notes,
-        kids=data.kids,
-        kids_small=data.kids_small,
+        **{k: v for k, v in data.model_dump().items() if v is not None},
     )
     if not ok:
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
@@ -363,12 +274,7 @@ def update_reservation(reservation_id: int, data: ReservationUpdate):
 
 @router.patch("/api/admin/reservations/{reservation_id}")
 def patch_reservation(reservation_id: int, data: ReservationUpdate):
-    """Partial update rezervacije (status, admin_notes, kids)."""
-    fields = {
-        "status": data.status,
-        "admin_notes": data.admin_notes,
-        "kids": data.kids,
-    }
+    fields = {k: v for k, v in data.model_dump().items() if v is not None}
     if data.status == "confirmed":
         fields["confirmed_at"] = datetime.now().isoformat()
     ok = service.update_reservation(reservation_id, **fields)
@@ -379,12 +285,13 @@ def patch_reservation(reservation_id: int, data: ReservationUpdate):
 
 @router.post("/api/admin/reservations/{reservation_id}/confirm")
 def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRequest] = None):
-    """Potrdi rezervacijo, preveri zasedenost sobe in pošlje email gostu."""
     res = service.get_reservation(reservation_id)
     if not res:
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
+
     requested_room = _normalize_room_id((data.room if data else None) or res.get("location"))
     requested_location = (data.location if data else None) or res.get("location")
+
     if res.get("reservation_type") == "room":
         if not requested_room:
             raise HTTPException(status_code=400, detail="Soba mora biti izbrana.")
@@ -398,18 +305,17 @@ def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRe
         reservation_id,
         status="confirmed",
         confirmed_at=datetime.now().isoformat(),
-        confirmed_by=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+        confirmed_by=os.getenv("ADMIN_EMAIL", "info@podgoro.si"),
         location=requested_room or requested_location,
     )
     res = service.get_reservation(reservation_id) or res
     send_reservation_confirmed(res)
-    subject = _ensure_subject_tag(reservation_id, "Potrditev rezervacije")
     service.add_reservation_message(
         reservation_id=reservation_id,
         direction="outbound",
-        subject=subject,
+        subject=_ensure_subject_tag(reservation_id, "Potrditev rezervacije"),
         body="Rezervacija potrjena.",
-        from_email=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+        from_email=os.getenv("ADMIN_EMAIL", "info@podgoro.si"),
         to_email=res.get("email") or "",
         message_id=None,
     )
@@ -418,29 +324,64 @@ def confirm_reservation(reservation_id: int, data: Optional[ConfirmReservationRe
 
 @router.post("/api/admin/reservations/{reservation_id}/reject")
 def reject_reservation(reservation_id: int):
-    """Zavrne rezervacijo in pošlje email gostu."""
     res = service.get_reservation(reservation_id)
     if not res:
         raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
     service.update_reservation(reservation_id, status="rejected")
     res = service.get_reservation(reservation_id) or res
     send_reservation_rejected(res)
-    subject = _ensure_subject_tag(reservation_id, "Zavrnjena rezervacija")
     service.add_reservation_message(
         reservation_id=reservation_id,
         direction="outbound",
-        subject=subject,
+        subject=_ensure_subject_tag(reservation_id, "Zavrnjena rezervacija"),
         body="Rezervacija zavrnjena.",
-        from_email=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+        from_email=os.getenv("ADMIN_EMAIL", "info@podgoro.si"),
         to_email=res.get("email") or "",
         message_id=None,
     )
     return {"success": True, "email_sent": True}
 
 
+def _email_action_html(title: str, message: str, success: bool = True) -> str:
+    color = "#22c55e" if success else "#ef4444"
+    return f"""
+    <!DOCTYPE html><html lang="sl"><head><meta charset="UTF-8"><title>{title}</title>
+    <style>body{{font-family:-apple-system,sans-serif;background:#f4f9f3;margin:0;padding:40px 20px}}
+    .c{{max-width:500px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.1)}}
+    h1{{color:#3a6b35;margin:0 0 16px;font-size:24px}}p{{color:#666;line-height:1.6;margin:0 0 24px}}
+    a{{display:inline-block;margin-top:24px;color:#3a6b35;text-decoration:none}}</style></head>
+    <body><div class="c"><h1 style="color:{color}">{title}</h1><p>{message}</p>
+    <a href="/admin">Nazaj na admin panel</a></div></body></html>"""
+
+
+@router.get("/api/admin/reservations/{reservation_id}/confirm")
+def confirm_reservation_get(reservation_id: int):
+    res = service.get_reservation(reservation_id)
+    if not res:
+        return HTMLResponse(_email_action_html("Ni najdena", f"Rezervacija #{reservation_id} ne obstaja.", False), status_code=404)
+    if res.get("status") == "confirmed":
+        return HTMLResponse(_email_action_html("Ze potrjeno", f"Rezervacija #{reservation_id} je bila ze potrjena."))
+    service.update_reservation(reservation_id, status="confirmed", confirmed_at=datetime.now().isoformat())
+    res = service.get_reservation(reservation_id) or res
+    send_reservation_confirmed(res)
+    return HTMLResponse(_email_action_html("Rezervacija potrjena", f"Rezervacija #{reservation_id} za {res.get('name', 'gosta')} je uspesno potrjena."))
+
+
+@router.get("/api/admin/reservations/{reservation_id}/reject")
+def reject_reservation_get(reservation_id: int):
+    res = service.get_reservation(reservation_id)
+    if not res:
+        return HTMLResponse(_email_action_html("Ni najdena", f"Rezervacija #{reservation_id} ne obstaja.", False), status_code=404)
+    if res.get("status") == "rejected":
+        return HTMLResponse(_email_action_html("Ze zavrnjeno", f"Rezervacija #{reservation_id} je bila ze zavrnjena.", False))
+    service.update_reservation(reservation_id, status="rejected")
+    res = service.get_reservation(reservation_id) or res
+    send_reservation_rejected(res)
+    return HTMLResponse(_email_action_html("Rezervacija zavrnjena", f"Rezervacija #{reservation_id} zavrnjena.", False))
+
+
 @router.post("/api/admin/send-message")
 def send_message(data: SendMessageRequest):
-    """Pošlje sporočilo gostu in opcijsko status nastavi na 'processing'."""
     if not data.email:
         raise HTTPException(status_code=400, detail="Email manjka")
     subject = _ensure_subject_tag(data.reservation_id, data.subject or "")
@@ -451,68 +392,41 @@ def send_message(data: SendMessageRequest):
             direction="outbound",
             subject=subject,
             body=data.body,
-            from_email=os.getenv("ADMIN_EMAIL", "info@kmetijapodgoro.si"),
+            from_email=os.getenv("ADMIN_EMAIL", "info@podgoro.si"),
             to_email=data.email,
             message_id=None,
         )
     if data.set_processing:
-        service.update_reservation(
-            data.reservation_id,
-            status="processing",
-            guest_message=data.body,
-        )
+        service.update_reservation(data.reservation_id, status="processing", guest_message=data.body)
     return {"ok": True}
 
 
 @router.get("/api/admin/reservations/{reservation_id}/messages")
 def get_reservation_messages(reservation_id: int):
-    """Vrne sporočila za izbrano rezervacijo."""
     messages = service.list_reservation_messages(reservation_id)
     return {"messages": messages}
 
 
-@router.get("/api/admin/imap_status")
-def get_imap_status():
-    """Vrne stanje IMAP pollinga."""
-    return load_state()
-
-
-@router.post("/api/admin/imap_resync")
-def imap_resync(limit: int = 50):
-    """Ročno prebere zadnjih N sporočil iz IMAP."""
-    return resync_last_messages(limit=limit)
-
-
-@router.get("/api/admin/imap_preview")
-def imap_preview(limit: int = 10):
-    """Vrne osnovne podatke zadnjih N sporočil (subject/from/date)."""
-    return preview_last_messages(limit=limit)
-
-
 @router.get("/api/admin/stats")
 def get_stats():
-    """Agregirani podatki za dashboard."""
     _log("stats")
     today_prefix = datetime.now().strftime("%Y-%m-%d")
     week_ago = datetime.now() - timedelta(days=7)
     month_ago = datetime.now().replace(day=1)
     res_list = service.read_reservations(limit=1000)
 
-    def parse_created(r) -> Optional[datetime]:
-        try:
-            return datetime.fromisoformat(str(r.get("created_at", "")))
-        except Exception:
-            return None
-
     counts = {
         "danes": 0,
         "ta_teden": 0,
         "ta_mesec": 0,
         "po_statusu": {"pending": 0, "processing": 0, "confirmed": 0, "rejected": 0},
-        "po_tipu": {"room": 0, "table": 0},
+        "po_tipu": {"room": 0, "table": 0, "bike": 0, "animals": 0},
     }
     for r in res_list:
-        created = parse_created(r)
+        try:
+            created = datetime.fromisoformat(str(r.get("created_at", "")))
+        except Exception:
+            created = None
         if created:
             if str(r.get("created_at", "")).startswith(today_prefix):
                 counts["danes"] += 1
@@ -534,57 +448,32 @@ def export_reservations(
     status: Optional[str] = None,
     type: Optional[str] = None,
     source: Optional[str] = None,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
 ):
-    """Izvoz rezervacij v CSV (uporabi iste filtre kot /reservations)."""
-    data = get_reservations(limit=1000, status=status, type=type, source=source, date_from=date_from, date_to=date_to)
+    data = get_reservations(limit=1000, status=status, type=type, source=source)
     reservations = data.get("reservations", [])
-    headers = [
-        "id",
-        "date",
-        "time",
-        "nights",
-        "rooms",
-        "people",
-        "kids",
-        "kids_small",
-        "reservation_type",
-        "name",
-        "email",
-        "phone",
-        "location",
-        "note",
-        "status",
-        "source",
-        "created_at",
-    ]
+    headers = ["id", "date", "time", "nights", "people", "kids", "reservation_type", "name", "email", "phone", "location", "note", "status", "source", "created_at"]
     lines = [",".join(headers)]
     for r in reservations:
         row = []
         for h in headers:
-            val = r.get(h, "")
-            if val is None:
-                val = ""
+            val = r.get(h, "") or ""
             cell = str(val).replace('"', '""')
             if any(c in cell for c in [",", "\n", '"']):
                 cell = f'"{cell}"'
             row.append(cell)
         lines.append(",".join(row))
-    csv_content = "\n".join(lines)
     return Response(
-        content=csv_content,
+        content="\n".join(lines),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=reservations.csv"},
+        headers={"Content-Disposition": "attachment; filename=pod_goro_reservations.csv"},
     )
 
 
 @router.get("/api/admin/calendar/rooms")
 def calendar_rooms(month: int, year: int):
-    """Vrne zasedenost sob po dnevih z ločenimi pending/confirmed."""
     if month < 1 or month > 12:
         raise HTTPException(status_code=400, detail="Neveljaven mesec")
-    days: dict[str, dict[str, Any]] = {}
+    days: dict = {}
     reservations = service.read_reservations(limit=1000, reservation_type="room")
     for r in reservations:
         status = r.get("status")
@@ -592,7 +481,7 @@ def calendar_rooms(month: int, year: int):
             continue
         room_id = _normalize_room_id(r.get("location"))
         if not room_id:
-            room_id = "ND"
+            continue
         for day in _reservation_days(r.get("date", ""), r.get("nights")):
             if day.month != month or day.year != year:
                 continue
@@ -601,98 +490,23 @@ def calendar_rooms(month: int, year: int):
             entry = days.setdefault(key, {"confirmed": [], "pending": [], "reservations": []})
             if room_id not in entry[bucket]:
                 entry[bucket].append(room_id)
-            entry["reservations"].append(
-                {
-                    "id": r.get("id"),
-                    "reservation_type": "room",
-                    "name": r.get("name"),
-                    "people": r.get("people"),
-                    "kids": r.get("kids"),
-                    "location": room_id if room_id != "ND" else "Soba ni dodeljena",
-                    "email": r.get("email"),
-                    "phone": r.get("phone"),
-                    "status": status,
-                    "date": r.get("date"),
-                    "nights": r.get("nights"),
-                }
-            )
-    return {"days": days}
-
-
-@router.get("/api/admin/calendar/tables")
-def calendar_tables(month: int, year: int):
-    """Zasedenost miz po dnevih in urah."""
-    if month < 1 or month > 12:
-        raise HTTPException(status_code=400, detail="Neveljaven mesec")
-    calendar: dict[str, dict[str, Any]] = {}
-    reservations = service.read_reservations(limit=1000, reservation_type="table")
-    for r in reservations:
-        status = r.get("status")
-        if status in {"rejected", "cancelled"}:
-            continue
-        day = _parse_ddmmyyyy(r.get("date", ""))
-        if not day or day.month != month or day.year != year:
-            continue
-        iso = day.strftime("%Y-%m-%d")
-        people = 0
-        try:
-            people = int(r.get("people") or 0)
-        except Exception:
-            people = 0
-        entry = calendar.setdefault(
-            iso, {"total_people": 0, "capacity": TOTAL_TABLE_CAPACITY, "reservations": []}
-        )
-        entry["total_people"] += people
-        entry["reservations"].append(
-            {
+            entry["reservations"].append({
                 "id": r.get("id"),
-                "reservation_type": "table",
-                "time": r.get("time"),
-                "people": people,
+                "reservation_type": "room",
                 "name": r.get("name"),
+                "people": r.get("people"),
+                "location": room_id,
                 "status": status,
-                "location": r.get("location"),
-                "email": r.get("email"),
-                "phone": r.get("phone"),
                 "date": r.get("date"),
-            }
-        )
-    return calendar
+                "nights": r.get("nights"),
+            })
+    return {"days": days}
 
 
 @router.post("/api/admin/reservations")
 def create_admin_reservation(data: AdminCreateReservation):
-    """Ročno dodajanje rezervacije (admin)."""
-    warning: Optional[str] = None
-    valid_rooms = {"", None, "GOZD", "RAZGLED", "SONCE"}
-    valid_tables = {"Pri peči", "Pri vrtu"}
     location = _normalize_room_id(data.location) if data.reservation_type == "room" else data.location
-
-    if data.reservation_type == "room":
-        if location not in valid_rooms:
-            raise HTTPException(status_code=400, detail="Neveljavna soba")
-    if data.reservation_type == "table":
-        if location and location not in valid_tables:
-            raise HTTPException(status_code=400, detail="Neveljavna jedilnica")
-
-    if data.reservation_type == "room" and location:
-        conflicts = _room_conflicts(0, location, data.date, data.nights)
-        if conflicts:
-            warning = f"Soba {location} je zasedena: {', '.join(conflicts)}"
-    if data.reservation_type == "table" and data.time:
-        ok, suggested_location, suggestions = service.check_table_availability(data.date, data.time, data.people)
-        if not ok:
-            warning = "Kapaciteta je polna za izbrano uro."
-            if suggestions:
-                warning += f" Predlogi: {', '.join(suggestions)}"
-        if suggested_location and not data.location:
-            location = suggested_location
-
-    # Status: uporabi poslan status, sicer "pending" za wordpress, "confirmed" za ostalo
-    final_status = data.status
-    if not final_status:
-        final_status = "pending" if data.source == "wordpress" else "confirmed"
-
+    final_status = data.status or ("pending" if data.source == "chatbot" else "confirmed")
     new_id = service.create_reservation(
         date=data.date,
         nights=data.nights,
@@ -713,32 +527,16 @@ def create_admin_reservation(data: AdminCreateReservation):
         event_type=data.event_type,
         special_needs=data.special_needs,
     )
-    return {"success": True, "id": new_id, "warning": warning}
+    return {"success": True, "id": new_id}
 
 
-# ============================================================
-# CRON ENDPOINTS - Railway scheduled tasks
-# ============================================================
-
-@router.post("/api/cron/daily-report")
-def trigger_daily_report():
-    """
-    Sproži dnevno poročilo. Railway kliče ta endpoint ob 7:00.
-    """
-    from app.services.daily_report_service import generate_and_send_daily_report
-
-    _log("daily_report_triggered")
-    success = generate_and_send_daily_report()
-    return {"success": success}
+@router.delete("/api/admin/reservations/all")
+def delete_all_reservations(token: str = Header(None, alias="X-Admin-Token"), t: str = Query(None)):
+    verify_admin(token, t)
+    count = service.delete_all_reservations()
+    return {"success": True, "deleted": count}
 
 
-@router.post("/api/cron/weekly-reminder")
-def trigger_weekly_reminder():
-    """
-    Sproži tedenski reminder rezervacij. Railway kliče ta endpoint ob četrtkih ob 18:00.
-    """
-    from app.services.daily_report_service import generate_and_send_weekly_reminder
-
-    _log("weekly_reminder_triggered")
-    success = generate_and_send_weekly_reminder()
-    return {"success": success}
+@router.post("/api/admin/knowledge_feedback")
+def create_knowledge_feedback(payload: KnowledgeFeedbackRequest):
+    return {"ok": True, "id": None}
