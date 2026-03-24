@@ -3,13 +3,13 @@
 
   // Konfiguracija
   const CONFIG = {
-    apiUrl: 'https://pod-goro-ai-production.up.railway.app/chat',
+    apiUrl: 'https://kmetija-pod-goro-production.up.railway.app/chat',
     brandColor: '#3a6b35',
-    brandColorHover: '#5d472d',
-    title: 'Domačija Pod Goro',
-    subtitle: 'Kako vam lahko pomagam?',
+    brandColorHover: '#2d5229',
+    title: 'Kmetija Pod Goro',
+    subtitle: 'AI asistent v živo',
     placeholder: 'Vprašajte karkoli...',
-    welcomeMessage: 'Pozdravljeni! 👋 Sem vaš virtualni pomočnik za Domačijo Pod Goro. Kako vam lahko pomagam z rezervacijo ali informacijami?',
+    welcomeMessage: 'Pozdravljeni! Sem AI asistent Kmetije Pod Goro. Pomagam vam z informacijami o nastanitvah, kosilu, kolesarjenju in rezervacijami.',
     mobileBreakpoint: 768,
     autoOpenDesktop: true,  // Auto-popup na desktopu
     autoOpenDelay: 2000,  // ms
@@ -426,7 +426,7 @@
     panel.id = 'kv-widget-panel';
     panel.innerHTML = `
       <div id="kv-widget-header">
-        <div id="kv-widget-header-icon"><img src="https://kovacnik.com/wp-content/uploads/2023/03/LOGO-KOVACNIK-2023.png" alt="Pod Goro"></div>
+        <div id="kv-widget-header-icon" style="font-size:32px;line-height:1">🌿</div>
         <div id="kv-widget-header-text">
           <h3>${CONFIG.title}</h3>
           <p>${CONFIG.subtitle}</p>

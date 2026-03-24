@@ -71,12 +71,7 @@ def home():
         </style>
     </head>
     <body>
-        <h1>Kmetija Pod Goro V2 AI</h1>
-        <nav>
-            <a href="/admin">Admin Panel</a>
-            <a href="/widget">Widget</a>
-            <a href="/health">Health</a>
-        </nav>
+        <h1>Kmetija Pod Goro — AI asistent</h1>
         <div id="chat"></div>
         <input type="text" id="input" placeholder="Vprašajte..." onkeypress="if(event.key==='Enter')send()">
         <button onclick="send()">Pošlji</button>
