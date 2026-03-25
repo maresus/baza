@@ -365,10 +365,12 @@ class ReservationService:
     def get_usage_stats(self) -> dict:
         conn = self._conn()
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM conversations")
-        total_convs = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM reservations")
-        total_res = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as cnt FROM conversations")
+        row = cur.fetchone()
+        total_convs = row["cnt"] if isinstance(row, dict) else row[0]
+        cur.execute("SELECT COUNT(*) as cnt FROM reservations")
+        row = cur.fetchone()
+        total_res = row["cnt"] if isinstance(row, dict) else row[0]
         cur.close()
         conn.close()
         return {"total_conversations": total_convs, "total_reservations": total_res}
