@@ -503,6 +503,41 @@ def calendar_rooms(month: int, year: int):
     return {"days": days}
 
 
+@router.get("/api/admin/calendar/tables")
+def calendar_tables(month: int, year: int):
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="Neveljaven mesec")
+    days: dict = {}
+    reservations = service.read_reservations(limit=1000, reservation_type="table")
+    for r in reservations:
+        status = r.get("status")
+        if status not in {"pending", "processing", "confirmed"}:
+            continue
+        date_str = r.get("date", "")
+        try:
+            day = datetime.strptime(date_str, "%Y-%m-%d")
+        except Exception:
+            continue
+        if day.month != month or day.year != year:
+            continue
+        key = day.strftime("%Y-%m-%d")
+        entry = days.setdefault(key, {"reservations": [], "total_people": 0, "capacity": 40})
+        entry["reservations"].append({
+            "id": r.get("id"),
+            "reservation_type": "table",
+            "name": r.get("name"),
+            "people": r.get("people") or 0,
+            "location": r.get("location") or "Jedilnica",
+            "status": status,
+            "date": date_str,
+            "time": r.get("time"),
+            "email": r.get("email"),
+            "phone": r.get("phone"),
+        })
+        entry["total_people"] += r.get("people") or 0
+    return days
+
+
 @router.post("/api/admin/reservations")
 def create_admin_reservation(data: AdminCreateReservation):
     location = _normalize_room_id(data.location) if data.reservation_type == "room" else data.location

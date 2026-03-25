@@ -713,8 +713,7 @@
               <div class="form-group">
                 <label>Jedilnica</label>
                 <select id="table-edit-location">
-                  <option value="Pri peči">Pri peči (kapaciteta 15 oseb)</option>
-                  <option value="Pri vrtu">Pri vrtu (kapaciteta 35 oseb)</option>
+                  <option value="Jedilnica">Jedilnica (kapaciteta 40 oseb)</option>
                 </select>
               </div>
               <div class="form-group">
@@ -896,8 +895,7 @@
           <div class="form-group">
             <label>Jedilnica</label>
             <select id="new-table-location">
-              <option value="Pri peči">Pri peči (15 oseb)</option>
-              <option value="Pri vrtu">Pri vrtu (35 oseb)</option>
+              <option value="Jedilnica">Jedilnica (40 oseb)</option>
             </select>
           </div>
           <div class="form-group">
@@ -954,7 +952,7 @@
     let currentTab = 'table';
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth(); // 0-indexed
-    const TABLE_CAP = { 'Pri peči': 15, 'Pri vrtu': 35 };
+    const TABLE_CAP = { 'Jedilnica': 40 };
 
     function todayISO() {
       const d = new Date();
@@ -1810,7 +1808,7 @@
       if (isTable) {
         qs('confirm-label').textContent = 'Izberi jedilnico';
         hint.textContent = r.location ? `Gost je izbral: ${r.location}` : 'Gost ni izbral jedilnice.';
-        ['Pri peči', 'Pri vrtu'].forEach(opt => {
+        ['Jedilnica'].forEach(opt => {
           const o = document.createElement('option');
           o.value = opt;
           o.textContent = opt;
@@ -1855,7 +1853,7 @@
     function clearNewTableForm() {
       qs('new-table-date').value = '';
       qs('new-table-time').value = '';
-      qs('new-table-location').value = 'Pri peči';
+      qs('new-table-location').value = 'Jedilnica';
       qs('new-table-people').value = '';
       qs('new-table-kids').value = '';
       qs('new-table-kids-ages').value = '';
@@ -2125,12 +2123,8 @@
         const dateKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const dayData = data[dateKey] || { total_people: 0, capacity: 50, reservations: [] };
         const reservations = dayData.reservations || [];
-        const pece = reservations.filter(r => (r.location || '').toLowerCase().includes('pe')).reduce((s,r)=>s+(r.people||0),0);
-        const vrtu = reservations.filter(r => (r.location || '').toLowerCase().includes('vrt')).reduce((s,r)=>s+(r.people||0),0);
-        const percentPece = TABLE_CAP['Pri peči'] ? (pece / TABLE_CAP['Pri peči']) * 100 : 0;
-        const percentVrtu = TABLE_CAP['Pri vrtu'] ? (vrtu / TABLE_CAP['Pri vrtu']) * 100 : 0;
-        const worst = Math.max(percentPece, percentVrtu);
-        const percent = worst;
+        const jedilnica = reservations.reduce((s,r)=>s+(r.people||0),0);
+        const percent = TABLE_CAP['Jedilnica'] ? (jedilnica / TABLE_CAP['Jedilnica']) * 100 : 0;
         let bg = '#e9f7ef'; // green-ish
         if (percent >= 80) bg = '#fdecea';
         else if (percent >= 50) bg = '#fff4d6';
@@ -2150,10 +2144,7 @@
 
         const info = document.createElement('div');
         info.style.cssText = 'font-size: 12px; color: #2d5229; display:grid; gap:2px;';
-        info.innerHTML = `
-          <span>Pri peči: ${pece}/${TABLE_CAP['Pri peči']}</span>
-          <span>Pri vrtu: ${vrtu}/${TABLE_CAP['Pri vrtu']}</span>
-        `;
+        info.innerHTML = `<span>Jedilnica: ${jedilnica}/${TABLE_CAP['Jedilnica']}</span>`;
         cell.appendChild(info);
         const pendingActions = reservations.filter(r => r.status === 'pending');
         if (pendingActions.length) {
@@ -2518,11 +2509,7 @@
       return '';
     }
     function normalizeTable(location) {
-      if (!location) return 'Pri peči';
-      const lower = String(location).toLowerCase();
-      if (lower.includes('peč')) return 'Pri peči';
-      if (lower.includes('vrt')) return 'Pri vrtu';
-      return 'Pri peči';
+      return 'Jedilnica';
     }
 
     qs('room-edit-form').addEventListener('submit', async (e) => {
