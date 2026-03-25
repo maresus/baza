@@ -304,10 +304,11 @@ class ReservationService:
             print(f"[DB] log_conversation error: {e}")
 
     def get_conversations(self, limit: int = 200, needs_followup_only: bool = False) -> list[dict]:
+        p = self._placeholder()
         conn = self._conn()
         cur = conn.cursor()
         cur.execute(
-            "SELECT * FROM conversations ORDER BY id DESC LIMIT ?",
+            f"SELECT * FROM conversations ORDER BY id DESC LIMIT {p}",
             (limit,),
         )
         rows = cur.fetchall()

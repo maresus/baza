@@ -323,7 +323,7 @@ def _detect_add_type(message: str, current_types: list[str]) -> str | None:
     Returns the new type to add, or None.
     """
     msg_l = message.lower()
-    add_phrases = ("tudi", "pa še", "in še", "ter še", "dodaj", "dodajte", "hkrati", "poleg tega", "bi rad še", "bi radi še", "še")
+    add_phrases = ("tudi", "pa še", "in še", "ter še", "dodaj", "dodajte", "hkrati", "poleg tega", "bi rad še", "bi radi še")
     if not any(p in msg_l for p in add_phrases):
         return None
     bike_words = ("kolo", "kolesa", "koleso", "kolesarj", "e-kolo", "gorsk")
@@ -452,8 +452,8 @@ def process_booking(state: BookingState, message: str) -> tuple[BookingState, st
                 state.step = "awaiting_nights"
                 return state, f"Datum prihoda: {date}\n\nKoliko nočitev? (npr. 2)"
             elif state.type == "table":
-                state.step = "awaiting_adults"
-                return state, f"Datum: {date}\n\nKoliko odraslih oseb?"
+                state.step = "awaiting_time"
+                return state, f"Datum: {date}\n\nOb kateri uri bo kosilo? (npr. 13:00)"
             elif state.type == "bike":
                 state.step = "awaiting_bike_type"
                 return state, f"Datum: {date}\n\nKakšna kolesa? **Gorska** (15 €/dan) ali **E-kolesa** (25 €/dan)?"

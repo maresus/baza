@@ -514,9 +514,14 @@ def calendar_tables(month: int, year: int):
         if status not in {"pending", "processing", "confirmed"}:
             continue
         date_str = r.get("date", "")
-        try:
-            day = datetime.strptime(date_str, "%Y-%m-%d")
-        except Exception:
+        day = None
+        for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d.%m.%y"):
+            try:
+                day = datetime.strptime(date_str.strip(), fmt)
+                break
+            except Exception:
+                continue
+        if not day:
             continue
         if day.month != month or day.year != year:
             continue
