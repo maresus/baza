@@ -28,18 +28,30 @@ class ReservationService:
     def __init__(self) -> None:
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         self.use_postgres = bool(DATABASE_URL)
-        if not self.use_postgres:
-            self.data_dir = os.path.join(project_root, "data")
-            os.makedirs(self.data_dir, exist_ok=True)
-            self.db_path = os.path.join(self.data_dir, "reservations.db")
+        self.data_dir = os.path.join(project_root, "data")
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.db_path = os.path.join(self.data_dir, "reservations.db")
 
-        self._ensure_db()
+        if self.use_postgres:
+            try:
+                self._ensure_db()
+            except Exception as e:
+                print(f"[DB] PostgreSQL connection failed: {e} — falling back to SQLite")
+                self.use_postgres = False
+                self._ensure_db()
+        else:
+            self._ensure_db()
 
     def _conn(self):
         if self.use_postgres:
             import psycopg2
             from psycopg2.extras import RealDictCursor
-            return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+            url = DATABASE_URL
+            # Railway PostgreSQL requires SSL
+            if "sslmode" not in (url or ""):
+                sep = "&" if "?" in url else "?"
+                url = url + sep + "sslmode=require"
+            return psycopg2.connect(url, cursor_factory=RealDictCursor)
         import sqlite3
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
