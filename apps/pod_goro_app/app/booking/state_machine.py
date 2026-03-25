@@ -71,6 +71,7 @@ def _save_reservation(state: BookingState) -> Optional[int]:
         from app.services.email_service import send_guest_confirmation, send_admin_notification
 
         service = ReservationService()
+        print(f"[BOOKING] Saving {state.type} reservation, DB mode: {'postgres' if service.use_postgres else 'sqlite'}")
         total_people = state.adults + state.children
 
         kids_str = ""
