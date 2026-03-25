@@ -183,10 +183,13 @@ def detect_booking_intent(message: str) -> str | None:
         "rad bi imel", "bi rad imel", "bi radi imeli", "rad bi imela",
         "hočem", "hočemo", "hocem", "hocemo",
         "bi hotel", "bi hotela", "bi hoteli",
-        "naroč", "naroc", "naroč",
+        "naroč", "naroc",
         "bi imel", "bi imeli",
+        "imel bi", "imela bi", "imeli bi",
         "rad bi prišel", "rad bi prišla", "rad bi obiskal",
         "bi rad prišel", "bi rad obiskal",
+        "želim", "zelim",
+        "zanima me rezerv", "kako rezerv",
     )
 
     has_booking = any(phrase in msg_l for phrase in booking_phrases)
