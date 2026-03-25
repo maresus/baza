@@ -200,18 +200,20 @@ class ReservationService:
         p = self._placeholder()
         conn = self._conn()
         cur = conn.cursor()
+        from datetime import datetime as _dt
+        now = _dt.now().isoformat()
         cur.execute(f"""
             INSERT INTO reservations
             (date, people, reservation_type, nights, time, location, name, phone, email,
-             note, kids, kids_small, rooms, status, source, admin_notes, event_type, special_needs)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+             note, kids, kids_small, rooms, status, source, admin_notes, event_type, special_needs, created_at)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
         """, (date, people, reservation_type, nights, time, location, name, phone, email,
-              note, kids, kids_small, rooms, status, source, admin_notes, event_type, special_needs))
+              note, kids, kids_small, rooms, status, source, admin_notes, event_type, special_needs, now))
         conn.commit()
         if self.use_postgres:
             cur.execute("SELECT lastval()")
             row = cur.fetchone()
-            new_id = row[0] if row else 0
+            new_id = row["lastval"] if isinstance(row, dict) else row[0]
         else:
             new_id = cur.lastrowid
         cur.close()
@@ -290,9 +292,10 @@ class ReservationService:
             p = self._placeholder()
             conn = self._conn()
             cur = conn.cursor()
+            from datetime import datetime as _dt
             cur.execute(
-                f"INSERT INTO conversations (session_id, user_message, bot_reply) VALUES ({p},{p},{p})",
-                (session_id, user_message, bot_reply),
+                f"INSERT INTO conversations (session_id, user_message, bot_reply, created_at) VALUES ({p},{p},{p},{p})",
+                (session_id, user_message, bot_reply, _dt.now().isoformat()),
             )
             conn.commit()
             cur.close()
