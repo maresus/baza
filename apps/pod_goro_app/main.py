@@ -52,56 +52,10 @@ def health():
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Kmetija Pod Goro V2 AI</title>
-        <meta charset="UTF-8">
-        <style>
-            body { font-family: system-ui; max-width: 600px; margin: 50px auto; padding: 20px; background: #f4f9f3; }
-            #chat { border: 1px solid #c8dfc5; height: 400px; overflow-y: auto; padding: 10px; margin-bottom: 10px; background: #fff; border-radius: 10px; }
-            .user { color: #2d5229; margin: 5px 0; }
-            .bot { color: #1a4d2e; margin: 5px 0; white-space: pre-wrap; }
-            #input { width: 80%; padding: 10px; border: 1px solid #c8dfc5; border-radius: 8px; }
-            button { padding: 10px 20px; background: #3a6b35; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
-            nav { margin-bottom: 20px; }
-            nav a { margin-right: 15px; color: #3a6b35; }
-            h1 { color: #3a6b35; }
-        </style>
-    </head>
-    <body>
-        <h1>Kmetija Pod Goro — AI asistent</h1>
-        <div id="chat"></div>
-        <input type="text" id="input" placeholder="Vprašajte..." onkeypress="if(event.key==='Enter')send()">
-        <button onclick="send()">Pošlji</button>
-
-        <script>
-            let sessionId = null;
-            const chat = document.getElementById('chat');
-            const input = document.getElementById('input');
-
-            async function send() {
-                const msg = input.value.trim();
-                if (!msg) return;
-
-                chat.innerHTML += `<div class="user"><b>Vi:</b> ${msg}</div>`;
-                input.value = '';
-
-                const res = await fetch('/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: msg, session_id: sessionId})
-                });
-                const data = await res.json();
-                sessionId = data.session_id;
-                chat.innerHTML += `<div class="bot"><b>Pod Goro AI:</b> ${data.reply}</div>`;
-                chat.scrollTop = chat.scrollHeight;
-            }
-        </script>
-    </body>
-    </html>
-    """
+    html_path = Path("static/widget.html")
+    if html_path.exists():
+        return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>Pod Goro AI</h1>", status_code=200)
 
 
 @app.get("/widget", response_class=HTMLResponse)
