@@ -46,11 +46,15 @@ class ReservationService:
         if self.use_postgres:
             import psycopg2
             from psycopg2.extras import RealDictCursor
-            url = DATABASE_URL
+            url = DATABASE_URL or ""
+            # Railway gives postgres:// but psycopg2 needs postgresql://
+            if url.startswith("postgres://"):
+                url = "postgresql://" + url[len("postgres://"):]
             # Railway PostgreSQL requires SSL
-            if "sslmode" not in (url or ""):
+            if "sslmode" not in url:
                 sep = "&" if "?" in url else "?"
                 url = url + sep + "sslmode=require"
+            print(f"[DB] Connecting to PostgreSQL...")
             return psycopg2.connect(url, cursor_factory=RealDictCursor)
         import sqlite3
         conn = sqlite3.connect(self.db_path)
