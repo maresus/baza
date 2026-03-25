@@ -184,7 +184,7 @@ def detect_booking_intent(message: str) -> str | None:
     has_booking = any(phrase in msg_l for phrase in booking_phrases)
 
     room_words = ("sobo", "soba", "sobi", "sobe", "nočitev", "nocitev", "prenočitev", "nastanitev")
-    table_words = ("mizo", "miza", "mizi", "mize", "miz", "kosilo", "kosilom", "jedilnic", "zajtrk", "večerjo", "vecerjo", "obrok", "zvečer", "zvecer")
+    table_words = ("mizo", "miza", "mizi", "mize", "miz", "kosilo", "kosila", "kosilu", "kosilom", "jedilnic", "zajtrk", "večerjo", "vecerjo", "obrok", "zvečer", "zvecer", "kosil")
     bike_words = ("kolo", "kolesa", "koleso", "kolesarj", "koles", "e-kolo", "gorsk", "kolom", "kolesih")
 
     has_room = any(w in msg_l for w in room_words)
