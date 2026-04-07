@@ -1799,29 +1799,37 @@
     function openConfirm(dataStr) {
       const r = JSON.parse(decodeURIComponent(dataStr));
       const isTable = isTableReservation(r);
+      const resType = (r.reservation_type || '').toLowerCase();
+      const isOther = !isTable && resType !== 'room' && resType !== 'soba'; // bike, animals, etc.
       qs('confirm-id').value = r.id;
-      qs('confirm-type').value = isTable ? 'table' : 'room';
+      qs('confirm-type').value = isTable ? 'table' : isOther ? 'other' : 'room';
       qs('confirm-title').textContent = `Potrdi rezervacijo #${r.id} (${r.name || 'gost'})`;
       const select = qs('confirm-choice');
       const hint = qs('confirm-hint');
+      const formGroup = select.closest('.form-group');
       select.innerHTML = '';
-      if (isTable) {
+      if (isOther) {
+        // Bike / animals — no location needed, just confirm
+        qs('confirm-label').textContent = 'Potrditev';
+        hint.textContent = `Tip: ${resType} · ${r.people || '-'} oseb · ${r.date || ''}`;
+        formGroup.style.display = 'none';
+      } else if (isTable) {
+        formGroup.style.display = '';
         qs('confirm-label').textContent = 'Izberi jedilnico';
         hint.textContent = r.location ? `Gost je izbral: ${r.location}` : 'Gost ni izbral jedilnice.';
         ['Jedilnica'].forEach(opt => {
           const o = document.createElement('option');
-          o.value = opt;
-          o.textContent = opt;
+          o.value = opt; o.textContent = opt;
           select.appendChild(o);
         });
         if (r.location) select.value = r.location;
       } else {
+        formGroup.style.display = '';
         qs('confirm-label').textContent = 'Izberi sobo';
         hint.textContent = r.location ? `Gost je izbral: ${(r.location || '').toUpperCase()}` : 'Gost ni izbral sobe.';
         ['', 'GOZD', 'RAZGLED', 'SONCE'].forEach(opt => {
           const o = document.createElement('option');
-          o.value = opt;
-          o.textContent = opt ? opt : '-- izberi --';
+          o.value = opt; o.textContent = opt ? opt : '-- izberi --';
           select.appendChild(o);
         });
         const currentRoom = (r.location || '').toUpperCase();
@@ -1978,11 +1986,11 @@
       const id = qs('confirm-id').value;
       const type = qs('confirm-type').value;
       const choice = qs('confirm-choice').value;
-      if (!choice) {
+      if (type === 'other') {
+        confirmReservation(id, {});
+      } else if (!choice) {
         toast('Izberi možnost pred potrditvijo.', 'warning');
-        return;
-      }
-      if (type === 'table') {
+      } else if (type === 'table') {
         confirmReservation(id, { location: choice });
       } else {
         confirmReservation(id, { room: choice });
