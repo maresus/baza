@@ -144,6 +144,101 @@
     .welcome ul { list-style: none; }
     .welcome li { padding: 4px 0; font-size: 0.88rem; color: rgba(255,255,255,0.85); }
     .welcome li::before { content: "— "; color: var(--accent); font-weight: 700; }
+    /* REZERVACIJSKI GUMB */
+    .rezerv-bar {
+      padding: 0 16px 10px; background: var(--green-dark); flex-shrink: 0;
+    }
+    .rezerv-btn {
+      width: 100%; padding: 9px;
+      background: transparent;
+      border: 2px solid var(--accent);
+      border-radius: 10px; color: var(--accent);
+      font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; transition: all 0.18s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .rezerv-btn:hover { background: rgba(109,191,103,0.12); }
+
+    /* BOOKING FORM OVERLAY */
+    #bf-overlay {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 100; display: none;
+      flex-direction: column; overflow: hidden;
+    }
+    #bf-overlay.open { display: flex; }
+    #bf-header {
+      background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+      padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; border-bottom: 1px solid var(--border);
+    }
+    #bf-header h2 { margin: 0; font-size: 1rem; color: var(--text); flex: 1; }
+    #bf-back {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      color: var(--text); padding: 5px 12px; border-radius: 8px;
+      font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: background 0.15s;
+      white-space: nowrap;
+    }
+    #bf-back:hover { background: rgba(255,255,255,0.25); }
+    #bf-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .bf-tabs { display: flex; gap: 8px; }
+    .bf-tab {
+      flex: 1; padding: 9px; border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 8px; background: transparent;
+      color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+    }
+    .bf-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(109,191,103,0.1); }
+    .bf-prices {
+      font-size: 0.75rem; color: var(--text-muted); line-height: 1.6;
+      background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px;
+      border: 1px solid var(--border);
+    }
+    .bf-prices a { color: var(--accent); }
+    .bf-row { display: flex; gap: 10px; }
+    .bf-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .bf-field label { font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 600; }
+    .bf-field input, .bf-field textarea {
+      background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 9px 12px; color: var(--text);
+      font-size: 0.9rem; outline: none; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .bf-field input:focus, .bf-field textarea:focus { border-color: var(--accent); }
+    .bf-field input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+    .bf-field textarea { resize: none; height: 58px; }
+    .bf-stepper {
+      display: flex; align-items: center; height: 38px;
+      border: 1.5px solid rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden;
+    }
+    .bf-stepper button {
+      width: 36px; background: rgba(255,255,255,0.08); border: none;
+      color: var(--accent); font-size: 1.1rem; font-weight: 700;
+      cursor: pointer; height: 100%; transition: background 0.15s;
+    }
+    .bf-stepper button:hover { background: rgba(109,191,103,0.2); }
+    .bf-stepper span { flex: 1; text-align: center; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .bf-section { font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px; }
+    .bf-gdpr { display: flex; gap: 8px; align-items: flex-start; font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
+    .bf-gdpr input { margin-top: 2px; flex-shrink: 0; }
+    #bf-footer {
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      background: var(--green-dark); flex-shrink: 0;
+    }
+    #bf-submit {
+      width: 100%; padding: 13px;
+      background: var(--accent); color: var(--green-dark);
+      border: none; border-radius: 10px; font-size: 0.95rem;
+      font-weight: 800; cursor: pointer; transition: opacity 0.15s;
+    }
+    #bf-submit:hover { opacity: 0.9; }
+    #bf-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
     /* MOBILE */
     @media (max-width: 600px) {
       .header { padding: calc(8px + env(safe-area-inset-top)) 14px 10px; }
@@ -151,6 +246,7 @@
       .input-area { padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
       .chips { display: none !important; }
       .input-hint { display: none; }
+      .rezerv-bar { padding: 0 12px 10px; }
     }
   </style>
 </head>
@@ -189,6 +285,105 @@
     </div>
     <div class="input-hint">Enter = pošlji &nbsp;•&nbsp; Shift+Enter = nova vrstica</div>
   </div>
+
+  <div class="rezerv-bar">
+    <button class="rezerv-btn" id="rezervBtn">📅 Rezerviraj sobo ali mizo</button>
+  </div>
+
+  <!-- BOOKING FORM OVERLAY -->
+  <div id="bf-overlay">
+    <div id="bf-header">
+      <button id="bf-back">← Nazaj</button>
+      <h2>📅 Nova rezervacija</h2>
+    </div>
+    <div id="bf-body">
+      <div class="bf-tabs">
+        <button class="bf-tab active" data-type="room" id="tabRoom">🛏️ Soba</button>
+        <button class="bf-tab" data-type="table" id="tabTable">🍽️ Miza</button>
+      </div>
+
+      <div class="bf-prices" id="bfPrices"></div>
+
+      <div class="bf-field">
+        <label>Datum</label>
+        <input type="date" id="bfDate" />
+      </div>
+
+      <!-- Room only -->
+      <div id="bfNightsRow" class="bf-field">
+        <label>Število nočitev</label>
+        <div class="bf-stepper">
+          <button onclick="step('bfNights',-1,1,14)">−</button>
+          <span id="bfNights">2</span>
+          <button onclick="step('bfNights',1,1,14)">+</button>
+        </div>
+      </div>
+
+      <!-- Table only -->
+      <div id="bfTimeRow" class="bf-field" style="display:none">
+        <label>Ura</label>
+        <input type="time" id="bfTime" value="12:00" />
+      </div>
+
+      <div class="bf-row">
+        <div class="bf-field">
+          <label>Odrasli</label>
+          <div class="bf-stepper">
+            <button onclick="step('bfAdults',-1,1,10)">−</button>
+            <span id="bfAdults">2</span>
+            <button onclick="step('bfAdults',1,1,10)">+</button>
+          </div>
+        </div>
+        <div class="bf-field">
+          <label>Otroci</label>
+          <div class="bf-stepper">
+            <button onclick="step('bfChildren',-1,0,8)">−</button>
+            <span id="bfChildren">0</span>
+            <button onclick="step('bfChildren',1,0,8)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="bfChildAgesRow" style="display:none" class="bf-field">
+        <label>Starosti otrok (let, z vejico)</label>
+        <input type="text" id="bfChildAges" placeholder="npr. 5, 8" />
+      </div>
+
+      <!-- Room only: dinner -->
+      <div id="bfDinnerRow" style="display:none;align-items:center;gap:8px;flex-direction:row" class="bf-field">
+        <input type="checkbox" id="bfDinner" style="width:18px;height:18px;flex-shrink:0" />
+        <label for="bfDinner" style="font-size:0.85rem;color:rgba(255,255,255,0.8)">Dodaj penzionsko večerjo (+30€/os)</label>
+      </div>
+
+      <div class="bf-section">Kontakt</div>
+
+      <div class="bf-field">
+        <label>Ime in priimek *</label>
+        <input type="text" id="bfName" placeholder="npr. Janez Novak" />
+      </div>
+      <div class="bf-field">
+        <label>Telefon *</label>
+        <input type="tel" id="bfPhone" placeholder="041 123 456" />
+      </div>
+      <div class="bf-field">
+        <label>E-pošta</label>
+        <input type="email" id="bfEmail" placeholder="janez@email.com (neobvezno)" />
+      </div>
+      <div class="bf-field">
+        <label>Opomba</label>
+        <textarea id="bfNote" placeholder="Posebne želje..."></textarea>
+      </div>
+
+      <div class="bf-gdpr">
+        <input type="checkbox" id="bfGdpr" />
+        <label for="bfGdpr">Strinjam se z obdelavo osebnih podatkov za namen rezervacije.</label>
+      </div>
+    </div>
+    <div id="bf-footer">
+      <button id="bf-submit">Pošlji rezervacijo</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -275,6 +470,115 @@
     chipsEl.style.display = 'flex';
   }
 
+  // ── BOOKING FORM ──────────────────────────────────────────────
+  const bfOverlay = document.getElementById('bf-overlay');
+  const bfPrices  = document.getElementById('bfPrices');
+  let bfType = 'room';
+
+  function openBookingForm(hint) {
+    bfType = (hint === 'table') ? 'table' : 'room';
+    setTab(bfType);
+    // Set min date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('bfDate').min = today;
+    if (!document.getElementById('bfDate').value) document.getElementById('bfDate').value = today;
+    bfOverlay.classList.add('open');
+  }
+
+  function closeBookingForm() {
+    bfOverlay.classList.remove('open');
+  }
+
+  function setTab(type) {
+    bfType = type;
+    document.getElementById('tabRoom').classList.toggle('active', type === 'room');
+    document.getElementById('tabTable').classList.toggle('active', type === 'table');
+    document.getElementById('bfNightsRow').style.display = type === 'room' ? '' : 'none';
+    document.getElementById('bfTimeRow').style.display   = type === 'table' ? '' : 'none';
+    document.getElementById('bfDinnerRow').style.display = type === 'room' ? 'flex' : 'none';
+    updatePrices();
+  }
+
+  function updatePrices() {
+    if (bfType === 'room') {
+      bfPrices.innerHTML = '🛏️ <strong>50 €/os/noč</strong> · min. 2 odrasli · min. 2 noči<br>🍽️ Penzionska večerja: 30 €/odrasla os., 15 €/otrok do 12 let<br>👶 Otroci do 3 let brezplačno';
+    } else {
+      bfPrices.innerHTML = '🍽️ Rezervacija mize za kosilo ali večerjo<br>Za informacije o menijih nas pokličite: <strong>02 601 54 00</strong>';
+    }
+  }
+
+  function step(id, delta, min, max) {
+    const el = document.getElementById(id);
+    let v = parseInt(el.textContent) + delta;
+    v = Math.max(min, Math.min(max, v));
+    el.textContent = v;
+    if (id === 'bfChildren') {
+      document.getElementById('bfChildAgesRow').style.display = v > 0 ? '' : 'none';
+    }
+  }
+
+  document.getElementById('tabRoom').addEventListener('click', () => setTab('room'));
+  document.getElementById('tabTable').addEventListener('click', () => setTab('table'));
+  document.getElementById('rezervBtn').addEventListener('click', () => openBookingForm('room'));
+  document.getElementById('bf-back').addEventListener('click', closeBookingForm);
+
+  document.getElementById('bf-submit').addEventListener('click', async function() {
+    const name  = document.getElementById('bfName').value.trim();
+    const phone = document.getElementById('bfPhone').value.trim();
+    const date  = document.getElementById('bfDate').value;
+    const gdpr  = document.getElementById('bfGdpr').checked;
+
+    if (!name)  { alert('Vnesite ime in priimek.'); return; }
+    if (!phone) { alert('Vnesite telefonsko številko.'); return; }
+    if (!date)  { alert('Izberite datum.'); return; }
+    if (!gdpr)  { alert('Strinjati se morate z GDPR.'); return; }
+
+    const adults   = parseInt(document.getElementById('bfAdults').textContent);
+    const children = parseInt(document.getElementById('bfChildren').textContent);
+    const agesRaw  = document.getElementById('bfChildAges').value;
+    const ages     = agesRaw ? agesRaw.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n)) : [];
+
+    const payload = {
+      session_id: sessionId,
+      booking_type: bfType,
+      date, adults, children,
+      children_ages: ages,
+      name, phone,
+      email: document.getElementById('bfEmail').value.trim(),
+      note: document.getElementById('bfNote').value.trim(),
+      gdpr: true,
+    };
+    if (bfType === 'room') {
+      payload.nights = parseInt(document.getElementById('bfNights').textContent);
+      payload.dinner = document.getElementById('bfDinner').checked;
+    } else {
+      payload.time = document.getElementById('bfTime').value;
+    }
+
+    const btn = document.getElementById('bf-submit');
+    btn.disabled = true; btn.textContent = 'Pošiljam...';
+
+    try {
+      const res = await fetch('/chat/quick-booking', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      closeBookingForm();
+      if (data.ok) {
+        addMsg('✅ Rezervacija sprejeta! Kmalu vas pokličemo za potrditev. Se vidimo na Kmetiji Pod Goro! 🏡', 'bot');
+      } else {
+        addMsg('❌ Napaka: ' + (data.error || 'Rezervacija ni uspela.'), 'bot');
+      }
+    } catch(e) {
+      closeBookingForm();
+      addMsg('❌ Napaka pri pošiljanju rezervacije.', 'bot');
+    }
+    btn.disabled = false; btn.textContent = 'Pošlji rezervacijo';
+  });
+
+  // ── CHAT ──────────────────────────────────────────────────────
   async function send(text) {
     text = text.trim();
     if (!text || sendBtn.disabled) return;
@@ -293,6 +597,9 @@
       if (res.ok) {
         const data = await res.json();
         addMsg(data.reply || 'Oprostite, brez odgovora.', 'bot');
+        if (data.action === 'open_booking_form') {
+          setTimeout(() => openBookingForm(data.booking_type_hint), 600);
+        }
       } else {
         addMsg('Strežnik ni dosegljiv. Poskusite znova.', 'bot');
       }
@@ -323,6 +630,7 @@
   });
 
   showWelcome();
+  updatePrices();
 </script>
 </body>
 </html>
