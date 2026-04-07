@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 
 from app.core.config import Settings
 from app.services.chat_router import router as chat_router
@@ -40,6 +40,15 @@ def chat_ui() -> HTMLResponse:
         )
     html = html_path.read_text(encoding="utf-8")
     return HTMLResponse(content=html)
+
+@app.get("/static/widget.js")
+def widget_js() -> PlainTextResponse:
+    """Postreže widget.js za embed v WordPress."""
+    js_path = Path("static/widget.js")
+    if not js_path.exists():
+        return PlainTextResponse("// widget.js not found", status_code=404)
+    return PlainTextResponse(content=js_path.read_text(encoding="utf-8"), media_type="application/javascript")
+
 
 @app.get("/widget", response_class=HTMLResponse)
 def widget_ui() -> HTMLResponse:

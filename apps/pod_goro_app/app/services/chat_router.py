@@ -2934,3 +2934,109 @@ def chat_stream(payload: ChatRequestWithSession):
         _stream_text_chunks(response.reply),
         media_type="text/plain",
     )
+
+
+# ============================================================
+# QUICK BOOKING — vizualna forma iz widgeta
+# ============================================================
+
+from pydantic import BaseModel as _BaseModel
+
+class QuickBookingRequest(_BaseModel):
+    session_id: Optional[str] = None
+    booking_type: str = "room"
+    date: str
+    nights: Optional[int] = None
+    time: Optional[str] = None
+    adults: int = 2
+    children: int = 0
+    children_ages: list[int] = []
+    name: str
+    phone: str
+    email: str = ""
+    dinner: bool = False
+    note: str = ""
+    gdpr: bool = False
+
+
+@router.post("/quick-booking")
+async def quick_booking(payload: QuickBookingRequest):
+    """Sprejme celo rezervacijo naenkrat iz forme v widgetu."""
+    if not payload.gdpr:
+        return {"ok": False, "error": "GDPR soglasje je obvezno."}
+
+    service = ReservationService()
+
+    total_people = payload.adults + payload.children
+    kids_str = ""
+    if payload.children > 0:
+        ages_str = ", ".join(str(a) for a in payload.children_ages) if payload.children_ages else ""
+        kids_str = f"{payload.children} ({ages_str} let)" if ages_str else str(payload.children)
+
+    note_parts = []
+    if payload.booking_type == "room" and payload.dinner:
+        note_parts.append("Večerja: Da")
+    if payload.note:
+        note_parts.append(payload.note)
+    note = "; ".join(note_parts) if note_parts else None
+
+    try:
+        reservation_id = service.create_reservation(
+            date=payload.date,
+            people=total_people,
+            reservation_type=payload.booking_type,
+            nights=payload.nights if payload.booking_type == "room" else None,
+            time=payload.time if payload.booking_type == "table" else None,
+            name=payload.name,
+            phone=payload.phone,
+            email=payload.email if payload.email else None,
+            note=note,
+            kids=kids_str if kids_str else None,
+            source="widget_form",
+            status="pending",
+            gdpr_consent="da" if payload.gdpr else None,
+        )
+
+        # Pošlji emaile
+        email_data = {
+            "id": reservation_id,
+            "date": payload.date,
+            "people": total_people,
+            "reservation_type": payload.booking_type,
+            "name": payload.name,
+            "phone": payload.phone,
+            "email": payload.email if payload.email else None,
+            "nights": payload.nights if payload.booking_type == "room" else None,
+            "time": payload.time if payload.booking_type == "table" else None,
+            "kids": kids_str if kids_str else None,
+            "note": note,
+            "source": "widget_form",
+        }
+        if payload.email:
+            try:
+                send_guest_confirmation(email_data)
+            except Exception:
+                pass
+        try:
+            send_admin_notification(email_data)
+        except Exception:
+            pass
+
+        sid = payload.session_id or str(uuid.uuid4())
+        type_label = payload.booking_type
+        time_info = f" ob {payload.time}" if payload.time else ""
+        nights_info = f", {payload.nights} noči" if payload.booking_type == "room" else ""
+        summary = f"[Widget forma] {type_label}: {payload.date}{time_info}{nights_info}, {payload.adults}+{payload.children} oseb, {payload.name}"
+        try:
+            reservation_service.log_conversation(
+                session_id=sid,
+                user_message=summary,
+                bot_response=f"Rezervacija #{reservation_id} shranjena.",
+                intent="quick_booking_form",
+            )
+        except Exception:
+            pass
+
+        return {"ok": True, "reservation_id": reservation_id}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
