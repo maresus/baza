@@ -9,11 +9,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --brand: #7b5e3b;
-      --bg: #f5f4f1;
+      --brand: #3a6b35;
+      --bg: #f4f9f3;
       --card: #fff;
       --muted: #7a7a7a;
-      --border: #e6e2da;
+      --border: #c8dfc5;
       --shadow: 0 10px 30px rgba(0,0,0,0.06);
       --radius: 14px;
     }
@@ -118,6 +118,7 @@
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a class="btn secondary" href="/admin">⬅ Nazaj na admin</a>
         <button class="btn" id="refreshBtn">Osveži</button>
+        <button class="btn" id="deleteAllBtn" style="background:#dc2626;">🗑 Zbriši vse</button>
       </div>
     </header>
 
@@ -283,6 +284,29 @@
 
     loadBtn.addEventListener('click', loadConversations);
     refreshBtn.addEventListener('click', loadConversations);
+
+    // Delete all conversations
+    document.getElementById('deleteAllBtn').addEventListener('click', async () => {
+      const confirmed = confirm('Ali ste prepričani, da želite ZBRISATI VSE pogovore?\n\nTo dejanje je NEPOPRAVLJIVO!');
+      if (!confirmed) return;
+
+      const doubleConfirm = confirm('ZADNJE OPOZORILO: Vsi pogovori bodo trajno izbrisani.\n\nNadaljujem?');
+      if (!doubleConfirm) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/conversations/all`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Uspešno zbrisanih ${data.deleted} pogovorov.`);
+          loadConversations();
+        } else {
+          alert('Napaka: ' + (data.error || 'Neznana napaka'));
+        }
+      } catch (e) {
+        alert('Napaka pri brisanju: ' + e.message);
+      }
+    });
+
     loadConversations();
   </script>
 </body>

@@ -2,329 +2,327 @@
 <html lang="sl">
 <head>
   <meta charset="UTF-8" />
-  <title>Kmetija Pod Goro AI</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pod Goro AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap');
     :root {
-      --bg: #faf8f5;
-      --card: #fffaf3;
-      --text: #2f302b;
-      --muted: #6b5f4e;
-      --border: #e4dfd7;
-      --green: #2d3e2f;
-      --accent: #c19a6b;
-      --bot-bg: #f1ece4;
-      --user-bg: #ffffff;
-      --bot-text: #2f302b;
+      --green-dark:  #1a3a26;
+      --green-mid:   #2d5c3f;
+      --green-light: #3a7a52;
+      --accent:      #6dbf67;
+      --accent-glow: rgba(109,191,103,0.25);
+      --bg:          #0f2218;
+      --border:      rgba(255,255,255,0.1);
+      --bot-msg:     rgba(255,255,255,0.06);
+      --text:        #ffffff;
+      --text-muted:  rgba(255,255,255,0.55);
+      --app-vh: 100vh;
+      font-family: 'Inter', system-ui, sans-serif;
     }
-    html, body {
-      height: 100%;
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+    html, body { height: 100%; overflow: hidden; background: var(--bg); }
+    .chat-wrap {
+      display: flex; flex-direction: column;
+      height: 100vh; height: var(--app-vh);
       overflow: hidden;
     }
-    .container { display: flex; flex-direction: column; height: 100%; }
+    /* HEADER */
     .header {
-      padding: 14px 16px;
-      background: var(--card);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+      padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px;
       flex-shrink: 0;
       border-bottom: 1px solid var(--border);
     }
     .header-icon {
-      width: 36px; height: 36px;
-      background: #e5f3ea;
-      border-radius: 50%;
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
+      font-size: 20px; flex-shrink: 0;
     }
-    .header-text h1 { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
-    .header-text p { font-size: 0.75rem; color: var(--muted); }
-    .header-actions { margin-left: auto; display: flex; gap: 8px; }
-    .clear-btn {
-      background: var(--green);
-      border: none;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      cursor: pointer;
+    .header-info h1 { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .header-info p  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .status-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 5px 12px; border-radius: 999px;
+      font-size: 0.75rem; color: var(--text);
     }
-    .clear-btn.secondary {
-      background: #f1ede5;
-      color: #4b3a28;
+    .status-dot {
+      width: 7px; height: 7px;
+      background: #4ade80; border-radius: 50%;
+      animation: pulse 2s infinite;
     }
-    .clear-btn:hover { filter: brightness(0.95); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .new-btn {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: var(--text); padding: 5px 12px;
+      border-radius: 10px; font-size: 0.75rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .new-btn:hover { background: rgba(255,255,255,0.22); }
+    /* MESSAGES */
     .messages {
-      flex: 1; overflow-y: auto; padding: 16px;
-      background: #fff;
-      display: flex; flex-direction: column; gap: 12px;
+      flex: 1; overflow-y: auto; min-height: 0;
+      padding: 16px; display: flex; flex-direction: column; gap: 12px;
+      background: var(--bg);
     }
-    .msg {
-      max-width: 85%; padding: 10px 14px; border-radius: 16px;
-      font-size: 0.9rem; line-height: 1.45;
-      white-space: pre-wrap; word-wrap: break-word;
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+    .msg { display: flex; align-items: flex-start; gap: 10px; animation: slide 0.25s ease; }
+    @keyframes slide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .msg.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
     }
-    .msg.user {
-      margin-left: auto; background: var(--user-bg);
-      color: var(--text); border: 1px solid var(--border);
-      border-bottom-right-radius: 4px;
+    .msg.bot  .avatar { background: var(--accent); color: var(--green-dark); }
+    .msg.user .avatar { background: rgba(255,255,255,0.15); color: var(--text); border: 1px solid var(--border); }
+    .bubble {
+      max-width: 78%; padding: 10px 14px; border-radius: 14px;
+      font-size: 0.88rem; line-height: 1.55; word-wrap: break-word;
     }
-    .msg.bot {
-      margin-right: auto; background: var(--bot-bg);
-      color: var(--text); border-bottom-left-radius: 4px;
+    .msg.bot  .bubble { background: var(--bot-msg); border: 1px solid var(--border); border-bottom-left-radius: 3px; color: rgba(255,255,255,0.9); }
+    .msg.user .bubble { background: var(--accent); color: var(--green-dark); font-weight: 500; border-bottom-right-radius: 3px; }
+    /* TYPING */
+    .typing-wrap { display: flex; align-items: flex-start; gap: 10px; }
+    .typing-bubble {
+      background: var(--bot-msg); border: 1px solid var(--border);
+      border-radius: 14px; border-bottom-left-radius: 3px;
+      padding: 12px 16px; display: flex; gap: 4px;
     }
-    .msg.typing { background: var(--bot-bg); color: var(--bot-text); padding: 12px 18px; }
-    .typing-dots { display: flex; gap: 4px; }
-    .typing-dots span {
-      width: 8px; height: 8px; background: var(--bot-text);
-      border-radius: 50%; animation: bounce 1.4s infinite ease-in-out;
+    .dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; animation: bounce 1.4s infinite; }
+    .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-7px);opacity:1} }
+    /* QUICK CHIPS */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; background: var(--bg); }
+    .chip {
+      padding: 5px 13px; border-radius: 999px;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.8); font-size: 0.8rem; cursor: pointer; transition: all 0.18s;
     }
-    .typing-dots span:nth-child(1) { animation-delay: 0s; }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-6px); }
-    }
-    .quick-btns {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      padding: 0 16px 12px; background: #fff;
-    }
-    .quick-btn {
-      padding: 6px 12px; border-radius: 20px;
-      background: #fff; border: 1px solid var(--border);
-      font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
-    }
-    .quick-btn:hover {
-      background: #fff5e6; color: var(--text); border-color: var(--accent);
-    }
+    .chip:hover { background: var(--accent); color: var(--green-dark); border-color: var(--accent); }
+    /* INPUT */
     .input-area {
-      padding: 12px 16px; background: var(--card);
-      border-top: 1px solid var(--border);
-      display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0;
+      padding: 12px 16px; background: var(--green-dark);
+      border-top: 1px solid var(--border); flex-shrink: 0;
     }
-    .input-area textarea {
-      flex: 1; min-height: 42px; max-height: 100px;
-      padding: 10px 14px; border: 1px solid var(--border);
-      border-radius: 16px; font-family: inherit; font-size: 0.9rem;
-      resize: none; outline: none; line-height: 1.4;
+    .input-row { display: flex; gap: 10px; align-items: flex-end; }
+    textarea {
+      flex: 1; background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.15); border-radius: 12px;
+      padding: 10px 14px; color: var(--text); font-family: inherit;
+      font-size: 0.9rem; resize: none; outline: none;
+      min-height: 44px; max-height: 120px; line-height: 1.4;
     }
-    .input-area textarea:focus { border-color: var(--accent); }
-    .input-area button {
-      width: 42px; height: 42px; border-radius: 50%;
-      border: none; background: var(--green); color: white;
-      cursor: pointer; display: flex; align-items: center;
-      justify-content: center; transition: background 0.15s; flex-shrink: 0;
+    textarea::placeholder { color: var(--text-muted); }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .send-btn {
+      background: var(--accent); color: var(--green-dark);
+      border: none; border-radius: 12px; padding: 10px 18px;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 12px var(--accent-glow); transition: all 0.2s;
+      height: 44px; flex-shrink: 0;
     }
-    .input-area button:hover { filter: brightness(0.95); }
-    .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .input-area button svg { width: 20px; height: 20px; fill: currentColor; }
-    .powered {
-      padding: 8px; text-align: center; font-size: 0.7rem;
-      color: var(--muted); background: var(--bg);
+    .send-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px var(--accent-glow); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .input-hint { font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-top: 7px; }
+    /* WELCOME */
+    .welcome {
+      background: rgba(109,191,103,0.07);
+      border: 1px solid rgba(109,191,103,0.25);
+      border-radius: 14px; padding: 18px;
     }
-    .powered a { color: var(--accent); text-decoration: none; }
+    .welcome h3 { color: var(--accent); margin-bottom: 8px; font-size: 1rem; }
+    .welcome ul { list-style: none; }
+    .welcome li { padding: 4px 0; font-size: 0.88rem; color: rgba(255,255,255,0.85); }
+    .welcome li::before { content: "— "; color: var(--accent); font-weight: 700; }
+    /* MOBILE */
+    @media (max-width: 600px) {
+      .header { padding: calc(8px + env(safe-area-inset-top)) 14px 10px; }
+      .messages { padding: 12px; padding-bottom: 10px; }
+      .input-area { padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+      .chips { display: none !important; }
+      .input-hint { display: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="header-icon">🏡</div>
-      <div class="header-text">
-        <h1>Kmetija Pod Goro</h1>
-        <p>Vprašajte me karkoli o kmetiji</p>
+<div class="chat-wrap">
+  <div class="header">
+    <div class="header-icon">🏡</div>
+    <div class="header-info">
+      <h1>Kmetija Pod Goro</h1>
+      <p>AI asistent za rezervacije in info</p>
+    </div>
+    <div class="header-right">
+      <button class="new-btn" id="newBtn">Nova seja</button>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>Na voljo</span>
       </div>
-      <div class="header-actions">
-        <button class="clear-btn" id="clearBtn" title="Počisti zgodovino">Gostiteljica – pomoč</button>
-        <button class="clear-btn secondary" id="newSessionBtn" title="Nova seja">Nova seja</button>
-      </div>
     </div>
-    <div class="messages" id="messages"></div>
-    <div class="quick-btns" id="quickBtns">
-      <button class="quick-btn" data-msg="Kaj ponujate na kmetiji?">Naša ponudba</button>
-      <button class="quick-btn" data-msg="Kaj prodajate v spletni trgovini?">Trgovina</button>
-      <button class="quick-btn" data-msg="Rad bi rezerviral sobo.">Rezervacija sobe</button>
-      <button class="quick-btn" data-msg="Rad bi rezerviral mizo.">Rezervacija mize</button>
-    </div>
-    <div class="input-area">
-      <textarea id="input" placeholder="Napišite sporočilo..." rows="1"></textarea>
-      <button id="sendBtn" aria-label="Pošlji">
-        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
-    </div>
-    <div class="powered">Ustvaril <a href="https://kmetijapodgoro.si" target="_blank">Kmetija Pod Goro</a></div>
   </div>
 
-  <script>
-    const STORAGE_KEY = 'podgoro_chat_history';
-    const MAX_MESSAGES = 50;
-    
-    const messagesEl = document.getElementById('messages');
-    const inputEl = document.getElementById('input');
-    const sendBtn = document.getElementById('sendBtn');
-    const quickBtns = document.getElementById('quickBtns');
-    const clearBtn = document.getElementById('clearBtn');
-    const newSessionBtn = document.getElementById('newSessionBtn');
-    
-    // Load history from localStorage
-    function loadHistory() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const messages = JSON.parse(saved);
-          if (messages.length > 0) {
-            messages.forEach(m => addMessageToDOM(m.text, m.who, false));
-            quickBtns.style.display = 'none';
-            return true;
-          }
-        }
-      } catch (e) { console.error('Error loading history:', e); }
-      return false;
-    }
-    
-    // Save history to localStorage
-    function saveHistory() {
-      try {
-        const messages = [];
-        document.querySelectorAll('.msg:not(.typing)').forEach(el => {
-          messages.push({
-            text: el.textContent,
-            who: el.classList.contains('user') ? 'user' : 'bot'
-          });
-        });
-        // Keep only last MAX_MESSAGES
-        const toSave = messages.slice(-MAX_MESSAGES);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-      } catch (e) { console.error('Error saving history:', e); }
-    }
-    
-    // Clear history
-    function clearHistory() {
-      localStorage.removeItem(STORAGE_KEY);
-      messagesEl.innerHTML = '';
-      addMessageToDOM('Pozdravljeni! Kako vam lahko pomagam?', 'bot', false);
-      quickBtns.style.display = 'flex';
-    }
+  <div class="messages" id="messages"></div>
 
-    function addMessageToDOM(text, who, save = true, scrollToThis = false) {
-      const div = document.createElement('div');
-      div.className = 'msg ' + who;
-      div.textContent = text;
-      messagesEl.appendChild(div);
-      // Scroll to user message (not to bottom) so user can read response top-down
-      if (scrollToThis || who === 'user') {
-        div.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      if (save) saveHistory();
-      return div;
-    }
-    
-    function showTyping() {
-      const div = document.createElement('div');
-      div.className = 'msg bot typing';
-      div.id = 'typing';
-      div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-      messagesEl.appendChild(div);
-      // Don't scroll - user message stays visible at top
-    }
-    
-    function hideTyping() {
-      const el = document.getElementById('typing');
-      if (el) el.remove();
-    }
-    
-    const sessionKey = 'chat_session_id';
-    let sessionId = localStorage.getItem(sessionKey);
-    if (!sessionId) {
-      sessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
-      localStorage.setItem(sessionKey, sessionId);
-    }
+  <div class="chips" id="chips">
+    <div class="chip" data-msg="Kaj ponujate?">Ponudba</div>
+    <div class="chip" data-msg="Koliko stane nastanitev?">Cene sob</div>
+    <div class="chip" data-msg="Rad bi rezerviral sobo.">Rezervacija sobe</div>
+    <div class="chip" data-msg="Rad bi rezerviral mizo za kosilo.">Kosilo</div>
+    <div class="chip" data-msg="Rad bi izposodil kolesa.">Kolesa</div>
+    <div class="chip" data-msg="Kje se nahajate?">Lokacija</div>
+  </div>
 
-    function resetSession() {
-      localStorage.removeItem(sessionKey);
-      sessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
-      localStorage.setItem(sessionKey, sessionId);
-    }
+  <div class="input-area">
+    <div class="input-row">
+      <textarea id="input" rows="1" placeholder="Napišite sporočilo..."></textarea>
+      <button class="send-btn" id="sendBtn">Pošlji →</button>
+    </div>
+    <div class="input-hint">Enter = pošlji &nbsp;•&nbsp; Shift+Enter = nova vrstica</div>
+  </div>
+</div>
 
-    async function sendMessage(text) {
-      if (!text.trim()) return;
-      addMessageToDOM(text, 'user');
-      inputEl.value = '';
-      inputEl.style.height = 'auto';
-      sendBtn.disabled = true;
-      quickBtns.style.display = 'none';
-      showTyping();
-      try {
-        const res = await fetch('/chat/stream', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, session_id: sessionId })
+<script>
+  // Viewport height fix
+  function setVh() {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-vh', h + 'px');
+  }
+  setVh();
+  window.addEventListener('resize', setVh);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', setVh);
+
+  const SESSION_KEY = 'podgoro_session_id';
+  let sessionId = localStorage.getItem(SESSION_KEY);
+  if (!sessionId) {
+    sessionId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    localStorage.setItem(SESSION_KEY, sessionId);
+  }
+
+  const messagesEl = document.getElementById('messages');
+  const chipsEl    = document.getElementById('chips');
+  const inputEl    = document.getElementById('input');
+  const sendBtn    = document.getElementById('sendBtn');
+  const newBtn     = document.getElementById('newBtn');
+
+  function fmt(text) {
+    return text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g,'<em>$1</em>')
+      .replace(/\n/g,'<br>');
+  }
+
+  function addMsg(text, who) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + who;
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = who === 'bot' ? 'AI' : 'Vi';
+    const bub = document.createElement('div');
+    bub.className = 'bubble';
+    bub.innerHTML = fmt(text);
+    div.appendChild(av);
+    div.appendChild(bub);
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return bub;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.id = 'typing'; div.className = 'msg bot';
+    const av = document.createElement('div');
+    av.className = 'avatar'; av.textContent = 'AI';
+    const bub = document.createElement('div');
+    bub.className = 'typing-bubble';
+    bub.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    div.appendChild(av); div.appendChild(bub);
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+  function hideTyping() { const el = document.getElementById('typing'); if(el) el.remove(); }
+
+  function showWelcome() {
+    messagesEl.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    const av = document.createElement('div');
+    av.className = 'avatar'; av.textContent = 'AI';
+    const bub = document.createElement('div');
+    bub.className = 'bubble';
+    bub.innerHTML = `<div class="welcome">
+      <h3>Pozdravljeni na Kmetiji Pod Goro!</h3>
+      <p style="font-size:.85rem;color:rgba(255,255,255,.7);margin-bottom:8px;">Pomagam vam z:</p>
+      <ul>
+        <li>Nastanitvijo in cenami sob</li>
+        <li>Rezervacijo kosila ali mize</li>
+        <li>Izposojo gorskih koles in e-koles</li>
+        <li>Informacijami o kmetiji in živali</li>
+      </ul>
+    </div>`;
+    div.appendChild(av); div.appendChild(bub);
+    messagesEl.appendChild(div);
+    chipsEl.style.display = 'flex';
+  }
+
+  async function send(text) {
+    text = text.trim();
+    if (!text || sendBtn.disabled) return;
+    chipsEl.style.display = 'none';
+    addMsg(text, 'user');
+    inputEl.value = ''; inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+    showTyping();
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({message: text, session_id: sessionId})
       });
-        hideTyping();
-        if (res.ok) {
-          if (!res.body) {
-            const data = await res.json();
-            addMessageToDOM(data.reply || 'Oprostite, prišlo je do napake.', 'bot');
-          } else {
-            const botEl = addMessageToDOM('', 'bot');
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            while (true) {
-              const { value, done } = await reader.read();
-              if (done) break;
-              const chunk = decoder.decode(value, { stream: true });
-              botEl.textContent += chunk;
-              // Don't auto-scroll during streaming - user reads top-down
-            }
-            saveHistory();
-          }
-        } else {
-          addMessageToDOM('Oprostite, strežnik ni dosegljiv.', 'bot');
-        }
-      } catch (err) {
-        hideTyping();
-        addMessageToDOM('Oprostite, prišlo je do napake pri povezavi.', 'bot');
+      hideTyping();
+      if (res.ok) {
+        const data = await res.json();
+        addMsg(data.reply || 'Oprostite, brez odgovora.', 'bot');
+      } else {
+        addMsg('Strežnik ni dosegljiv. Poskusite znova.', 'bot');
       }
-      sendBtn.disabled = false;
-      inputEl.focus();
+    } catch(e) {
+      hideTyping();
+      addMsg('Napaka pri povezavi.', 'bot');
     }
-    
-    // Event listeners
-    sendBtn.addEventListener('click', () => sendMessage(inputEl.value));
-    clearBtn.addEventListener('click', clearHistory);
-    newSessionBtn.addEventListener('click', () => {
-      clearHistory();
-      resetSession();
-    });
-    
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage(inputEl.value);
-      }
-    });
-    
-    inputEl.addEventListener('input', () => {
-      inputEl.style.height = 'auto';
-      inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
-    });
-    
-    document.querySelectorAll('.quick-btn').forEach(btn => {
-      btn.addEventListener('click', () => { sendMessage(btn.dataset.msg); });
-    });
-    
-    // Initialize
-    const hasHistory = loadHistory();
-    if (!hasHistory) {
-      addMessageToDOM('Pozdravljeni! Kako vam lahko pomagam?', 'bot', false);
-    }
-  </script>
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+
+  sendBtn.addEventListener('click', () => send(inputEl.value));
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(inputEl.value); }
+  });
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  });
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => send(c.dataset.msg));
+  });
+  newBtn.addEventListener('click', () => {
+    localStorage.removeItem(SESSION_KEY);
+    sessionId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    localStorage.setItem(SESSION_KEY, sessionId);
+    showWelcome();
+  });
+
+  showWelcome();
+</script>
 </body>
 </html>
