@@ -43,6 +43,15 @@ def chat(
 
     # Build conversation
     system_prompt = _load_system_prompt()
+
+    from datetime import datetime
+    _DAYS_SL = ["ponedeljek", "torek", "sreda", "četrtek", "petek", "sobota", "nedelja"]
+    _now = datetime.now()
+    system_prompt += (
+        f"\n\nDanes je {_DAYS_SL[_now.weekday()]}, {_now.strftime('%-d. %-m. %Y')}. "
+        f"Jutri je {_DAYS_SL[(_now.weekday()+1)%7]}."
+    )
+
     if rag_context:
         system_prompt += f"\n\n## Dodatni kontekst iz baze znanja:\n{rag_context}"
 
