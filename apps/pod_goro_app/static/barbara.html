@@ -156,6 +156,12 @@
     .cal-cell.today .cal-day-num { background: var(--brand); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
     .cal-cell.weekend .cal-day-num { color: var(--brand); }
     .cal-day-num { font-size: 13px; font-weight: 700; line-height: 22px; }
+    .cal-dots { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 2px; }
+    .cal-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .cal-dot.green { background: var(--green); }
+    .cal-dot.orange { background: var(--orange); }
+    .cal-dot.red { background: var(--red); }
+    .cal-count { font-size: 10px; color: var(--muted); margin-top: 2px; }
     /* Room dots in calendar */
     .cal-rooms { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
     .cal-room-chip { font-size: 9px; font-weight: 700; border-radius: 3px; padding: 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -292,18 +298,47 @@
 
   <!-- ══════════════════════════════════════════════════════════════ MIZE -->
   <div id="screen-mize" class="screen">
-    <div class="page">
-      <div class="wk-nav">
-        <h2 id="wk-title-r">Urnik vikenda</h2>
-        <div class="wk-btns">
-          <button class="wk-btn" onclick="wkMize(-1)">← Prej</button>
-          <button class="wk-btn active" id="wk-m-today" onclick="wkMizeReset()">Ta vikend</button>
-          <button class="wk-btn" onclick="wkMize(1)">Naprej →</button>
-        </div>
+    <div class="sub-tabs" id="mize-subtabs">
+      <button class="sub-tab" onclick="goSubMize('odprte')">Odprte rezervacije</button>
+      <button class="sub-tab active" onclick="goSubMize('potrjene')">Potrjene rezervacije</button>
+    </div>
+
+    <!-- Odprte mize -->
+    <div id="sub-mize-odprte" class="sub-screen">
+      <div class="page">
+        <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
+        <div id="mize-pnd-list"></div>
+        <div class="sec-lbl" style="margin-top:18px">Vse odprte (čakajoče)</div>
+        <div id="mize-open-list"></div>
       </div>
-      <div class="sec-lbl">Kapaciteta jedilnice</div>
-      <div class="cap-strip" id="cap-mize"></div>
-      <div id="mize-days"></div>
+    </div>
+
+    <!-- Potrjene mize + Koledar -->
+    <div id="sub-mize-potrjene" class="sub-screen active">
+      <div class="page">
+        <div class="cal-nav">
+          <h2 id="cal-mize-month">Maj 2026</h2>
+          <div class="cal-nav-btns">
+            <button class="cal-nav-btn" onclick="calMizeMove(-1)">◀</button>
+            <button class="cal-nav-btn" onclick="calMizeToday()">Danes</button>
+            <button class="cal-nav-btn" onclick="calMizeMove(1)">▶</button>
+          </div>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-head" id="cal-mize-head"></div>
+          <div class="cal-body" id="cal-mize-body"></div>
+        </div>
+        <div id="mize-day-panel" style="display:none;margin-top:14px">
+          <div style="background:var(--white);border-radius:var(--radius);padding:12px;border:1px solid var(--border);box-shadow:var(--sh)">
+            <div id="mize-day-panel-title" style="font-size:14px;font-weight:800;color:var(--brand);margin-bottom:10px"></div>
+            <div id="mize-day-panel-list"></div>
+          </div>
+        </div>
+        <div class="sec-lbl" style="margin-top:18px">Kapaciteta jedilnice</div>
+        <div class="cap-strip" id="cap-mize"></div>
+        <div class="sec-lbl">Potrjene rezervacije miz</div>
+        <div id="mize-conf-list"></div>
+      </div>
     </div>
   </div>
 
@@ -506,9 +541,12 @@ let _nextId = 30;
 // ══════════════════════════════════════════════════════════════ STATE
 let activeTab = 'sobe';
 let activeSobeSubTab = 'odprte';
+let activeMizeSubTab = 'potrjene';
 let wkOffM = 0;
 let calRoomYear = new Date().getFullYear(), calRoomMonth = new Date().getMonth();
 let calRoomSelected = null;
+let calMizeYear = new Date().getFullYear(), calMizeMonth = new Date().getMonth();
+let calMizeSelected = null;
 let _newType = 'table';
 
 // ══════════════════════════════════════════════════════════════ UTILS
@@ -550,17 +588,25 @@ function goTab(t){
   document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['sobe','mize','analitika'][i]===t));
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+t).classList.add('active');
-  if(t==='sobe') loadSobe();
-  else if(t==='mize') loadMize();
+  if(t==='sobe'){ activeSobeSubTab='odprte'; goSubSobe('odprte'); }
+  else if(t==='mize'){ activeMizeSubTab='potrjene'; goSubMize('potrjene'); }
   else if(t==='analitika') loadAnalitika();
 }
 function goSubSobe(sub){
   activeSobeSubTab=sub;
   document.querySelectorAll('#sobe-subtabs .sub-tab').forEach((b,i)=>b.classList.toggle('active',['odprte','potrjene'][i]===sub));
-  document.querySelectorAll('.sub-screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('sub-sobe-'+sub).classList.add('active');
+  document.getElementById('sub-sobe-odprte').classList.toggle('active',sub==='odprte');
+  document.getElementById('sub-sobe-potrjene').classList.toggle('active',sub==='potrjene');
   if(sub==='odprte') loadSobeOdprte();
   else loadSobePotrjene();
+}
+function goSubMize(sub){
+  activeMizeSubTab=sub;
+  document.querySelectorAll('#mize-subtabs .sub-tab').forEach((b,i)=>b.classList.toggle('active',['odprte','potrjene'][i]===sub));
+  document.getElementById('sub-mize-odprte').classList.toggle('active',sub==='odprte');
+  document.getElementById('sub-mize-potrjene').classList.toggle('active',sub==='potrjene');
+  if(sub==='odprte') loadMizeOdprte();
+  else loadMizePotrjene();
 }
 
 // ══════════════════════════════════════════════════════════════ RES ROW (mize)
@@ -701,15 +747,28 @@ function wkMize(d){ wkOffM+=d; loadMize(); }
 function wkMizeReset(){ wkOffM=0; loadMize(); }
 
 async function loadMize(){
-  const {sat,sun}=wkDates(wkOffM);
-  const t=wkOffM===0?'Urnik vikenda':wkOffM===1?'Naslednji vikend':wkOffM===-1?'Prejšnji vikend':`Vikend ${slDFull(sat)}`;
-  document.getElementById('wk-title-r').textContent=t;
-  document.getElementById('wk-m-today').classList.toggle('active',wkOffM===0);
+  if(activeMizeSubTab==='odprte') await loadMizeOdprte();
+  else await loadMizePotrjene();
+}
+
+async function loadMizeOdprte(){
   const all=await fetchAll();
+  const tables=all.filter(r=>r.reservation_type==='table');
+  const pnd=tables.filter(r=>r.status==='pending').sort((a,b)=>normD(a.date).localeCompare(normD(b.date)));
+  const pndEl=document.getElementById('mize-pnd-list');
+  pndEl.innerHTML=pnd.length?`<div class="res-list">${pnd.map(resRow).join('')}</div>`:'<div class="empty"><div class="ei">✅</div>Ni čakajočih rezervacij miz</div>';
+  const open=tables.filter(r=>r.status==='pending').sort((a,b)=>normD(a.date).localeCompare(normD(b.date)));
+  const openEl=document.getElementById('mize-open-list');
+  openEl.innerHTML=open.length?`<div class="res-list">${open.map(resRow).join('')}</div>`:'<div class="empty"><div class="ei">🍽</div>Ni odprtih rezervacij miz</div>';
+}
+
+async function loadMizePotrjene(){
+  const all=await fetchAll();
+  renderMizeCalendar(all);
   // Capacity
+  const {sat,sun}=wkDates(0);
   const capEl=document.getElementById('cap-mize');
-  const ss=ymd(sat),su=ymd(sun);
-  capEl.innerHTML=[{l:'Sobota',d:sat},{l:'Nedelja',d:sun}].map(({l,d})=>{
+  capEl.innerHTML=[{l:'Ta Sob',d:sat},{l:'Ta Ned',d:sun}].map(({l,d})=>{
     const ds=ymd(d),dayR=byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
     const ppl=sumPpl(dayR),pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
     const bc=pct>=90?'full':pct>=60?'warn':'';
@@ -717,16 +776,83 @@ async function loadMize(){
       <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
       <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX} oseb · ${dayR.length} rez.</div></div>`;
   }).join('');
-  // Days
-  const container=document.getElementById('mize-days');
-  container.innerHTML=[{l:`Sobota · ${slDFull(sat)}`,ds:ss},{l:`Nedelja · ${slDFull(sun)}`,ds:su}].map(({l,ds})=>{
-    const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-    const ppl=sumPpl(dayR.filter(r=>r.status!=='rejected'&&r.status!=='cancelled'));
-    return `<div style="margin-bottom:20px">
-      <div class="day-hdr"><span class="day-name">${l}</span><span class="day-meta">${dayR.length} rez · ${ppl} oseb</span></div>
-      ${dayR.length?`<div class="res-list">${dayR.map(resRow).join('')}</div>`:'<div class="empty"><div class="ei">🌿</div>Ni rezervacij</div>'}
+  // Confirmed list
+  const today=ymd(new Date());
+  const conf=all.filter(r=>r.reservation_type==='table'&&r.status==='confirmed'&&normD(r.date)>=today)
+    .sort((a,b)=>normD(a.date).localeCompare(normD(b.date))||((a.time||'').localeCompare(b.time||'')));
+  const confEl=document.getElementById('mize-conf-list');
+  if(!conf.length){confEl.innerHTML='<div class="empty"><div class="ei">🌿</div>Ni potrjenih prihodnjih rezervacij</div>';return;}
+  // Group by date
+  const byDateMap={};
+  conf.forEach(r=>{const ds=normD(r.date);if(!byDateMap[ds])byDateMap[ds]=[];byDateMap[ds].push(r);});
+  confEl.innerHTML=Object.entries(byDateMap).map(([ds,dayR])=>{
+    const d=new Date(ds+'T00:00:00');
+    const ppl=sumPpl(dayR);
+    return `<div style="margin-bottom:16px">
+      <div class="day-hdr"><span class="day-name">${slDFull(d)}</span><span class="day-meta">${dayR.length} rez · ${ppl} oseb</span></div>
+      <div class="res-list">${dayR.map(resRow).join('')}</div>
     </div>`;
   }).join('');
+}
+
+// Mize calendar
+function calMizeMove(d){ calMizeMonth+=d;if(calMizeMonth<0){calMizeMonth=11;calMizeYear--;}else if(calMizeMonth>11){calMizeMonth=0;calMizeYear++;}fetchAll().then(all=>renderMizeCalendar(all)); }
+function calMizeToday(){ calMizeYear=new Date().getFullYear();calMizeMonth=new Date().getMonth();calMizeSelected=null;fetchAll().then(all=>renderMizeCalendar(all)); }
+
+function renderMizeCalendar(all){
+  document.getElementById('cal-mize-month').textContent=`${MONTHS[calMizeMonth]} ${calMizeYear}`;
+  const head=document.getElementById('cal-mize-head');
+  head.innerHTML=['Pon','Tor','Sre','Čet','Pet','Sob','Ned'].map((d,i)=>`<div class="cal-head-cell${i>=5?' wknd':''}">${d}</div>`).join('');
+  const firstDay=new Date(calMizeYear,calMizeMonth,1);
+  const lastDay=new Date(calMizeYear,calMizeMonth+1,0);
+  const startDow=(firstDay.getDay()+6)%7;
+  const todayStr=ymd(new Date());
+  const body=document.getElementById('cal-mize-body');
+  let html='';
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(calMizeYear,calMizeMonth,d);
+    const ds=ymd(date);
+    const dow=(date.getDay()+6)%7;
+    const isWknd=dow>=5;
+    const isToday=ds===todayStr;
+    const isSel=ds===calMizeSelected;
+    const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
+    const ppl=sumPpl(dayR);
+    const pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
+    const dotClass=pct>=90?'red':pct>=50?'orange':'green';
+    let dots='';
+    if(dayR.length){
+      const n=Math.min(dayR.length,4);let dotItems='';
+      for(let i=0;i<n;i++) dotItems+='<span class="cal-dot '+dotClass+'"></span>';
+      dots='<div class="cal-dots">'+dotItems+'</div>';
+    }
+    const cnt=dayR.length?`<div class="cal-count">${dayR.length} rez</div>`:'';
+    html+=`<div class="cal-cell${isWknd?' weekend':''}${isToday?' today':''}${isSel?' selected':''}" onclick="calMizeSelectDay('${ds}')">
+      <div class="cal-day-num">${d}</div>${dots}${cnt}
+    </div>`;
+  }
+  const total=startDow+lastDay.getDate();
+  const rem=total%7;if(rem>0)for(let i=0;i<7-rem;i++) html+=`<div class="cal-cell empty"></div>`;
+  body.innerHTML=html;
+  if(calMizeSelected) showMizeDayPanel(calMizeSelected,all);
+}
+
+function calMizeSelectDay(ds){
+  calMizeSelected=ds;
+  document.querySelectorAll('#cal-mize-body .cal-cell').forEach(c=>c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  fetchAll().then(all=>showMizeDayPanel(ds,all));
+}
+function showMizeDayPanel(ds,all){
+  const panel=document.getElementById('mize-day-panel');
+  const date=new Date(ds+'T00:00:00');
+  document.getElementById('mize-day-panel-title').textContent=`${slDFull(date)} – rezervacije miz`;
+  panel.style.display='block';
+  const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  document.getElementById('mize-day-panel-list').innerHTML=dayR.length
+    ?`<div class="res-list">${dayR.map(resRow).join('')}</div>`
+    :'<div class="empty"><div class="ei">🌿</div>Ni rezervacij ta dan</div>';
 }
 
 // ══════════════════════════════════════════════════════════════ ANALITIKA
