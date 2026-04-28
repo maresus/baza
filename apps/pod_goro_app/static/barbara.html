@@ -198,6 +198,39 @@
     #avail-info.warn { background: var(--orange-bg); color: var(--orange); display: block; }
     #avail-info.full { background: var(--red-bg); color: var(--red); display: block; }
 
+    /* ── ROOM CARDS ─── */
+    .room-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+    .room-card { background: var(--white); border-radius: var(--radius); padding: 11px 13px; display: flex; align-items: center; gap: 12px; box-shadow: var(--sh); border: 1px solid var(--border); border-left: 4px solid var(--border); cursor: pointer; }
+    .room-card.free { border-left-color: var(--green); }
+    .room-card.partial { border-left-color: var(--orange); }
+    .room-card.full { border-left-color: var(--red); }
+    .room-icon { font-size: 22px; flex-shrink: 0; }
+    .room-info { flex: 1; min-width: 0; }
+    .room-name { font-size: 13px; font-weight: 800; }
+    .room-cap { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .room-nights { display: flex; flex-direction: column; gap: 2px; }
+    .room-night { font-size: 12px; display: flex; align-items: center; gap: 5px; }
+    .room-night-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .room-night-dot.free { background: var(--green); }
+    .room-night-dot.occ { background: var(--red); }
+    .room-status-badge { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px; flex-shrink: 0; }
+    .room-status-badge.free { background: var(--green-bg); color: var(--green); }
+    .room-status-badge.partial { background: var(--orange-bg); color: var(--orange); }
+    .room-status-badge.full { background: var(--red-bg); color: var(--red); }
+
+    /* ── SOBE SCREEN ─── */
+    .room-detail-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--sh); border: 1px solid var(--border); margin-bottom: 14px; overflow: hidden; }
+    .room-detail-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+    .room-detail-title { font-size: 15px; font-weight: 800; }
+    .room-detail-cap { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .room-reservations { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+    .room-res-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: var(--bg); cursor: pointer; }
+    .room-res-row:hover { background: var(--brand-light); }
+    .room-res-dates { font-size: 12px; font-weight: 800; color: var(--brand); min-width: 100px; }
+    .room-res-info { flex: 1; }
+    .room-res-name { font-size: 13px; font-weight: 700; }
+    .room-res-sub { font-size: 11px; color: var(--muted); }
+
     /* ── TOAST ─── */
     #toast { position: fixed; bottom: calc(14px + env(safe-area-inset-bottom,0px)); left: 50%; transform: translateX(-50%) translateY(80px); background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; transition: transform .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
     #toast.show { transform: translateX(-50%) translateY(0); }
@@ -216,6 +249,7 @@
       <button class="nav-tab active" onclick="goTab('pregled')">Pregled</button>
       <button class="nav-tab" onclick="goTab('koledar')">Koledar</button>
       <button class="nav-tab" onclick="goTab('rezervacije')">Rezervacije</button>
+      <button class="nav-tab" onclick="goTab('sobe')">Sobe</button>
     </nav>
     <span id="pending-badge">0</span>
     <button id="refresh-btn" onclick="refreshAll()" title="Osveži">↻</button>
@@ -231,8 +265,10 @@
           <button class="wk-btn" onclick="setWkP(1)">Naslednji →</button>
         </div>
       </div>
-      <div class="sec-lbl">Kapaciteta vikenda</div>
+      <div class="sec-lbl">Jedilnica – kapaciteta vikenda</div>
       <div class="cap-strip" id="cap-p"></div>
+      <div class="sec-lbl" style="margin-top:14px">Sobe – zasedenost vikenda</div>
+      <div class="room-cards" id="room-cards-p"></div>
       <div class="sec-lbl" style="margin-top:14px">Skupaj ta vikend</div>
       <div class="stats-row" id="stats-row">
         <div class="stat-card"><div class="stat-num" id="s-rez">—</div><div class="stat-lbl">Rezervacij</div></div>
@@ -280,6 +316,23 @@
       </div>
       <div class="cap-strip" id="cap-r" style="margin-bottom:16px"></div>
       <div id="rez-days"><div class="empty"><div class="ei">🌿</div>Ni rezervacij</div></div>
+    </div>
+  </div>
+
+  <!-- SOBE -->
+  <div id="screen-sobe" class="screen">
+    <div class="page">
+      <div class="wk-nav">
+        <h2 id="wk-title-s">Sobe – ta vikend</h2>
+        <div class="wk-btns">
+          <button class="wk-btn" onclick="wkSobe(-1)">← Prej</button>
+          <button class="wk-btn active" id="wk-s-today" onclick="wkSobeReset()">Ta vikend</button>
+          <button class="wk-btn" onclick="wkSobe(1)">Naprej →</button>
+        </div>
+      </div>
+      <div id="sobe-rooms"></div>
+      <div class="sec-lbl" style="margin-top:6px">Vse prihajajoče rezervacije sob</div>
+      <div id="sobe-list"></div>
     </div>
   </div>
 </div>
@@ -456,12 +509,33 @@ let _demoData = [
   // Preteklost – Nedelja 2026-04-26
   { id:18, date:'26.4.2026',time:'12:30', name:'Blaž Kastelic',  people:5,  kids:2, phone:'070 789 012', email:'blaz.k@email.si',        status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'',                                     note:'' },
   { id:19, date:'26.4.2026',time:'14:00', name:'Manja Pirnat',   people:3,  kids:0, phone:'040 890 123', email:'manja.p@gmail.com',      status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
+
+  // ── SOBARSKE REZERVACIJE ────────────────────────────────────────────────────
+  // GOZD: zasedena Čet-Ned 30.4–3.5 (3 noči)
+  { id:20, date:'30.4.2026', nights:3, name:'Horvat Maja',    people:2, kids:1, phone:'031 345 678', email:'maja.h@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'room', location:'GOZD',    note:'Prosimo za otroško posteljico.' },
+  // RAZGLED: zasedena Pet-Ned 1.5–3.5 (2 noči)
+  { id:21, date:'1.5.2026',  nights:2, name:'Kovač Janez',    people:4, kids:0, phone:'040 234 567', email:'kovac.j@email.si',       status:'confirmed', source:'chatbot',   reservation_type:'room', location:'RAZGLED', note:'' },
+  // SONCE: zasedena Sob-Pon 2.5–4.5 (2 noči)
+  { id:22, date:'2.5.2026',  nights:2, name:'Zorman Petra',   people:3, kids:2, phone:'041 567 890', email:'petra.zorman@gmail.com', status:'pending',   source:'wordpress', reservation_type:'room', location:'SONCE',   note:'Alergija na penico – prosimo za hipoalergene blazine.' },
+  // GOZD: naslednji vikend Pet-Ned 8.5–10.5 (2 noči)
+  { id:23, date:'8.5.2026',  nights:2, name:'Vidmar Tine',    people:2, kids:0, phone:'040 678 901', email:'tine.v@email.si',        status:'confirmed', source:'manual',    reservation_type:'room', location:'GOZD',    note:'' },
+  // RAZGLED: 15.5–17.5 (2 noči)
+  { id:24, date:'15.5.2026', nights:2, name:'Petek Luka',     people:2, kids:0, phone:'070 456 789', email:'luka.petek@email.si',    status:'confirmed', source:'wordpress', reservation_type:'room', location:'RAZGLED', note:'Medeni tedni – prosimo za romantično dekoracijo.' },
+  // SONCE: 16.5–20.5 (4 noči) – daljše bivanje
+  { id:25, date:'16.5.2026', nights:4, name:'Novak Družina',  people:4, kids:2, phone:'041 123 456', email:'ana.novak@gmail.com',    status:'confirmed', source:'chatbot',   reservation_type:'room', location:'SONCE',   note:'Potrebujemo dva otroška ležišča.' },
+  // Preteklo – RAZGLED Sob 26.4 (1 noč)
+  { id:26, date:'25.4.2026', nights:1, name:'Bergant Nina',   people:2, kids:0, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'room', location:'RAZGLED', note:'' },
 ];
 
 let _nextId = 20;
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const CAP_MAX = 40;
+const ROOMS = [
+  { id:'GOZD',    name:'Soba GOZD',    icon:'🌲', cap:4, desc:'Balkon, pogled na gozd' },
+  { id:'RAZGLED', name:'Soba RAZGLED', icon:'🏔️', cap:4, desc:'Panoramski razgled' },
+  { id:'SONCE',   name:'Soba SONCE',   icon:'☀️', cap:4, desc:'2 spalnici, prostorna' },
+];
 
 // ── SIMULATED API ─────────────────────────────────────────────────────────────
 function fetchAll() {
@@ -478,12 +552,13 @@ function toast(msg) {
 let activeTab = 'pregled';
 function goTab(t) {
   activeTab = t;
-  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['pregled','koledar','rezervacije'][i]===t));
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['pregled','koledar','rezervacije','sobe'][i]===t));
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+t).classList.add('active');
   if (t==='pregled') loadPregled();
   else if (t==='koledar') renderCal();
   else if (t==='rezervacije') loadRez();
+  else if (t==='sobe') loadSobe();
 }
 
 // ── DATES ─────────────────────────────────────────────────────────────────────
@@ -511,7 +586,7 @@ function byDate(arr,ds){ return arr.filter(r=>normD(r.date||'')===ds); }
 function sumPpl(arr){ return arr.reduce((s,r)=>s+(parseInt(r.people)||0),0); }
 
 // ── WEEKEND OFFSETS ───────────────────────────────────────────────────────────
-let wkOffP=0, wkOffR=0;
+let wkOffP=0, wkOffR=0, wkOffS=0;
 function setWkP(n){
   wkOffP=n;
   document.querySelectorAll('#screen-pregled .wk-btn').forEach((b,i)=>b.classList.toggle('active',i===n));
@@ -519,11 +594,35 @@ function setWkP(n){
 }
 function wkRez(d){ wkOffR+=d; loadRez(); }
 function wkRezReset(){ wkOffR=0; loadRez(); }
+function wkSobe(d){ wkOffS+=d; loadSobe(); }
+function wkSobeReset(){ wkOffS=0; loadSobe(); }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function srcLbl(s){ return s==='chatbot'?'AI chat':s==='wordpress'?'Spletni obrazec':s==='manual'?'Ročni vnos':s||''; }
 function stLbl(s){ return {pending:'V čakanju',confirmed:'Potrjeno',rejected:'Zavrnjeno',cancelled:'Preklicano'}[s]||s; }
+
+// Room helpers
+function roomsByLoc(all, loc){ return all.filter(r=>r.reservation_type==='room'&&r.location===loc&&r.status!=='rejected'&&r.status!=='cancelled'); }
+function dateToYmd(s){ // '1.5.2026' → '2026-05-01'
+  if(!s) return '';
+  if(s.includes('-')) return s.slice(0,10);
+  const p=s.split('.');
+  return `${p[2].trim().padStart(4,'0')}-${p[1].trim().padStart(2,'0')}-${p[0].trim().padStart(2,'0')}`;
+}
+function addDays(ymdStr, n){
+  const d=new Date(ymdStr+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d);
+}
+function isRoomOccupiedOn(res, dayYmd){
+  const cin=dateToYmd(res.date);
+  const cout=addDays(cin, res.nights||1);
+  return dayYmd>=cin && dayYmd<cout;
+}
+function getRoomOnDate(all, loc, dayYmd){
+  return roomsByLoc(all,loc).find(r=>isRoomOccupiedOn(r,dayYmd))||null;
+}
+function roomIcon(id){ return ROOMS.find(r=>r.id===id)?.icon||'🛏️'; }
+function roomName(id){ return ROOMS.find(r=>r.id===id)?.name||id; }
 
 // ── CAPACITY STRIP ────────────────────────────────────────────────────────────
 function renderCap(elId, all, off){
@@ -589,16 +688,35 @@ function renderDetailView(r){
   const note=r.note||'';
   const adminNote=r.admin_notes||'';
   const kv=document.getElementById('dm-kv');
-  kv.innerHTML=[
-    ['Datum', r.date||'—'],
-    ['Čas', r.time||'—'],
-    ['Osebe', `${r.people||'?'}${r.kids?' + '+r.kids+' otr.':''}`],
-    r.phone?['Telefon',esc(r.phone)]:[],
-    r.email?['E-pošta',esc(r.email)]:[],
-    r.event_type?['Dogodek',esc(r.event_type)]:[],
-    note?['Opomba gosta','<i>'+esc(note)+'</i>']:[],
-    adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[],
-  ].filter(x=>x.length).map(([k,v])=>`<div class="dm-k">${k}</div><div class="dm-v">${v}</div>`).join('');
+  let rows=[];
+  if(r.reservation_type==='room'){
+    const cin=dateToYmd(r.date);
+    const cout=addDays(cin,r.nights||1);
+    const cinD=new Date(cin+'T00:00:00'), coutD=new Date(cout+'T00:00:00');
+    rows=[
+      ['Soba', roomIcon(r.location)+' '+roomName(r.location)],
+      ['Check-in', slDFull(cinD)],
+      ['Check-out', slDFull(coutD)],
+      ['Noči', String(r.nights||1)],
+      ['Osebe', `${r.people||'?'}${r.kids?' + '+r.kids+' otr.':''}`],
+      r.phone?['Telefon',esc(r.phone)]:[],
+      r.email?['E-pošta',esc(r.email)]:[],
+      note?['Opomba gosta','<i>'+esc(note)+'</i>']:[],
+      adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[],
+    ];
+  } else {
+    rows=[
+      ['Datum', r.date||'—'],
+      ['Čas', r.time||'—'],
+      ['Osebe', `${r.people||'?'}${r.kids?' + '+r.kids+' otr.':''}`],
+      r.phone?['Telefon',esc(r.phone)]:[],
+      r.email?['E-pošta',esc(r.email)]:[],
+      r.event_type?['Dogodek',esc(r.event_type)]:[],
+      note?['Opomba gosta','<i>'+esc(note)+'</i>']:[],
+      adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[],
+    ];
+  }
+  kv.innerHTML=rows.filter(x=>x.length).map(([k,v])=>`<div class="dm-k">${k}</div><div class="dm-v">${v}</div>`).join('');
 
   const acts=document.getElementById('dm-actions');
   acts.innerHTML=`
@@ -763,6 +881,34 @@ async function loadPregled(){
   const pl=document.getElementById('pnd-list');
   pl.innerHTML=pnd.length?`<div class="res-list">${pnd.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(resRow).join('')}</div>`
     :'<div class="empty"><div class="ei">✅</div>Ni čakajočih rezervacij</div>';
+  // room cards
+  renderRoomCards('room-cards-p', all, sat, sun);
+}
+
+function renderRoomCards(elId, all, sat, sun){
+  const el=document.getElementById(elId); if(!el) return;
+  const ss=ymd(sat), su=ymd(sun);
+  el.innerHTML=ROOMS.map(room=>{
+    const satRes=getRoomOnDate(all,room.id,ss);
+    const sunRes=getRoomOnDate(all,room.id,su);
+    const satOcc=!!satRes, sunOcc=!!sunRes;
+    const cls=satOcc&&sunOcc?'full':satOcc||sunOcc?'partial':'free';
+    const badgeLbl=cls==='full'?'Zasedena':cls==='partial'?'Delno':'Prosta';
+    const satLbl=satOcc?`<span style="color:var(--red)">Zasedena – ${esc(satRes.name)}</span>`:`<span style="color:var(--green)">Prosta</span>`;
+    const sunLbl=sunOcc?`<span style="color:var(--red)">Zasedena – ${esc(sunRes.name)}</span>`:`<span style="color:var(--green)">Prosta</span>`;
+    return `<div class="room-card ${cls}" onclick="goTab('sobe')">
+      <div class="room-icon">${room.icon}</div>
+      <div class="room-info">
+        <div class="room-name">${room.name}</div>
+        <div class="room-cap">do ${room.cap} osebe · ${room.desc}</div>
+        <div class="room-nights">
+          <div class="room-night"><span class="room-night-dot ${satOcc?'occ':'free'}"></span>Sob: ${satLbl}</div>
+          <div class="room-night"><span class="room-night-dot ${sunOcc?'occ':'free'}"></span>Ned: ${sunLbl}</div>
+        </div>
+      </div>
+      <div class="room-status-badge ${cls}">${badgeLbl}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
@@ -911,11 +1057,88 @@ async function submitNew(){
   await refreshAll();
 }
 
+// ── LOAD SOBE ─────────────────────────────────────────────────────────────────
+let wkOffSobe = 0;
+async function loadSobe(){
+  const {sat,sun}=wkDates(wkOffS);
+  const t=wkOffS===0?'Sobe – ta vikend':wkOffS===1?'Sobe – naslednji vikend':wkOffS===-1?'Sobe – prejšnji vikend':`Sobe – vikend ${slDFull(sat)}`;
+  document.getElementById('wk-title-s').textContent=t;
+  document.getElementById('wk-s-today').classList.toggle('active',wkOffS===0);
+  const all=await fetchAll();
+  const ss=ymd(sat), su=ymd(sun);
+
+  // Room detail cards
+  const roomsEl=document.getElementById('sobe-rooms');
+  roomsEl.innerHTML=ROOMS.map(room=>{
+    const rAll=roomsByLoc(all,room.id);
+    // Noči tega vikenda
+    const nights=[];
+    let d=new Date(ss+'T00:00:00');
+    const endD=new Date(su+'T00:00:00'); endD.setDate(endD.getDate()+1);
+    while(d<endD){
+      const ds=ymd(d);
+      const res=rAll.find(r=>isRoomOccupiedOn(r,ds));
+      nights.push({ds, res});
+      d.setDate(d.getDate()+1);
+    }
+    const satR=getRoomOnDate(all,room.id,ss);
+    const sunR=getRoomOnDate(all,room.id,su);
+    const cls=satR&&sunR?'full':satR||sunR?'partial':'free';
+    const nightRows=nights.map(({ds,res})=>{
+      const date=new Date(ds+'T00:00:00');
+      const dayName=['Ned','Pon','Tor','Sre','Čet','Pet','Sob'][date.getDay()];
+      const occupied=!!res;
+      return `<div class="room-night" style="padding:3px 0">
+        <span class="room-night-dot ${occupied?'occ':'free'}"></span>
+        <span style="font-weight:700;min-width:28px">${dayName}</span>
+        ${occupied?`<span style="cursor:pointer;color:var(--text)" onclick="openDetail(${res.id})">${esc(res.name)} · ${res.people} os.${res.kids?' +'+res.kids+' otr.':''}</span>`:'<span style="color:var(--green)">Prosta</span>'}
+      </div>`;
+    }).join('');
+    return `<div class="room-detail-card">
+      <div class="room-detail-header">
+        <div style="font-size:28px">${room.icon}</div>
+        <div style="flex:1">
+          <div class="room-detail-title">${room.name}</div>
+          <div class="room-detail-cap">do ${room.cap} osebe · ${room.desc}</div>
+        </div>
+        <div class="room-status-badge ${cls}">${cls==='full'?'Zasedena':cls==='partial'?'Delno':'Prosta'}</div>
+      </div>
+      <div class="room-reservations">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Noči vikenda</div>
+        <div class="room-nights">${nightRows}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Upcoming room list
+  const today=ymd(new Date());
+  const upcoming=_demoData.filter(r=>r.reservation_type==='room'&&r.status!=='rejected'&&r.status!=='cancelled'&&dateToYmd(r.date)>=today)
+    .sort((a,b)=>dateToYmd(a.date).localeCompare(dateToYmd(b.date)));
+  const listEl=document.getElementById('sobe-list');
+  if(!upcoming.length){listEl.innerHTML='<div class="empty"><div class="ei">🛏️</div>Ni prihodnjih rezervacij sob</div>';return;}
+  listEl.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'+upcoming.map(r=>{
+    const cin=dateToYmd(r.date);
+    const cout=addDays(cin,r.nights||1);
+    const cinD=new Date(cin+'T00:00:00'), coutD=new Date(cout+'T00:00:00');
+    const room=ROOMS.find(x=>x.id===r.location)||{icon:'🛏️',name:r.location||'—'};
+    return `<div class="room-res-row" onclick="openDetail(${r.id})">
+      <div style="font-size:22px">${room.icon}</div>
+      <div class="room-res-info">
+        <div class="room-res-name">${esc(r.name)}</div>
+        <div class="room-res-sub">${room.name} · ${slDFull(cinD)} → ${slDFull(coutD)} (${r.nights} noč${r.nights===1?'':'i'})</div>
+        <div class="room-res-sub">👥 ${r.people} os.${r.kids?' +'+r.kids+' otr.':''} · ${srcLbl(r.source)}</div>
+      </div>
+      <span class="badge badge-${r.status}">${stLbl(r.status)}</span>
+    </div>`;
+  }).join('')+'</div>';
+}
+
 // ── REFRESH ───────────────────────────────────────────────────────────────────
 async function refreshAll(){
   if(activeTab==='pregled') await loadPregled();
   else if(activeTab==='koledar') await renderCal();
   else if(activeTab==='rezervacije') await loadRez();
+  else if(activeTab==='sobe') await loadSobe();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
