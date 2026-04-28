@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pod Goro">
   <meta name="theme-color" content="#3a6b35">
-  <title>Pod Goro – Rezervacije</title>
+  <title>Pod Goro – Admin</title>
   <style>
     :root {
       --brand: #3a6b35;
@@ -27,24 +27,15 @@
       --muted: #6b7280;
       --sh: 0 1px 3px rgba(0,0,0,.08);
       --radius: 10px;
-      --cap: 40;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
 
     /* ── DEMO BANNER ─── */
-    #demo-banner {
-      background: var(--orange); color: #fff;
-      text-align: center; padding: 8px 16px; font-size: 13px; font-weight: 700;
-    }
+    #demo-banner { background: var(--orange); color: #fff; text-align: center; padding: 8px 16px; font-size: 13px; font-weight: 700; }
 
     /* ── TOPBAR ─── */
-    #topbar {
-      background: var(--brand); color: #fff;
-      display: flex; align-items: center; gap: 10px;
-      padding: 0 14px; height: 52px; position: sticky; top: 0; z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,.18);
-    }
+    #topbar { background: var(--brand); color: #fff; display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 52px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
     .brand { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     nav { display: flex; gap: 4px; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     nav::-webkit-scrollbar { display: none; }
@@ -54,10 +45,21 @@
     #pending-badge.show { display: flex; }
     #refresh-btn { background: rgba(255,255,255,.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
+    /* ── SUB-TABS ─── */
+    .sub-tabs { display: flex; gap: 0; background: var(--white); border-bottom: 1px solid var(--border); position: sticky; top: 52px; z-index: 90; overflow-x: auto; scrollbar-width: none; }
+    .sub-tabs::-webkit-scrollbar { display: none; }
+    .sub-tab { flex: 1; border: none; background: none; padding: 11px 14px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: color .15s, border-color .15s; }
+    .sub-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+
     /* ── SCREENS ─── */
     .screen { display: none; }
     .screen.active { display: block; }
+    .sub-screen { display: none; }
+    .sub-screen.active { display: block; }
     .page { padding: 14px 14px calc(80px + env(safe-area-inset-bottom,0px)); max-width: 700px; margin: 0 auto; }
+
+    /* ── SECTION LABEL ─── */
+    .sec-lbl { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 8px; }
 
     /* ── WEEK NAV ─── */
     .wk-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -65,9 +67,6 @@
     .wk-btns { display: flex; gap: 6px; }
     .wk-btn { background: var(--white); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--brand); }
     .wk-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-
-    /* ── SECTION LABEL ─── */
-    .sec-lbl { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 8px; }
 
     /* ── STATS ROW ─── */
     .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
@@ -88,8 +87,7 @@
 
     /* ── RES ROWS ─── */
     .res-list { display: flex; flex-direction: column; gap: 6px; }
-    .res-row { background: var(--white); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh); cursor: pointer; border: 1.5px solid transparent; transition: border-color .15s; border-left: 4px solid var(--border); }
-    .res-row:active { border-color: var(--brand); }
+    .res-row { background: var(--white); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh); cursor: pointer; border: 1.5px solid transparent; border-left: 4px solid var(--border); }
     .res-row.confirmed { border-left-color: var(--green); }
     .res-row.pending { border-left-color: var(--orange); }
     .res-row.rejected, .res-row.cancelled { border-left-color: #d1d5db; opacity: .65; }
@@ -115,6 +113,31 @@
     .empty { text-align: center; padding: 28px 16px; color: var(--muted); font-size: 13px; }
     .ei { font-size: 28px; margin-bottom: 6px; }
 
+    /* ── ROOM GRID (Potrjene sub-tab) ─── */
+    .room-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+    .room-row { background: var(--white); border-radius: var(--radius); box-shadow: var(--sh); border: 1px solid var(--border); overflow: hidden; }
+    .room-row-header { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-bottom: 1px solid var(--border); background: var(--brand-light); }
+    .room-row-icon { font-size: 20px; }
+    .room-row-name { font-size: 14px; font-weight: 800; flex: 1; }
+    .room-row-cap { font-size: 11px; color: var(--muted); }
+    .room-nights-row { display: flex; flex-direction: column; gap: 0; }
+    .room-night-line { display: flex; align-items: center; gap: 10px; padding: 8px 13px; border-bottom: 1px solid var(--border); }
+    .room-night-line:last-child { border-bottom: none; }
+    .rn-date { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 80px; }
+    .rn-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .rn-dot.free { background: #d1fae5; border: 1.5px solid var(--green); }
+    .rn-dot.occ { background: var(--green); }
+    .rn-guest { font-size: 13px; flex: 1; cursor: pointer; }
+    .rn-guest:hover { text-decoration: underline; }
+
+    /* ── ROOM CONFIRMED LIST ─── */
+    .room-conf-row { background: var(--white); border-radius: var(--radius); padding: 11px 13px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh); border: 1px solid var(--border); border-left: 4px solid var(--green); cursor: pointer; margin-bottom: 6px; }
+    .rcr-icon { font-size: 20px; flex-shrink: 0; }
+    .rcr-info { flex: 1; min-width: 0; }
+    .rcr-name { font-size: 14px; font-weight: 700; }
+    .rcr-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .rcr-dates { font-size: 12px; font-weight: 800; color: var(--brand); white-space: nowrap; }
+
     /* ── CALENDAR ─── */
     .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .cal-nav h2 { font-size: 16px; font-weight: 800; }
@@ -125,7 +148,7 @@
     .cal-head-cell { text-align: center; font-size: 11px; font-weight: 800; color: var(--muted); padding: 7px 0; }
     .cal-head-cell.wknd { color: var(--brand); }
     .cal-body { display: grid; grid-template-columns: repeat(7,1fr); }
-    .cal-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5px; min-height: 54px; cursor: pointer; position: relative; transition: background .12s; }
+    .cal-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5px; min-height: 62px; cursor: pointer; transition: background .12s; }
     .cal-cell:nth-child(7n) { border-right: none; }
     .cal-cell.empty { cursor: default; background: var(--bg); }
     .cal-cell:hover:not(.empty) { background: var(--brand-light); }
@@ -133,27 +156,30 @@
     .cal-cell.today .cal-day-num { background: var(--brand); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
     .cal-cell.weekend .cal-day-num { color: var(--brand); }
     .cal-day-num { font-size: 13px; font-weight: 700; line-height: 22px; }
-    .cal-dots { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 2px; }
-    .cal-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .cal-dot.green { background: var(--green); }
-    .cal-dot.orange { background: var(--orange); }
-    .cal-dot.red { background: var(--red); }
-    .cal-count { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    /* Room dots in calendar */
+    .cal-rooms { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+    .cal-room-chip { font-size: 9px; font-weight: 700; border-radius: 3px; padding: 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-room-chip.occ { background: var(--green-bg); color: var(--green); }
+    .cal-room-chip.pnd { background: var(--orange-bg); color: var(--orange); }
     #day-panel { background: var(--white); border-radius: var(--radius); box-shadow: var(--sh); padding: 12px; margin-top: 14px; border: 1px solid var(--border); }
     #day-panel-title { font-size: 14px; font-weight: 800; margin-bottom: 10px; color: var(--brand); }
-    @media (min-width: 600px) {
-      .cal-cell { min-height: 68px; }
-    }
+
+    /* ── ANALITIKA ─── */
+    .anl-section { margin-bottom: 20px; }
+    .anl-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+    .anl-card { background: var(--white); border-radius: var(--radius); padding: 13px 14px; box-shadow: var(--sh); border: 1px solid var(--border); }
+    .anl-num { font-size: 26px; font-weight: 800; color: var(--brand); }
+    .anl-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .anl-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .anl-bar-label { font-size: 12px; font-weight: 700; min-width: 100px; }
+    .anl-bar-wrap { flex: 1; background: var(--bg); border-radius: 4px; height: 8px; overflow: hidden; }
+    .anl-bar-fill { height: 100%; border-radius: 4px; background: var(--brand); transition: width .5s; }
+    .anl-bar-val { font-size: 12px; color: var(--muted); min-width: 28px; text-align: right; }
+    .room-occ-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .room-occ-row:last-child { border-bottom: none; }
 
     /* ── FAB ─── */
-    #fab {
-      position: fixed; bottom: calc(20px + env(safe-area-inset-bottom,0px)); right: 18px;
-      width: 54px; height: 54px; border-radius: 50%; background: var(--brand); color: #fff;
-      font-size: 28px; font-weight: 300; border: none; cursor: pointer;
-      box-shadow: 0 4px 16px rgba(58,107,53,.45); z-index: 200;
-      display: flex; align-items: center; justify-content: center;
-      transition: transform .15s;
-    }
+    #fab { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom,0px)); right: 18px; width: 54px; height: 54px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 28px; font-weight: 300; border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(58,107,53,.45); z-index: 200; display: flex; align-items: center; justify-content: center; transition: transform .15s; }
     #fab:active { transform: scale(.93); }
 
     /* ── MODAL ─── */
@@ -168,12 +194,11 @@
     .mo-field input:focus, .mo-field select:focus, .mo-field textarea:focus { outline: none; border-color: var(--brand); }
     .mo-field textarea { resize: none; height: 80px; }
     .mo-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mo-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .mo-actions { display: flex; gap: 8px; margin-top: 16px; }
     .mo-actions button { flex: 1; padding: 12px; border-radius: 9px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
     .btn-ok { background: var(--brand); color: #fff; }
     .btn-cancel { background: var(--bg); color: var(--gray); }
-
-    /* Detail modal */
     .dm-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
     .dm-btn { border: none; border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; }
     .dm-confirm { background: var(--green-bg); color: var(--green); }
@@ -192,44 +217,10 @@
     .comm-out { background: var(--brand-light); }
     .comm-in  { background: var(--bg); border: 1px solid var(--border); }
     .comm-meta { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
-
     #avail-info { border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
     #avail-info.ok   { background: var(--green-bg); color: var(--green); display: block; }
     #avail-info.warn { background: var(--orange-bg); color: var(--orange); display: block; }
     #avail-info.full { background: var(--red-bg); color: var(--red); display: block; }
-
-    /* ── ROOM CARDS ─── */
-    .room-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
-    .room-card { background: var(--white); border-radius: var(--radius); padding: 11px 13px; display: flex; align-items: center; gap: 12px; box-shadow: var(--sh); border: 1px solid var(--border); border-left: 4px solid var(--border); cursor: pointer; }
-    .room-card.free { border-left-color: var(--green); }
-    .room-card.partial { border-left-color: var(--orange); }
-    .room-card.full { border-left-color: var(--red); }
-    .room-icon { font-size: 22px; flex-shrink: 0; }
-    .room-info { flex: 1; min-width: 0; }
-    .room-name { font-size: 13px; font-weight: 800; }
-    .room-cap { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-    .room-nights { display: flex; flex-direction: column; gap: 2px; }
-    .room-night { font-size: 12px; display: flex; align-items: center; gap: 5px; }
-    .room-night-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .room-night-dot.free { background: var(--green); }
-    .room-night-dot.occ { background: var(--red); }
-    .room-status-badge { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px; flex-shrink: 0; }
-    .room-status-badge.free { background: var(--green-bg); color: var(--green); }
-    .room-status-badge.partial { background: var(--orange-bg); color: var(--orange); }
-    .room-status-badge.full { background: var(--red-bg); color: var(--red); }
-
-    /* ── SOBE SCREEN ─── */
-    .room-detail-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--sh); border: 1px solid var(--border); margin-bottom: 14px; overflow: hidden; }
-    .room-detail-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
-    .room-detail-title { font-size: 15px; font-weight: 800; }
-    .room-detail-cap { font-size: 12px; color: var(--muted); margin-top: 1px; }
-    .room-reservations { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
-    .room-res-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: var(--bg); cursor: pointer; }
-    .room-res-row:hover { background: var(--brand-light); }
-    .room-res-dates { font-size: 12px; font-weight: 800; color: var(--brand); min-width: 100px; }
-    .room-res-info { flex: 1; }
-    .room-res-name { font-size: 13px; font-weight: 700; }
-    .room-res-sub { font-size: 11px; color: var(--muted); }
 
     /* ── TOAST ─── */
     #toast { position: fixed; bottom: calc(14px + env(safe-area-inset-bottom,0px)); left: 50%; transform: translateX(-50%) translateY(80px); background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; transition: transform .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
@@ -238,101 +229,100 @@
 </head>
 <body>
 
-<!-- DEMO BANNER -->
 <div id="demo-banner">🌲 DEMO PRIKAZ – podatki so namišljeni, za predstavitev stranki</div>
 
-<!-- APP -->
 <div id="app">
   <div id="topbar">
     <div class="brand"><span>🌲</span> Pod Goro</div>
     <nav>
-      <button class="nav-tab active" onclick="goTab('pregled')">Pregled</button>
-      <button class="nav-tab" onclick="goTab('koledar')">Koledar</button>
-      <button class="nav-tab" onclick="goTab('rezervacije')">Rezervacije</button>
-      <button class="nav-tab" onclick="goTab('sobe')">Sobe</button>
+      <button class="nav-tab active"   onclick="goTab('sobe')">🛏 Sobe</button>
+      <button class="nav-tab"          onclick="goTab('mize')">🍽 Mize</button>
+      <button class="nav-tab"          onclick="goTab('analitika')">📊 Analitika</button>
     </nav>
     <span id="pending-badge">0</span>
     <button id="refresh-btn" onclick="refreshAll()" title="Osveži">↻</button>
   </div>
 
-  <!-- PREGLED -->
-  <div id="screen-pregled" class="screen active">
-    <div class="page">
-      <div class="wk-nav">
-        <h2 id="wk-title-p">Ta vikend</h2>
-        <div class="wk-btns">
-          <button class="wk-btn active" onclick="setWkP(0)">Ta vikend</button>
-          <button class="wk-btn" onclick="setWkP(1)">Naslednji →</button>
+  <!-- ══════════════════════════════════════════════════════════════ SOBE -->
+  <div id="screen-sobe" class="screen active">
+    <div class="sub-tabs" id="sobe-subtabs">
+      <button class="sub-tab active" onclick="goSubSobe('odprte')">Odprte rezervacije</button>
+      <button class="sub-tab"        onclick="goSubSobe('potrjene')">Potrjene rezervacije</button>
+    </div>
+
+    <!-- Odprte -->
+    <div id="sub-sobe-odprte" class="sub-screen active">
+      <div class="page">
+        <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
+        <div id="sobe-pnd-list"></div>
+        <div class="sec-lbl" style="margin-top:18px">Vse odprte (čakajoče)</div>
+        <div id="sobe-open-list"></div>
+      </div>
+    </div>
+
+    <!-- Potrjene + Koledar -->
+    <div id="sub-sobe-potrjene" class="sub-screen">
+      <div class="page">
+        <div class="cal-nav">
+          <h2 id="cal-room-month">Maj 2026</h2>
+          <div class="cal-nav-btns">
+            <button class="cal-nav-btn" onclick="calRoomMove(-1)">◀</button>
+            <button class="cal-nav-btn" onclick="calRoomToday()">Danes</button>
+            <button class="cal-nav-btn" onclick="calRoomMove(1)">▶</button>
+          </div>
         </div>
+        <!-- Room grid legend -->
+        <div id="room-grid-cal"></div>
+        <!-- Calendar -->
+        <div class="cal-grid" style="margin-top:12px">
+          <div class="cal-head" id="cal-room-head"></div>
+          <div class="cal-body" id="cal-room-body"></div>
+        </div>
+        <div id="day-panel" style="display:none;margin-top:14px">
+          <div style="background:var(--white);border-radius:var(--radius);padding:12px;border:1px solid var(--border);box-shadow:var(--sh)">
+            <div id="day-panel-title" style="font-size:14px;font-weight:800;color:var(--brand);margin-bottom:10px"></div>
+            <div id="day-panel-list"></div>
+          </div>
+        </div>
+        <div class="sec-lbl" style="margin-top:18px">Potrjene rezervacije sob</div>
+        <div id="sobe-conf-list"></div>
       </div>
-      <div class="sec-lbl">Jedilnica – kapaciteta vikenda</div>
-      <div class="cap-strip" id="cap-p"></div>
-      <div class="sec-lbl" style="margin-top:14px">Sobe – zasedenost vikenda</div>
-      <div class="room-cards" id="room-cards-p"></div>
-      <div class="sec-lbl" style="margin-top:14px">Skupaj ta vikend</div>
-      <div class="stats-row" id="stats-row">
-        <div class="stat-card"><div class="stat-num" id="s-rez">—</div><div class="stat-lbl">Rezervacij</div></div>
-        <div class="stat-card"><div class="stat-num" id="s-ppl">—</div><div class="stat-lbl">Oseb</div></div>
-        <div class="stat-card"><div class="stat-num" id="s-pnd">—</div><div class="stat-lbl">V čakanju</div></div>
-      </div>
-      <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
-      <div id="pnd-list"><div class="empty"><div class="ei">✅</div>Ni čakajočih rezervacij</div></div>
-      <div style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center">Za celoten urnik vikenda → zavihek <strong>Rezervacije</strong></div>
     </div>
   </div>
 
-  <!-- KOLEDAR -->
-  <div id="screen-koledar" class="screen">
-    <div class="page">
-      <div class="cal-nav">
-        <h2 id="cal-month-title">Maj 2026</h2>
-        <div class="cal-nav-btns">
-          <button class="cal-nav-btn" onclick="calMove(-1)">◀</button>
-          <button class="cal-nav-btn" onclick="calToday()">Danes</button>
-          <button class="cal-nav-btn" onclick="calMove(1)">▶</button>
-        </div>
-      </div>
-      <div class="cal-grid">
-        <div class="cal-head" id="cal-head"></div>
-        <div class="cal-body" id="cal-body"></div>
-      </div>
-      <div id="day-panel" style="display:none">
-        <div id="day-panel-title">—</div>
-        <div id="day-panel-list"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- REZERVACIJE -->
-  <div id="screen-rezervacije" class="screen">
+  <!-- ══════════════════════════════════════════════════════════════ MIZE -->
+  <div id="screen-mize" class="screen">
     <div class="page">
       <div class="wk-nav">
         <h2 id="wk-title-r">Urnik vikenda</h2>
         <div class="wk-btns">
-          <button class="wk-btn" onclick="wkRez(-1)">← Prej</button>
-          <button class="wk-btn active" id="wk-r-today" onclick="wkRezReset()">Ta vikend</button>
-          <button class="wk-btn" onclick="wkRez(1)">Naprej →</button>
+          <button class="wk-btn" onclick="wkMize(-1)">← Prej</button>
+          <button class="wk-btn active" id="wk-m-today" onclick="wkMizeReset()">Ta vikend</button>
+          <button class="wk-btn" onclick="wkMize(1)">Naprej →</button>
         </div>
       </div>
-      <div class="cap-strip" id="cap-r" style="margin-bottom:16px"></div>
-      <div id="rez-days"><div class="empty"><div class="ei">🌿</div>Ni rezervacij</div></div>
+      <div class="sec-lbl">Kapaciteta jedilnice</div>
+      <div class="cap-strip" id="cap-mize"></div>
+      <div id="mize-days"></div>
     </div>
   </div>
 
-  <!-- SOBE -->
-  <div id="screen-sobe" class="screen">
+  <!-- ══════════════════════════════════════════════════════════════ ANALITIKA -->
+  <div id="screen-analitika" class="screen">
     <div class="page">
-      <div class="wk-nav">
-        <h2 id="wk-title-s">Sobe – ta vikend</h2>
-        <div class="wk-btns">
-          <button class="wk-btn" onclick="wkSobe(-1)">← Prej</button>
-          <button class="wk-btn active" id="wk-s-today" onclick="wkSobeReset()">Ta vikend</button>
-          <button class="wk-btn" onclick="wkSobe(1)">Naprej →</button>
-        </div>
+      <div class="sec-lbl">Ta mesec</div>
+      <div class="anl-grid" style="margin-bottom:14px">
+        <div class="anl-card"><div class="anl-num" id="anl-rez-total">—</div><div class="anl-lbl">Vseh rezervacij</div></div>
+        <div class="anl-card"><div class="anl-num" id="anl-ppl-total">—</div><div class="anl-lbl">Skupaj gostov</div></div>
+        <div class="anl-card"><div class="anl-num" id="anl-rooms-total">—</div><div class="anl-lbl">Nočitev sob</div></div>
+        <div class="anl-card"><div class="anl-num" id="anl-pnd-total">—</div><div class="anl-lbl">Čakajočih</div></div>
       </div>
-      <div id="sobe-rooms"></div>
-      <div class="sec-lbl" style="margin-top:6px">Vse prihajajoče rezervacije sob</div>
-      <div id="sobe-list"></div>
+      <div class="sec-lbl">Zasedenost sob (prihodnje)</div>
+      <div class="anl-card" style="margin-bottom:14px" id="anl-room-occ"></div>
+      <div class="sec-lbl">Vir rezervacij</div>
+      <div class="anl-card" style="margin-bottom:14px" id="anl-sources"></div>
+      <div class="sec-lbl">Kapaciteta jedilnice – naslednji 3 vikendi</div>
+      <div class="cap-strip" id="anl-cap"></div>
     </div>
   </div>
 </div>
@@ -351,13 +341,7 @@
       <button class="dm-btn dm-edit" id="dm-toggle-edit" onclick="toggleEditMode()" style="padding:6px 12px;font-size:12px">✏️ Uredi</button>
     </div>
     <div class="dm-actions" id="dm-actions"></div>
-
-    <!-- VIEW MODE -->
-    <div id="dm-view">
-      <div class="dm-kv" id="dm-kv"></div>
-    </div>
-
-    <!-- EDIT MODE -->
+    <div id="dm-view"><div class="dm-kv" id="dm-kv"></div></div>
     <div id="dm-edit" style="display:none">
       <div class="dm-edit-grid">
         <div class="mo-field"><label>Ime in priimek</label><input type="text" id="ed-name"></div>
@@ -370,46 +354,37 @@
           </select>
         </div>
         <div class="mo-field"><label>Datum</label><input type="date" id="ed-date"></div>
-        <div class="mo-field"><label>Čas</label><select id="ed-time"></select></div>
+        <div class="mo-field full" id="ed-room-field" style="display:none"><label>Soba</label>
+          <select id="ed-room">
+            <option value="GOZD">🌲 Soba GOZD</option>
+            <option value="RAZGLED">🏔️ Soba RAZGLED</option>
+            <option value="SONCE">☀️ Soba SONCE</option>
+          </select>
+        </div>
+        <div class="mo-field" id="ed-nights-field" style="display:none"><label>Noči</label><input type="number" id="ed-nights" min="1" max="30"></div>
+        <div class="mo-field" id="ed-time-field"><label>Čas</label><select id="ed-time"></select></div>
         <div class="mo-field"><label>Odrasli</label><input type="number" id="ed-people" min="1" max="99"></div>
         <div class="mo-field"><label>Otroci</label><input type="number" id="ed-kids" min="0" max="20"></div>
         <div class="mo-field"><label>Telefon</label><input type="tel" id="ed-phone"></div>
         <div class="mo-field"><label>E-pošta</label><input type="email" id="ed-email"></div>
-        <div class="mo-field full"><label>Vrsta dogodka</label>
-          <select id="ed-event">
-            <option value="">—</option>
-            <option>Kosilo ali večerja</option>
-            <option>Družinsko srečanje ali praznovanje</option>
-            <option>Rojstni dan</option>
-            <option>Poslovno kosilo</option>
-            <option>Poroka ali večji dogodek</option>
-          </select>
-        </div>
         <div class="mo-field full"><label>Opomba gosta</label><textarea id="ed-note" style="height:60px"></textarea></div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-cancel" style="flex:1;padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer" onclick="cancelEdit()">Prekliči</button>
-        <button class="btn-ok" style="flex:2;padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer" onclick="saveEdit()">Shrani spremembe</button>
+        <button class="btn-ok" style="flex:2;padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer" onclick="saveEdit()">Shrani</button>
       </div>
       <hr class="dm-divider">
     </div>
-
-    <hr class="dm-divider" id="dm-div1">
-
-    <!-- Admin opomba -->
+    <hr class="dm-divider">
     <div class="mo-field">
       <label>Admin opomba</label>
-      <textarea id="dm-anote" placeholder="Interna opomba (vidna samo vam)..." style="height:60px"></textarea>
+      <textarea id="dm-anote" placeholder="Interna opomba..." style="height:60px"></textarea>
     </div>
     <button class="btn-ok" onclick="saveNote()" style="width:100%;padding:10px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">Shrani opombo</button>
-
     <hr class="dm-divider">
-
-    <!-- Komunikacija -->
     <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Komunikacija</div>
     <div id="dm-comm"></div>
     <button class="dm-btn dm-email" onclick="openEmailFromDetail()" style="width:100%;justify-content:center;margin-top:10px">✉️ Pošlji sporočilo gostu</button>
-
     <div class="mo-actions" style="margin-top:14px">
       <button class="btn-cancel" onclick="closeDetailModal()">Zapri</button>
       <button style="flex:1;padding:12px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer;background:var(--red-bg);color:var(--red)" onclick="doDelete()">🗑 Izbriši</button>
@@ -420,32 +395,34 @@
 <!-- NEW RESERVATION MODAL -->
 <div class="mo hidden" id="new-modal">
   <div class="mo-box">
-    <div class="mo-title">+ Nova rezervacija mize</div>
+    <div class="mo-title" id="new-modal-title">+ Nova rezervacija</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button id="nw-type-table" class="btn-ok" style="flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer" onclick="setNewType('table')">🍽 Miza</button>
+      <button id="nw-type-room" class="btn-cancel" style="flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer" onclick="setNewType('room')">🛏 Soba</button>
+    </div>
     <div class="mo-2col">
       <div class="mo-field"><label>Datum *</label><input type="date" id="nw-date" onchange="checkAvail()"></div>
-      <div class="mo-field"><label>Čas *</label><select id="nw-time" onchange="checkAvail()"><option value="">Izberite...</option></select></div>
+      <div class="mo-field" id="nw-nights-wrap" style="display:none"><label>Noči *</label><input type="number" id="nw-nights" min="1" max="30" value="2" onchange="checkAvail()"></div>
+      <div class="mo-field" id="nw-time-wrap"><label>Čas *</label><select id="nw-time" onchange="checkAvail()"><option value="">Izberite...</option></select></div>
+    </div>
+    <div class="mo-field" id="nw-room-wrap" style="display:none"><label>Soba *</label>
+      <select id="nw-room" onchange="checkAvail()">
+        <option value="GOZD">🌲 Soba GOZD (do 4 osebe)</option>
+        <option value="RAZGLED">🏔️ Soba RAZGLED (do 4 osebe)</option>
+        <option value="SONCE">☀️ Soba SONCE (do 4 osebe)</option>
+      </select>
     </div>
     <div id="avail-info"></div>
     <div class="mo-field"><label>Ime in priimek *</label><input type="text" id="nw-name" placeholder="Ana Novak"></div>
     <div class="mo-2col">
-      <div class="mo-field"><label>Odrasli *</label><input type="number" id="nw-people" min="1" max="40" placeholder="4"></div>
+      <div class="mo-field"><label>Odrasli *</label><input type="number" id="nw-people" min="1" max="40" placeholder="2"></div>
       <div class="mo-field"><label>Otroci</label><input type="number" id="nw-kids" min="0" max="20" placeholder="0"></div>
     </div>
     <div class="mo-2col">
       <div class="mo-field"><label>Telefon</label><input type="tel" id="nw-phone" placeholder="+386..."></div>
       <div class="mo-field"><label>E-pošta</label><input type="email" id="nw-email" placeholder="gost@email.com"></div>
     </div>
-    <div class="mo-field"><label>Vrsta dogodka</label>
-      <select id="nw-event">
-        <option value="">—</option>
-        <option>Kosilo ali večerja</option>
-        <option>Družinsko srečanje ali praznovanje</option>
-        <option>Rojstni dan</option>
-        <option>Poslovno kosilo</option>
-        <option>Poroka ali večji dogodek</option>
-      </select>
-    </div>
-    <div class="mo-field"><label>Opomba</label><textarea id="nw-note" placeholder="Posebne potrebe, alergije..."></textarea></div>
+    <div class="mo-field"><label>Opomba</label><textarea id="nw-note" placeholder="Posebne potrebe..."></textarea></div>
     <div class="mo-2col">
       <div class="mo-field"><label>Status</label>
         <select id="nw-status"><option value="pending">V čakanju</option><option value="confirmed">Potrjeno</option></select>
@@ -463,7 +440,7 @@
 <div class="mo hidden" id="email-modal">
   <div class="mo-box" style="max-width:480px">
     <div class="mo-title">✉️ Pošlji sporočilo gostu</div>
-    <div class="mo-field"><label>Prejemnik (email)</label><input type="email" id="em-to" placeholder="gost@email.com"></div>
+    <div class="mo-field"><label>Prejemnik</label><input type="email" id="em-to"></div>
     <div class="mo-field"><label>Zadeva</label><input type="text" id="em-subject"></div>
     <div class="mo-field"><label>Sporočilo</label><textarea id="em-body" style="height:130px"></textarea></div>
     <div class="mo-actions">
@@ -476,171 +453,117 @@
 <div id="toast"></div>
 
 <script>
-// ── DEMO DATA ─────────────────────────────────────────────────────────────────
-// Namišljene rezervacije za prikaz stranki
-let _demoData = [
-  // Sobota 2026-05-02
-  { id:1, date:'2.5.2026',  time:'12:00', name:'Ana Novak',      people:4,  kids:2, phone:'041 123 456', email:'ana.novak@gmail.com',    status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
-  { id:2, date:'2.5.2026',  time:'13:00', name:'Janez Kovač',    people:6,  kids:0, phone:'040 234 567', email:'kovac.j@email.si',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'Prosimo za mizo ob oknu.' },
-  { id:3, date:'2.5.2026',  time:'14:30', name:'Maja Horvat',    people:8,  kids:3, phone:'031 345 678', email:'maja.h@gmail.com',       status:'pending',   source:'chatbot',   reservation_type:'table', event_type:'Rojstni dan',                          note:'Proslava 40. rojstnega dne, prosimo za torto.' },
-  { id:4, date:'2.5.2026',  time:'16:00', name:'Luka Petek',     people:4,  kids:0, phone:'070 456 789', email:'luka.petek@email.si',    status:'confirmed', source:'manual',    reservation_type:'table', event_type:'',                                     note:'' },
-  { id:5, date:'2.5.2026',  time:'18:00', name:'Petra Zorman',   people:10, kids:2, phone:'041 567 890', email:'petra.zorman@gmail.com', status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Družinsko srečanje ali praznovanje',   note:'Letno srečanje – prosimo za ločen prostor.' },
-
-  // Nedelja 2026-05-03
-  { id:6, date:'3.5.2026',  time:'12:00', name:'Tine Vidmar',    people:6,  kids:1, phone:'040 678 901', email:'tine.v@email.si',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
-  { id:7, date:'3.5.2026',  time:'13:30', name:'Eva Kranjc',     people:4,  kids:0, phone:'031 789 012', email:'eva.kranjc@gmail.com',   status:'pending',   source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'Vegetarijanska prehrana za 2 osebi.' },
-  { id:8, date:'3.5.2026',  time:'15:00', name:'Robert Oblak',   people:8,  kids:4, phone:'041 890 123', email:'r.oblak@email.si',       status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Družinsko srečanje ali praznovanje',   note:'Alergija na gluten pri enem otroku.' },
-  { id:9, date:'3.5.2026',  time:'17:00', name:'Lucija Štefan',  people:3,  kids:0, phone:'070 901 234', email:'lucija.s@gmail.com',     status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                     note:'' },
-
-  // Sobota 2026-05-09
-  { id:10, date:'9.5.2026', time:'12:30', name:'Peter Dolenc',   people:5,  kids:2, phone:'040 012 345', email:'peter.dolenc@email.si',  status:'pending',   source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
-  { id:11, date:'9.5.2026', time:'14:00', name:'Sara Mrak',      people:6,  kids:0, phone:'031 123 456', email:'sara.mrak@gmail.com',    status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Poslovno kosilo',                      note:'Prikaz za poslovne partnerje.' },
-  { id:12, date:'9.5.2026', time:'17:30', name:'Bojan Lesjak',   people:12, kids:0, phone:'041 234 567', email:'b.lesjak@firma.si',      status:'pending',   source:'wordpress', reservation_type:'table', event_type:'Poroka ali večji dogodek',             note:'Poroke se udeležuje 12 povabljenih.' },
-
-  // Nedelja 2026-05-10
-  { id:13, date:'10.5.2026',time:'13:00', name:'Marko Ferjan',   people:4,  kids:1, phone:'070 345 678', email:'marko.f@email.si',       status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                     note:'' },
-  { id:14, date:'10.5.2026',time:'15:00', name:'Nina Bergant',   people:6,  kids:2, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Rojstni dan',                          note:'Praznovanje 50-letnice, prosimo za glasbeno presenečenje.' },
-
-  // Preteklost – Sobota 2026-04-25
-  { id:15, date:'25.4.2026',time:'12:00', name:'Nina Bergant',   people:8,  kids:0, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Poroka ali večji dogodek',             note:'Porok slavje – celoten prostor rezerviran.' },
-  { id:16, date:'25.4.2026',time:'14:00', name:'Rok Zupančič',   people:4,  kids:2, phone:'031 567 890', email:'rok.z@email.si',         status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                     note:'' },
-  { id:17, date:'25.4.2026',time:'17:00', name:'Ana Grošelj',    people:6,  kids:0, phone:'041 678 901', email:'ana.g@gmail.com',        status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
-
-  // Preteklost – Nedelja 2026-04-26
-  { id:18, date:'26.4.2026',time:'12:30', name:'Blaž Kastelic',  people:5,  kids:2, phone:'070 789 012', email:'blaz.k@email.si',        status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'',                                     note:'' },
-  { id:19, date:'26.4.2026',time:'14:00', name:'Manja Pirnat',   people:3,  kids:0, phone:'040 890 123', email:'manja.p@gmail.com',      status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
-
-  // ── SOBARSKE REZERVACIJE ────────────────────────────────────────────────────
-  // GOZD: zasedena Čet-Ned 30.4–3.5 (3 noči)
-  { id:20, date:'30.4.2026', nights:3, name:'Horvat Maja',    people:2, kids:1, phone:'031 345 678', email:'maja.h@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'room', location:'GOZD',    note:'Prosimo za otroško posteljico.' },
-  // RAZGLED: zasedena Pet-Ned 1.5–3.5 (2 noči)
-  { id:21, date:'1.5.2026',  nights:2, name:'Kovač Janez',    people:4, kids:0, phone:'040 234 567', email:'kovac.j@email.si',       status:'confirmed', source:'chatbot',   reservation_type:'room', location:'RAZGLED', note:'' },
-  // SONCE: zasedena Sob-Pon 2.5–4.5 (2 noči)
-  { id:22, date:'2.5.2026',  nights:2, name:'Zorman Petra',   people:3, kids:2, phone:'041 567 890', email:'petra.zorman@gmail.com', status:'pending',   source:'wordpress', reservation_type:'room', location:'SONCE',   note:'Alergija na penico – prosimo za hipoalergene blazine.' },
-  // GOZD: naslednji vikend Pet-Ned 8.5–10.5 (2 noči)
-  { id:23, date:'8.5.2026',  nights:2, name:'Vidmar Tine',    people:2, kids:0, phone:'040 678 901', email:'tine.v@email.si',        status:'confirmed', source:'manual',    reservation_type:'room', location:'GOZD',    note:'' },
-  // RAZGLED: 15.5–17.5 (2 noči)
-  { id:24, date:'15.5.2026', nights:2, name:'Petek Luka',     people:2, kids:0, phone:'070 456 789', email:'luka.petek@email.si',    status:'confirmed', source:'wordpress', reservation_type:'room', location:'RAZGLED', note:'Medeni tedni – prosimo za romantično dekoracijo.' },
-  // SONCE: 16.5–20.5 (4 noči) – daljše bivanje
-  { id:25, date:'16.5.2026', nights:4, name:'Novak Družina',  people:4, kids:2, phone:'041 123 456', email:'ana.novak@gmail.com',    status:'confirmed', source:'chatbot',   reservation_type:'room', location:'SONCE',   note:'Potrebujemo dva otroška ležišča.' },
-  // Preteklo – RAZGLED Sob 26.4 (1 noč)
-  { id:26, date:'25.4.2026', nights:1, name:'Bergant Nina',   people:2, kids:0, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'room', location:'RAZGLED', note:'' },
-];
-
-let _nextId = 20;
-
-// ── CONFIG ────────────────────────────────────────────────────────────────────
-const CAP_MAX = 40;
+// ══════════════════════════════════════════════════════════════ DEMO DATA
 const ROOMS = [
   { id:'GOZD',    name:'Soba GOZD',    icon:'🌲', cap:4, desc:'Balkon, pogled na gozd' },
   { id:'RAZGLED', name:'Soba RAZGLED', icon:'🏔️', cap:4, desc:'Panoramski razgled' },
   { id:'SONCE',   name:'Soba SONCE',   icon:'☀️', cap:4, desc:'2 spalnici, prostorna' },
 ];
+const CAP_MAX = 40;
+const MONTHS = ['Januar','Februar','Marec','April','Maj','Junij','Julij','Avgust','September','Oktober','November','December'];
 
-// ── SIMULATED API ─────────────────────────────────────────────────────────────
-function fetchAll() {
-  return Promise.resolve(_demoData.slice());
-}
+let _demoData = [
+  // ── MIZE ──────────────────────────────────────────────────────────────────
+  // Sobota 2026-05-02
+  { id:1,  date:'2.5.2026',  time:'12:00', name:'Ana Novak',      people:4,  kids:2, phone:'041 123 456', email:'ana.novak@gmail.com',    status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                 note:'' },
+  { id:2,  date:'2.5.2026',  time:'13:00', name:'Janez Kovač',    people:6,  kids:0, phone:'040 234 567', email:'kovac.j@email.si',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                 note:'Miza ob oknu.' },
+  { id:3,  date:'2.5.2026',  time:'14:30', name:'Maja Horvat',    people:8,  kids:3, phone:'031 345 678', email:'maja.h@gmail.com',       status:'pending',   source:'chatbot',   reservation_type:'table', event_type:'Rojstni dan',                        note:'Torta za 40. rojstni dan.' },
+  { id:4,  date:'2.5.2026',  time:'16:00', name:'Luka Petek',     people:4,  kids:0, phone:'070 456 789', email:'luka.petek@email.si',    status:'confirmed', source:'manual',    reservation_type:'table', event_type:'',                                   note:'' },
+  { id:5,  date:'2.5.2026',  time:'18:00', name:'Petra Zorman',   people:10, kids:2, phone:'041 567 890', email:'petra.zorman@gmail.com', status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Družinsko srečanje',                 note:'Ločen prostor.' },
+  // Nedelja 2026-05-03
+  { id:6,  date:'3.5.2026',  time:'12:00', name:'Tine Vidmar',    people:6,  kids:1, phone:'040 678 901', email:'tine.v@email.si',        status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                 note:'' },
+  { id:7,  date:'3.5.2026',  time:'13:30', name:'Eva Kranjc',     people:4,  kids:0, phone:'031 789 012', email:'eva.kranjc@gmail.com',   status:'pending',   source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                 note:'2 vegetarijanki.' },
+  { id:8,  date:'3.5.2026',  time:'15:00', name:'Robert Oblak',   people:8,  kids:4, phone:'041 890 123', email:'r.oblak@email.si',       status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Družinsko srečanje',                 note:'Alergija na gluten.' },
+  // Naslednji vikend
+  { id:9,  date:'9.5.2026',  time:'12:30', name:'Peter Dolenc',   people:5,  kids:2, phone:'040 012 345', email:'peter.dolenc@email.si',  status:'pending',   source:'wordpress', reservation_type:'table', event_type:'',                                   note:'' },
+  { id:10, date:'9.5.2026',  time:'14:00', name:'Sara Mrak',      people:6,  kids:0, phone:'031 123 456', email:'sara.mrak@gmail.com',    status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Poslovno kosilo',                    note:'' },
+  { id:11, date:'10.5.2026', time:'13:00', name:'Marko Ferjan',   people:4,  kids:1, phone:'070 345 678', email:'marko.f@email.si',       status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                   note:'' },
+  { id:12, date:'10.5.2026', time:'15:00', name:'Nina Bergant',   people:6,  kids:2, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Rojstni dan',                        note:'Praznovanje 50-letnice.' },
+  // Preteklost
+  { id:13, date:'25.4.2026', time:'12:00', name:'Rok Zupančič',   people:4,  kids:2, phone:'031 567 890', email:'rok.z@email.si',         status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                   note:'' },
+  { id:14, date:'26.4.2026', time:'12:30', name:'Blaž Kastelic',  people:5,  kids:0, phone:'070 789 012', email:'blaz.k@email.si',        status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'',                                   note:'' },
 
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
+  // ── SOBE ──────────────────────────────────────────────────────────────────
+  // GOZD: Čet 30.4 – Ned 3.5 (3 noči)
+  { id:20, date:'30.4.2026', nights:3, name:'Maja Horvat',     people:2, kids:1, phone:'031 345 678', email:'maja.h@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'room', location:'GOZD',    note:'Otroška posteljica.' },
+  // RAZGLED: Pet 1.5 – Ned 3.5 (2 noči)
+  { id:21, date:'1.5.2026',  nights:2, name:'Janez Kovač',     people:4, kids:0, phone:'040 234 567', email:'kovac.j@email.si',       status:'confirmed', source:'chatbot',   reservation_type:'room', location:'RAZGLED', note:'' },
+  // SONCE: Sob 2.5 – Pon 4.5 (2 noči)
+  { id:22, date:'2.5.2026',  nights:2, name:'Petra Zorman',    people:3, kids:2, phone:'041 567 890', email:'petra.zorman@gmail.com', status:'pending',   source:'wordpress', reservation_type:'room', location:'SONCE',   note:'Hipoalergene blazine.' },
+  // GOZD: Pet 8.5 – Ned 10.5 (2 noči)
+  { id:23, date:'8.5.2026',  nights:2, name:'Tine Vidmar',     people:2, kids:0, phone:'040 678 901', email:'tine.v@email.si',        status:'confirmed', source:'manual',    reservation_type:'room', location:'GOZD',    note:'' },
+  // RAZGLED: Čet 14.5 – Ned 17.5 (3 noči)
+  { id:24, date:'14.5.2026', nights:3, name:'Luka Petek',      people:2, kids:0, phone:'070 456 789', email:'luka.petek@email.si',    status:'confirmed', source:'wordpress', reservation_type:'room', location:'RAZGLED', note:'Medeni tedni.' },
+  // SONCE: Pet 15.5 – Tor 19.5 (4 noči)
+  { id:25, date:'15.5.2026', nights:4, name:'Novak Družina',   people:4, kids:2, phone:'041 123 456', email:'ana.novak@gmail.com',    status:'confirmed', source:'chatbot',   reservation_type:'room', location:'SONCE',   note:'2 otroški ležišči.' },
+  // GOZD: Sob 23.5 – Pon 25.5 (2 noči)
+  { id:26, date:'23.5.2026', nights:2, name:'Eva Kranjc',      people:2, kids:0, phone:'031 789 012', email:'eva.kranjc@gmail.com',   status:'pending',   source:'chatbot',   reservation_type:'room', location:'GOZD',    note:'' },
+  // Preteklost
+  { id:27, date:'25.4.2026', nights:1, name:'Nina Bergant',    people:2, kids:0, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'room', location:'RAZGLED', note:'' },
+];
+let _nextId = 30;
 
-// ── TABS ──────────────────────────────────────────────────────────────────────
-let activeTab = 'pregled';
-function goTab(t) {
-  activeTab = t;
-  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['pregled','koledar','rezervacije','sobe'][i]===t));
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-'+t).classList.add('active');
-  if (t==='pregled') loadPregled();
-  else if (t==='koledar') renderCal();
-  else if (t==='rezervacije') loadRez();
-  else if (t==='sobe') loadSobe();
-}
+// ══════════════════════════════════════════════════════════════ STATE
+let activeTab = 'sobe';
+let activeSobeSubTab = 'odprte';
+let wkOffM = 0;
+let calRoomYear = new Date().getFullYear(), calRoomMonth = new Date().getMonth();
+let calRoomSelected = null;
+let _newType = 'table';
 
-// ── DATES ─────────────────────────────────────────────────────────────────────
-function wkDates(off=0) {
-  const now=new Date(), day=now.getDay(), dSat=(6-day+7)%7||7;
-  const sat=new Date(now); sat.setDate(now.getDate()+dSat+off*7);
-  const sun=new Date(sat); sun.setDate(sat.getDate()+1);
-  return {sat,sun};
-}
-function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+// ══════════════════════════════════════════════════════════════ UTILS
+function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pad(n){ return String(n).padStart(2,'0'); }
-function slD(d){ return `${d.getDate()}. ${d.getMonth()+1}.`; }
+function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function slDFull(d){ return `${d.getDate()}. ${d.getMonth()+1}. ${d.getFullYear()}`; }
+function slDShort(d){ return `${d.getDate()}. ${d.getMonth()+1}.`; }
 function normD(s){
   if(!s) return '';
-  if(s.includes('.')){
-    const p=s.split('.');
-    if(p.length>=3) return `${p[2].trim().padStart(4,'0')}-${p[1].trim().padStart(2,'0')}-${p[0].trim().padStart(2,'0')}`;
-  }
+  if(s.includes('.')){const p=s.split('.');if(p.length>=3)return`${p[2].trim().padStart(4,'0')}-${p[1].trim().padStart(2,'0')}-${p[0].trim().padStart(2,'0')}`;}
   return s.slice(0,10);
 }
-const MONTHS=['Januar','Februar','Marec','April','Maj','Junij','Julij','Avgust','September','Oktober','November','December'];
-
+function addDays(ymdStr,n){ const d=new Date(ymdStr+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d); }
+function fetchAll(){ return Promise.resolve(_demoData.slice()); }
 function byDate(arr,ds){ return arr.filter(r=>normD(r.date||'')===ds); }
 function sumPpl(arr){ return arr.reduce((s,r)=>s+(parseInt(r.people)||0),0); }
-
-// ── WEEKEND OFFSETS ───────────────────────────────────────────────────────────
-let wkOffP=0, wkOffR=0, wkOffS=0;
-function setWkP(n){
-  wkOffP=n;
-  document.querySelectorAll('#screen-pregled .wk-btn').forEach((b,i)=>b.classList.toggle('active',i===n));
-  loadPregled();
-}
-function wkRez(d){ wkOffR+=d; loadRez(); }
-function wkRezReset(){ wkOffR=0; loadRez(); }
-function wkSobe(d){ wkOffS+=d; loadSobe(); }
-function wkSobeReset(){ wkOffS=0; loadSobe(); }
-
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function srcLbl(s){ return s==='chatbot'?'AI chat':s==='wordpress'?'Spletni obrazec':s==='manual'?'Ročni vnos':s||''; }
 function stLbl(s){ return {pending:'V čakanju',confirmed:'Potrjeno',rejected:'Zavrnjeno',cancelled:'Preklicano'}[s]||s; }
-
-// Room helpers
-function roomsByLoc(all, loc){ return all.filter(r=>r.reservation_type==='room'&&r.location===loc&&r.status!=='rejected'&&r.status!=='cancelled'); }
-function dateToYmd(s){ // '1.5.2026' → '2026-05-01'
-  if(!s) return '';
-  if(s.includes('-')) return s.slice(0,10);
-  const p=s.split('.');
-  return `${p[2].trim().padStart(4,'0')}-${p[1].trim().padStart(2,'0')}-${p[0].trim().padStart(2,'0')}`;
-}
-function addDays(ymdStr, n){
-  const d=new Date(ymdStr+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d);
-}
-function isRoomOccupiedOn(res, dayYmd){
-  const cin=dateToYmd(res.date);
-  const cout=addDays(cin, res.nights||1);
+function roomById(id){ return ROOMS.find(r=>r.id===id)||{icon:'🛏️',name:id,cap:4,desc:''}; }
+function isRoomOccOn(res,dayYmd){
+  const cin=normD(res.date); const cout=addDays(cin,res.nights||1);
   return dayYmd>=cin && dayYmd<cout;
 }
-function getRoomOnDate(all, loc, dayYmd){
-  return roomsByLoc(all,loc).find(r=>isRoomOccupiedOn(r,dayYmd))||null;
+function getRoomOnDay(all,loc,dayYmd){
+  return all.filter(r=>r.reservation_type==='room'&&r.location===loc&&r.status!=='rejected'&&r.status!=='cancelled').find(r=>isRoomOccOn(r,dayYmd))||null;
 }
-function roomIcon(id){ return ROOMS.find(r=>r.id===id)?.icon||'🛏️'; }
-function roomName(id){ return ROOMS.find(r=>r.id===id)?.name||id; }
+function wkDates(off=0){
+  const now=new Date(),day=now.getDay(),dSat=(6-day+7)%7||7;
+  const sat=new Date(now);sat.setDate(now.getDate()+dSat+off*7);
+  const sun=new Date(sat);sun.setDate(sat.getDate()+1);
+  return {sat,sun};
+}
+function toast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500); }
 
-// ── CAPACITY STRIP ────────────────────────────────────────────────────────────
-function renderCap(elId, all, off){
-  const el=document.getElementById(elId);
-  const {sat,sun}=wkDates(off);
-  el.innerHTML=[{l:'Sobota',d:sat},{l:'Nedelja',d:sun}].map(({l,d})=>{
-    const ds=ymd(d), dayR=byDate(all,ds).filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
-    const ppl=sumPpl(dayR), pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
-    const bc=pct>=90?'full':pct>=60?'warn':'';
-    return `<div class="cap-card">
-      <div class="cap-day">${l}</div><div class="cap-date">${slDFull(d)}</div>
-      <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
-      <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX} oseb · ${dayR.length} rez.</div>
-    </div>`;
-  }).join('');
+// ══════════════════════════════════════════════════════════════ TABS
+function goTab(t){
+  activeTab=t;
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['sobe','mize','analitika'][i]===t));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+t).classList.add('active');
+  if(t==='sobe') loadSobe();
+  else if(t==='mize') loadMize();
+  else if(t==='analitika') loadAnalitika();
+}
+function goSubSobe(sub){
+  activeSobeSubTab=sub;
+  document.querySelectorAll('#sobe-subtabs .sub-tab').forEach((b,i)=>b.classList.toggle('active',['odprte','potrjene'][i]===sub));
+  document.querySelectorAll('.sub-screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sub-sobe-'+sub).classList.add('active');
+  if(sub==='odprte') loadSobeOdprte();
+  else loadSobePotrjene();
 }
 
-// ── COMPACT ROW ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════ RES ROW (mize)
 function resRow(r){
   const kids=r.kids?` + ${r.kids} otr.`:'';
   return `<div class="res-row ${r.status}" onclick="openDetail(${r.id})">
@@ -654,21 +577,237 @@ function resRow(r){
   </div>`;
 }
 
-// ── DETAIL MODAL ──────────────────────────────────────────────────────────────
-let _currentRes = null;
-let _editMode = false;
+// ══════════════════════════════════════════════════════════════ SOBE – ODPRTE
+async function loadSobeOdprte(){
+  const all=await fetchAll();
+  const rooms=all.filter(r=>r.reservation_type==='room');
+  const pnd=rooms.filter(r=>r.status==='pending').sort((a,b)=>normD(a.date).localeCompare(normD(b.date)));
+  const open=rooms.filter(r=>r.status==='pending'||r.status==='processing').sort((a,b)=>normD(a.date).localeCompare(normD(b.date)));
 
+  // badge
+  const allPnd=all.filter(r=>r.status==='pending');
+  const b=document.getElementById('pending-badge');
+  b.textContent=allPnd.length;b.classList.toggle('show',allPnd.length>0);
+
+  const pndEl=document.getElementById('sobe-pnd-list');
+  pndEl.innerHTML=pnd.length?pnd.map(roomResCard).join(''):'<div class="empty"><div class="ei">✅</div>Ni čakajočih sobnih rezervacij</div>';
+
+  const openEl=document.getElementById('sobe-open-list');
+  openEl.innerHTML=open.length?open.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni odprtih rezervacij</div>';
+}
+
+// ══════════════════════════════════════════════════════════════ SOBE – POTRJENE
+async function loadSobePotrjene(){
+  const all=await fetchAll();
+  renderRoomCalendar(all);
+  const today=ymd(new Date());
+  const conf=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&normD(r.date)>=today)
+    .sort((a,b)=>normD(a.date).localeCompare(normD(b.date)));
+  const confEl=document.getElementById('sobe-conf-list');
+  confEl.innerHTML=conf.length?conf.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih prihodnjih rezervacij</div>';
+}
+
+function roomResCard(r){
+  const room=roomById(r.location);
+  const cin=normD(r.date);
+  const cout=addDays(cin,r.nights||1);
+  const cinD=new Date(cin+'T00:00:00'),coutD=new Date(cout+'T00:00:00');
+  const kids=r.kids?` + ${r.kids} otr.`:'';
+  return `<div class="room-conf-row" onclick="openDetail(${r.id})">
+    <div class="rcr-icon">${room.icon}</div>
+    <div class="rcr-info">
+      <div class="rcr-name">${esc(r.name)}</div>
+      <div class="rcr-sub">${room.name} · 👥 ${r.people}${kids} · ${srcLbl(r.source)}</div>
+      <div class="rcr-sub">${r.note?'📝 '+esc(r.note.slice(0,60)):''}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="rcr-dates">${slDShort(cinD)}→${slDShort(coutD)}</div>
+      <div style="margin-top:3px"><span class="badge badge-${r.status}">${stLbl(r.status)}</span></div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════ ROOM CALENDAR
+function calRoomMove(d){ calRoomMonth+=d;if(calRoomMonth<0){calRoomMonth=11;calRoomYear--;}else if(calRoomMonth>11){calRoomMonth=0;calRoomYear++;}fetchAll().then(all=>renderRoomCalendar(all)); }
+function calRoomToday(){ calRoomYear=new Date().getFullYear();calRoomMonth=new Date().getMonth();calRoomSelected=null;fetchAll().then(all=>renderRoomCalendar(all)); }
+
+function renderRoomCalendar(all){
+  document.getElementById('cal-room-month').textContent=`${MONTHS[calRoomMonth]} ${calRoomYear}`;
+  const head=document.getElementById('cal-room-head');
+  head.innerHTML=['Pon','Tor','Sre','Čet','Pet','Sob','Ned'].map((d,i)=>`<div class="cal-head-cell${i>=5?' wknd':''}">${d}</div>`).join('');
+  const firstDay=new Date(calRoomYear,calRoomMonth,1);
+  const lastDay=new Date(calRoomYear,calRoomMonth+1,0);
+  const startDow=(firstDay.getDay()+6)%7;
+  const todayStr=ymd(new Date());
+  const body=document.getElementById('cal-room-body');
+  let html='';
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(calRoomYear,calRoomMonth,d);
+    const ds=ymd(date);
+    const dow=(date.getDay()+6)%7;
+    const isWknd=dow>=5;
+    const isToday=ds===todayStr;
+    const isSel=ds===calRoomSelected;
+    // Check each room
+    let chips='';
+    ROOMS.forEach(room=>{
+      const res=getRoomOnDay(all,room.id,ds);
+      if(res){
+        const cls=res.status==='confirmed'?'occ':'pnd';
+        chips+=`<div class="cal-room-chip ${cls}">${room.icon} ${esc(res.name.split(' ')[0])}</div>`;
+      }
+    });
+    html+=`<div class="cal-cell${isWknd?' weekend':''}${isToday?' today':''}${isSel?' selected':''}" onclick="calRoomSelectDay('${ds}')">
+      <div class="cal-day-num">${d}</div>
+      ${chips?`<div class="cal-rooms">${chips}</div>`:''}
+    </div>`;
+  }
+  const total=startDow+lastDay.getDate();
+  const rem=total%7;if(rem>0)for(let i=0;i<7-rem;i++) html+=`<div class="cal-cell empty"></div>`;
+  body.innerHTML=html;
+  if(calRoomSelected) showRoomDayPanel(calRoomSelected,all);
+}
+
+function calRoomSelectDay(ds){
+  calRoomSelected=ds;
+  document.querySelectorAll('#cal-room-body .cal-cell').forEach(c=>c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  fetchAll().then(all=>showRoomDayPanel(ds,all));
+}
+
+function showRoomDayPanel(ds,all){
+  const panel=document.getElementById('day-panel');
+  const date=new Date(ds+'T00:00:00');
+  document.getElementById('day-panel-title').textContent=`${slDFull(date)} – zasedenost sob`;
+  panel.style.display='block';
+  const list=document.getElementById('day-panel-list');
+  const rows=ROOMS.map(room=>{
+    const res=getRoomOnDay(all,room.id,ds);
+    if(!res) return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:18px">${room.icon}</span><span style="font-weight:700;flex:1">${room.name}</span><span style="color:var(--green);font-size:12px;font-weight:700">Prosta</span></div>`;
+    const cin=normD(res.date),cout=addDays(cin,res.nights||1);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openDetail(${res.id})"><span style="font-size:18px">${room.icon}</span><div style="flex:1"><div style="font-weight:700;font-size:13px">${room.name}</div><div style="font-size:12px;color:var(--muted)">${esc(res.name)} · ${cin.slice(5).replace('-','.')}→${cout.slice(5).replace('-','.')}</div></div><span class="badge badge-${res.status}">${stLbl(res.status)}</span></div>`;
+  }).join('');
+  list.innerHTML=rows||'<div class="empty">Ni rezervacij</div>';
+}
+
+async function loadSobe(){
+  if(activeSobeSubTab==='odprte') await loadSobeOdprte();
+  else await loadSobePotrjene();
+}
+
+// ══════════════════════════════════════════════════════════════ MIZE
+function wkMize(d){ wkOffM+=d; loadMize(); }
+function wkMizeReset(){ wkOffM=0; loadMize(); }
+
+async function loadMize(){
+  const {sat,sun}=wkDates(wkOffM);
+  const t=wkOffM===0?'Urnik vikenda':wkOffM===1?'Naslednji vikend':wkOffM===-1?'Prejšnji vikend':`Vikend ${slDFull(sat)}`;
+  document.getElementById('wk-title-r').textContent=t;
+  document.getElementById('wk-m-today').classList.toggle('active',wkOffM===0);
+  const all=await fetchAll();
+  // Capacity
+  const capEl=document.getElementById('cap-mize');
+  const ss=ymd(sat),su=ymd(sun);
+  capEl.innerHTML=[{l:'Sobota',d:sat},{l:'Nedelja',d:sun}].map(({l,d})=>{
+    const ds=ymd(d),dayR=byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
+    const ppl=sumPpl(dayR),pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
+    const bc=pct>=90?'full':pct>=60?'warn':'';
+    return `<div class="cap-card"><div class="cap-day">${l}</div><div class="cap-date">${slDFull(d)}</div>
+      <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
+      <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX} oseb · ${dayR.length} rez.</div></div>`;
+  }).join('');
+  // Days
+  const container=document.getElementById('mize-days');
+  container.innerHTML=[{l:`Sobota · ${slDFull(sat)}`,ds:ss},{l:`Nedelja · ${slDFull(sun)}`,ds:su}].map(({l,ds})=>{
+    const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const ppl=sumPpl(dayR.filter(r=>r.status!=='rejected'&&r.status!=='cancelled'));
+    return `<div style="margin-bottom:20px">
+      <div class="day-hdr"><span class="day-name">${l}</span><span class="day-meta">${dayR.length} rez · ${ppl} oseb</span></div>
+      ${dayR.length?`<div class="res-list">${dayR.map(resRow).join('')}</div>`:'<div class="empty"><div class="ei">🌿</div>Ni rezervacij</div>'}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════ ANALITIKA
+async function loadAnalitika(){
+  const all=await fetchAll();
+  const now=new Date();
+  const monthStart=ymd(new Date(now.getFullYear(),now.getMonth(),1));
+  const monthEnd=ymd(new Date(now.getFullYear(),now.getMonth()+1,0));
+  const thisMonth=all.filter(r=>normD(r.date)>=monthStart&&normD(r.date)<=monthEnd&&r.status!=='rejected'&&r.status!=='cancelled');
+  const tables=thisMonth.filter(r=>r.reservation_type==='table');
+  const rooms=thisMonth.filter(r=>r.reservation_type==='room');
+  const totalNights=rooms.reduce((s,r)=>s+(r.nights||1),0);
+  const pnd=all.filter(r=>r.status==='pending');
+
+  document.getElementById('anl-rez-total').textContent=thisMonth.length;
+  document.getElementById('anl-ppl-total').textContent=sumPpl(thisMonth);
+  document.getElementById('anl-rooms-total').textContent=totalNights;
+  document.getElementById('anl-pnd-total').textContent=pnd.length;
+
+  // Room occupancy – next 30 days
+  const today=ymd(new Date());
+  const end30=addDays(today,30);
+  const roomOccEl=document.getElementById('anl-room-occ');
+  roomOccEl.innerHTML=ROOMS.map(room=>{
+    let occ=0;
+    let d=new Date(today+'T00:00:00');
+    const endD=new Date(end30+'T00:00:00');
+    while(d<endD){ if(getRoomOnDay(all,room.id,ymd(d))) occ++;d.setDate(d.getDate()+1); }
+    const pct=Math.round(occ/30*100);
+    const bc=pct>=90?'full':pct>=60?'warn':'';
+    return `<div class="room-occ-row">
+      <span style="font-size:18px">${room.icon}</span>
+      <span style="font-size:13px;font-weight:700;flex:1">${room.name}</span>
+      <div style="width:120px"><div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div></div>
+      <span style="font-size:12px;color:var(--muted);min-width:50px;text-align:right">${occ}/30 noči</span>
+    </div>`;
+  }).join('');
+
+  // Sources
+  const srcEl=document.getElementById('anl-sources');
+  const srcData=[
+    {key:'wordpress',lbl:'Spletni obrazec'},
+    {key:'chatbot',  lbl:'AI chat'},
+    {key:'manual',   lbl:'Ročni vnos'},
+  ];
+  const total=all.filter(r=>r.status!=='rejected'&&r.status!=='cancelled').length||1;
+  srcEl.innerHTML=srcData.map(({key,lbl})=>{
+    const cnt=all.filter(r=>r.source===key&&r.status!=='rejected'&&r.status!=='cancelled').length;
+    const pct=Math.round(cnt/total*100);
+    return `<div class="anl-bar-row">
+      <span class="anl-bar-label">${lbl}</span>
+      <div class="anl-bar-wrap"><div class="anl-bar-fill" style="width:${pct}%"></div></div>
+      <span class="anl-bar-val">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  // Capacity next 3 weekends
+  const capEl=document.getElementById('anl-cap');
+  capEl.innerHTML=[0,1,2].map(off=>{
+    const {sat,sun}=wkDates(off);
+    const ss=ymd(sat),su=ymd(sun);
+    const dayR=[...byDate(all,ss),...byDate(all,su)].filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
+    const ppl=sumPpl(dayR),pct=Math.min(100,Math.round(ppl/CAP_MAX/2*100));
+    const bc=pct>=90?'full':pct>=60?'warn':'';
+    return `<div class="cap-card"><div class="cap-day">Vikend ${off===0?'ta':'+'+(off)} (${slDShort(sat)}–${slDShort(sun)})</div>
+      <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
+      <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX*2} oseb · ${dayR.length} rez.</div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════ DETAIL MODAL
+let _currentRes=null,_editMode=false;
 (function initEdTimes(){
   const s=document.getElementById('ed-time');
-  for(let h=12;h<=20;h++) for(const m of[0,15,30,45]){
-    const v=`${pad(h)}:${pad(m)}`; s.innerHTML+=`<option>${v}</option>`;
-  }
+  for(let h=12;h<=20;h++) for(const m of[0,15,30,45]){const v=`${pad(h)}:${pad(m)}`;s.innerHTML+=`<option>${v}</option>`;}
 })();
 
 function openDetail(id){
   fetchAll().then(all=>{
-    const r=all.find(x=>x.id===id); if(!r) return;
-    _currentRes=r; _editMode=false;
+    const r=all.find(x=>x.id===id);if(!r)return;
+    _currentRes=r;_editMode=false;
     renderDetailView(r);
     document.getElementById('dm-view').style.display='block';
     document.getElementById('dm-edit').style.display='none';
@@ -679,471 +818,145 @@ function openDetail(id){
 }
 
 function renderDetailView(r){
-  document.getElementById('dm-title').textContent=`${r.time||'?'} · ${r.name||'—'}`;
+  document.getElementById('dm-title').textContent=r.reservation_type==='room'
+    ? `${roomById(r.location).icon} ${r.name} – ${roomById(r.location).name}`
+    : `${r.time||'?'} · ${r.name||'—'}`;
   const badge=document.getElementById('dm-badge');
-  badge.className=`badge badge-${r.status}`;
-  badge.textContent=stLbl(r.status);
+  badge.className=`badge badge-${r.status}`;badge.textContent=stLbl(r.status);
   document.getElementById('dm-src').textContent=srcLbl(r.source);
-
-  const note=r.note||'';
-  const adminNote=r.admin_notes||'';
-  const kv=document.getElementById('dm-kv');
+  const note=r.note||'',adminNote=r.admin_notes||'';
   let rows=[];
   if(r.reservation_type==='room'){
-    const cin=dateToYmd(r.date);
-    const cout=addDays(cin,r.nights||1);
-    const cinD=new Date(cin+'T00:00:00'), coutD=new Date(cout+'T00:00:00');
-    rows=[
-      ['Soba', roomIcon(r.location)+' '+roomName(r.location)],
-      ['Check-in', slDFull(cinD)],
-      ['Check-out', slDFull(coutD)],
-      ['Noči', String(r.nights||1)],
-      ['Osebe', `${r.people||'?'}${r.kids?' + '+r.kids+' otr.':''}`],
-      r.phone?['Telefon',esc(r.phone)]:[],
-      r.email?['E-pošta',esc(r.email)]:[],
-      note?['Opomba gosta','<i>'+esc(note)+'</i>']:[],
-      adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[],
-    ];
+    const cin=normD(r.date),cout=addDays(cin,r.nights||1);
+    const cinD=new Date(cin+'T00:00:00'),coutD=new Date(cout+'T00:00:00');
+    rows=[['Soba',roomById(r.location).icon+' '+roomById(r.location).name],['Check-in',slDFull(cinD)],['Check-out',slDFull(coutD)],['Noči',String(r.nights||1)],['Osebe',`${r.people}${r.kids?' + '+r.kids+' otr.':''}`],r.phone?['Telefon',esc(r.phone)]:[],r.email?['E-pošta',esc(r.email)]:[],note?['Opomba','<i>'+esc(note)+'</i>']:[],adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[]];
   } else {
-    rows=[
-      ['Datum', r.date||'—'],
-      ['Čas', r.time||'—'],
-      ['Osebe', `${r.people||'?'}${r.kids?' + '+r.kids+' otr.':''}`],
-      r.phone?['Telefon',esc(r.phone)]:[],
-      r.email?['E-pošta',esc(r.email)]:[],
-      r.event_type?['Dogodek',esc(r.event_type)]:[],
-      note?['Opomba gosta','<i>'+esc(note)+'</i>']:[],
-      adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[],
-    ];
+    rows=[['Datum',r.date||'—'],['Čas',r.time||'—'],['Osebe',`${r.people}${r.kids?' + '+r.kids+' otr.':''}`],r.phone?['Telefon',esc(r.phone)]:[],r.email?['E-pošta',esc(r.email)]:[],r.event_type?['Dogodek',esc(r.event_type)]:[],note?['Opomba','<i>'+esc(note)+'</i>']:[],adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[]];
   }
-  kv.innerHTML=rows.filter(x=>x.length).map(([k,v])=>`<div class="dm-k">${k}</div><div class="dm-v">${v}</div>`).join('');
-
+  document.getElementById('dm-kv').innerHTML=rows.filter(x=>x.length).map(([k,v])=>`<div class="dm-k">${k}</div><div class="dm-v">${v}</div>`).join('');
   const acts=document.getElementById('dm-actions');
-  acts.innerHTML=`
-    ${r.status!=='confirmed'?`<button class="dm-btn dm-confirm" onclick="doConfirm(${r.id})">✅ Potrdi</button>`:''}
-    ${r.status!=='rejected'&&r.status!=='cancelled'?`<button class="dm-btn dm-reject" onclick="doReject(${r.id})">❌ Zavrni</button>`:''}
-  `;
+  acts.innerHTML=`${r.status!=='confirmed'?`<button class="dm-btn dm-confirm" onclick="doConfirm(${r.id})">✅ Potrdi</button>`:''}${r.status!=='rejected'&&r.status!=='cancelled'?`<button class="dm-btn dm-reject" onclick="doReject(${r.id})">❌ Zavrni</button>`:''}`;
   document.getElementById('dm-anote').value=adminNote;
 }
 
 function toggleEditMode(){
-  if(!_currentRes) return;
-  _editMode=!_editMode;
+  if(!_currentRes)return;_editMode=!_editMode;
   document.getElementById('dm-view').style.display=_editMode?'none':'block';
   document.getElementById('dm-edit').style.display=_editMode?'block':'none';
   document.getElementById('dm-toggle-edit').textContent=_editMode?'← Nazaj':'✏️ Uredi';
   if(_editMode) fillEditForm(_currentRes);
 }
-
 function fillEditForm(r){
   document.getElementById('ed-name').value=r.name||'';
   document.getElementById('ed-status').value=r.status||'pending';
   document.getElementById('ed-date').value=normD(r.date||'');
-  const tSel=document.getElementById('ed-time');
-  tSel.value=r.time||'';
-  if(!tSel.value&&r.time){const opt=document.createElement('option');opt.value=r.time;opt.textContent=r.time;tSel.prepend(opt);tSel.value=r.time;}
+  const isRoom=r.reservation_type==='room';
+  document.getElementById('ed-room-field').style.display=isRoom?'block':'none';
+  document.getElementById('ed-nights-field').style.display=isRoom?'block':'none';
+  document.getElementById('ed-time-field').style.display=isRoom?'none':'block';
+  if(isRoom){document.getElementById('ed-room').value=r.location||'GOZD';document.getElementById('ed-nights').value=r.nights||1;}
+  else{const tSel=document.getElementById('ed-time');tSel.value=r.time||'';}
   document.getElementById('ed-people').value=r.people||'';
   document.getElementById('ed-kids').value=r.kids||'';
   document.getElementById('ed-phone').value=r.phone||'';
   document.getElementById('ed-email').value=r.email||'';
-  document.getElementById('ed-event').value=r.event_type||'';
   document.getElementById('ed-note').value=r.note||'';
 }
-
-function cancelEdit(){
-  _editMode=false;
-  document.getElementById('dm-view').style.display='block';
-  document.getElementById('dm-edit').style.display='none';
-  document.getElementById('dm-toggle-edit').textContent='✏️ Uredi';
-}
-
+function cancelEdit(){_editMode=false;document.getElementById('dm-view').style.display='block';document.getElementById('dm-edit').style.display='none';document.getElementById('dm-toggle-edit').textContent='✏️ Uredi';}
 function saveEdit(){
-  if(!_currentRes) return;
-  const dateVal=document.getElementById('ed-date').value;
-  const [y,m,d]=dateVal.split('-');
-  const dateSl=`${d}.${m}.${y}`;
-  const idx=_demoData.findIndex(x=>x.id===_currentRes.id);
-  if(idx<0) return;
-  _demoData[idx]={
-    ..._demoData[idx],
-    name: document.getElementById('ed-name').value.trim(),
-    status: document.getElementById('ed-status').value,
-    date: dateSl,
-    time: document.getElementById('ed-time').value,
-    people: parseInt(document.getElementById('ed-people').value)||_currentRes.people,
-    kids: parseInt(document.getElementById('ed-kids').value)||0,
-    phone: document.getElementById('ed-phone').value.trim(),
-    email: document.getElementById('ed-email').value.trim(),
-    event_type: document.getElementById('ed-event').value,
-    note: document.getElementById('ed-note').value.trim(),
-  };
-  toast('✅ Shranjeno (demo)');
-  _currentRes=_demoData[idx];
-  cancelEdit();
-  renderDetailView(_currentRes);
-  refreshAll();
+  if(!_currentRes)return;
+  const idx=_demoData.findIndex(x=>x.id===_currentRes.id);if(idx<0)return;
+  const dateVal=document.getElementById('ed-date').value,[y,m,d]=dateVal.split('-'),dateSl=`${d}.${m}.${y}`;
+  const isRoom=_currentRes.reservation_type==='room';
+  _demoData[idx]={..._demoData[idx],name:document.getElementById('ed-name').value.trim(),status:document.getElementById('ed-status').value,date:dateSl,people:parseInt(document.getElementById('ed-people').value)||_currentRes.people,kids:parseInt(document.getElementById('ed-kids').value)||0,phone:document.getElementById('ed-phone').value.trim(),email:document.getElementById('ed-email').value.trim(),note:document.getElementById('ed-note').value.trim()};
+  if(isRoom){_demoData[idx].location=document.getElementById('ed-room').value;_demoData[idx].nights=parseInt(document.getElementById('ed-nights').value)||1;}
+  else{_demoData[idx].time=document.getElementById('ed-time').value;}
+  toast('✅ Shranjeno (demo)');_currentRes=_demoData[idx];cancelEdit();renderDetailView(_currentRes);refreshAll();
 }
-
-function saveNote(){
-  if(!_currentRes) return;
-  const txt=document.getElementById('dm-anote').value;
-  const idx=_demoData.findIndex(x=>x.id===_currentRes.id);
-  if(idx>=0) _demoData[idx].admin_notes=txt;
-  toast('✅ Opomba shranjena (demo)');
-  closeDetailModal();
-  refreshAll();
-}
-
-function renderComm(id){
-  const el=document.getElementById('dm-comm');
-  // Demo communication history
-  const demos={
-    3:[
-      {direction:'inbound',  sent_at:'2026-04-28T10:15:00', body:'Živijo! Bi radi rezervirali mizo za 8 oseb + 3 otroke za 2.5. ob 14:30. Je možno?'},
-      {direction:'outbound', sent_at:'2026-04-28T11:02:00', subject:'Rezervacija – Pod Goro', body:'Pozdravljeni! Z veseljem sprejemamo vašo rezervacijo. Prosimo za potrditev s plačilom akontacije.'},
-    ],
-    7:[
-      {direction:'inbound',  sent_at:'2026-04-27T14:30:00', body:'Bi radi rezervirali kosilo za 4 osebe za 3.5. ob 13:30. 2 osebi sta vegetarijanki.'},
-    ],
-  };
-  const msgs=demos[id]||[];
-  if(!msgs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:6px 0">Ni sporočil</div>';return;}
-  el.innerHTML=msgs.map(m=>{
-    const out=m.direction==='outbound';
-    return `<div class="comm-msg ${out?'comm-out':'comm-in'}">
-      <div class="comm-meta">${out?'▶ Vi':'◀ Gost'} · ${(m.sent_at||'').slice(0,16).replace('T',' ')}</div>
-      ${m.subject?`<div style="font-weight:700;margin-bottom:2px">${esc(m.subject)}</div>`:''}
-      <div>${esc(m.body||'').replace(/\n/g,'<br>')}</div>
-    </div>`;
-  }).join('');
-}
-
-function closeDetailModal(){ document.getElementById('detail-modal').classList.add('hidden'); _currentRes=null; _editMode=false; }
+function saveNote(){if(!_currentRes)return;const txt=document.getElementById('dm-anote').value;const idx=_demoData.findIndex(x=>x.id===_currentRes.id);if(idx>=0)_demoData[idx].admin_notes=txt;toast('✅ Opomba shranjena (demo)');closeDetailModal();refreshAll();}
+function doDelete(){if(!_currentRes)return;if(!confirm(`Izbrisati rezervacijo za ${_currentRes.name}?`))return;_demoData=_demoData.filter(x=>x.id!==_currentRes.id);toast('🗑 Izbrisano (demo)');closeDetailModal();refreshAll();}
+function doConfirm(id){const idx=_demoData.findIndex(x=>x.id===id);if(idx>=0)_demoData[idx].status='confirmed';toast('✅ Potrjeno (demo)');closeDetailModal();refreshAll();}
+function doReject(id){if(!confirm('Zavrniti?'))return;const idx=_demoData.findIndex(x=>x.id===id);if(idx>=0)_demoData[idx].status='rejected';toast('❌ Zavrnjeno (demo)');closeDetailModal();refreshAll();}
+function closeDetailModal(){document.getElementById('detail-modal').classList.add('hidden');_currentRes=null;_editMode=false;}
 document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===document.getElementById('detail-modal'))closeDetailModal();});
 
-// ── ACTIONS ───────────────────────────────────────────────────────────────────
-function doDelete(){
-  if(!_currentRes) return;
-  if(!confirm(`Izbrisati rezervacijo za ${_currentRes.name||'?'}?`)) return;
-  _demoData=_demoData.filter(x=>x.id!==_currentRes.id);
-  toast('🗑 Rezervacija izbrisana (demo)');
-  closeDetailModal(); refreshAll();
+function renderComm(id){
+  const demos={22:[{direction:'inbound',sent_at:'2026-04-28T10:15:00',body:'Pozdravljeni! Bi radi rezervirali sobo SONCE za 2.5. za 2 noči, 3 osebe + 2 otrocih. Je možno?'},{direction:'outbound',sent_at:'2026-04-28T11:00:00',subject:'Rezervacija – Pod Goro',body:'Pozdravljeni! Z veseljem potrdimo sobo SONCE. Potrebujemo akontacijo 50€.'}],26:[{direction:'inbound',sent_at:'2026-04-27T14:30:00',body:'Zanima nas soba GOZD za 23.5. za 2 noči za 2 osebi.'}]};
+  const msgs=demos[id]||[];
+  const el=document.getElementById('dm-comm');
+  if(!msgs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:6px 0">Ni sporočil</div>';return;}
+  el.innerHTML=msgs.map(m=>{const out=m.direction==='outbound';return`<div class="comm-msg ${out?'comm-out':'comm-in'}"><div class="comm-meta">${out?'▶ Vi':'◀ Gost'} · ${(m.sent_at||'').slice(0,16).replace('T',' ')}</div>${m.subject?`<div style="font-weight:700;margin-bottom:2px">${esc(m.subject)}</div>`:''}<div>${esc(m.body||'').replace(/\n/g,'<br>')}</div></div>`;}).join('');
 }
 
-function doConfirm(id){
-  const idx=_demoData.findIndex(x=>x.id===id);
-  if(idx>=0) _demoData[idx].status='confirmed';
-  toast('✅ Potrjeno (demo)');
-  closeDetailModal(); refreshAll();
-}
-
-function doReject(id){
-  if(!confirm('Zavrniti rezervacijo?')) return;
-  const idx=_demoData.findIndex(x=>x.id===id);
-  if(idx>=0) _demoData[idx].status='rejected';
-  toast('❌ Zavrnjeno (demo)');
-  closeDetailModal(); refreshAll();
-}
-
-// ── EMAIL ─────────────────────────────────────────────────────────────────────
-function openEmailFromDetail(){
-  if(!_currentRes) return;
-  document.getElementById('em-to').value=_currentRes.email||'';
-  document.getElementById('em-subject').value=`Rezervacija – Pod Goro`;
-  document.getElementById('em-body').value=`Pozdravljeni ${_currentRes.name||''},\n\n`;
-  document.getElementById('email-modal').classList.remove('hidden');
-}
-function closeEmailModal(){ document.getElementById('email-modal').classList.add('hidden'); }
+// ══════════════════════════════════════════════════════════════ EMAIL
+function openEmailFromDetail(){if(!_currentRes)return;document.getElementById('em-to').value=_currentRes.email||'';document.getElementById('em-subject').value=`Rezervacija – Pod Goro`;document.getElementById('em-body').value=`Pozdravljeni ${_currentRes.name||''},\n\n`;document.getElementById('email-modal').classList.remove('hidden');}
+function closeEmailModal(){document.getElementById('email-modal').classList.add('hidden');}
 document.getElementById('email-modal').addEventListener('click',e=>{if(e.target===document.getElementById('email-modal'))closeEmailModal();});
-function sendEmail(){
-  toast('✅ Sporočilo poslano (demo)');
-  closeEmailModal();
-}
+function sendEmail(){toast('✅ Sporočilo poslano (demo)');closeEmailModal();}
 
-// ── LOAD PREGLED ──────────────────────────────────────────────────────────────
-async function loadPregled(){
-  const {sat,sun}=wkDates(wkOffP);
-  document.getElementById('wk-title-p').textContent=wkOffP===0?'Ta vikend':wkOffP===1?'Naslednji vikend':`Vikend ${slDFull(sat)}`;
-  const all=await fetchAll();
-  renderCap('cap-p',all,wkOffP);
-  const ss=ymd(sat),su=ymd(sun);
-  const wkR=[...byDate(all,ss),...byDate(all,su)];
-  const active=wkR.filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
-  const pnd=wkR.filter(r=>r.status==='pending');
-  document.getElementById('s-rez').textContent=active.length;
-  document.getElementById('s-ppl').textContent=sumPpl(active);
-  document.getElementById('s-pnd').textContent=pnd.length;
-  // badge
-  const allPnd=all.filter(r=>r.status==='pending');
-  const b=document.getElementById('pending-badge');
-  b.textContent=allPnd.length; b.classList.toggle('show',allPnd.length>0);
-  // pending
-  const pl=document.getElementById('pnd-list');
-  pl.innerHTML=pnd.length?`<div class="res-list">${pnd.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(resRow).join('')}</div>`
-    :'<div class="empty"><div class="ei">✅</div>Ni čakajočih rezervacij</div>';
-  // room cards
-  renderRoomCards('room-cards-p', all, sat, sun);
-}
-
-function renderRoomCards(elId, all, sat, sun){
-  const el=document.getElementById(elId); if(!el) return;
-  const ss=ymd(sat), su=ymd(sun);
-  el.innerHTML=ROOMS.map(room=>{
-    const satRes=getRoomOnDate(all,room.id,ss);
-    const sunRes=getRoomOnDate(all,room.id,su);
-    const satOcc=!!satRes, sunOcc=!!sunRes;
-    const cls=satOcc&&sunOcc?'full':satOcc||sunOcc?'partial':'free';
-    const badgeLbl=cls==='full'?'Zasedena':cls==='partial'?'Delno':'Prosta';
-    const satLbl=satOcc?`<span style="color:var(--red)">Zasedena – ${esc(satRes.name)}</span>`:`<span style="color:var(--green)">Prosta</span>`;
-    const sunLbl=sunOcc?`<span style="color:var(--red)">Zasedena – ${esc(sunRes.name)}</span>`:`<span style="color:var(--green)">Prosta</span>`;
-    return `<div class="room-card ${cls}" onclick="goTab('sobe')">
-      <div class="room-icon">${room.icon}</div>
-      <div class="room-info">
-        <div class="room-name">${room.name}</div>
-        <div class="room-cap">do ${room.cap} osebe · ${room.desc}</div>
-        <div class="room-nights">
-          <div class="room-night"><span class="room-night-dot ${satOcc?'occ':'free'}"></span>Sob: ${satLbl}</div>
-          <div class="room-night"><span class="room-night-dot ${sunOcc?'occ':'free'}"></span>Ned: ${sunLbl}</div>
-        </div>
-      </div>
-      <div class="room-status-badge ${cls}">${badgeLbl}</div>
-    </div>`;
-  }).join('');
-}
-
-// ── CALENDAR ──────────────────────────────────────────────────────────────────
-let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
-let calSelectedDate=null;
-
-function calMove(d){ calMonth+=d; if(calMonth<0){calMonth=11;calYear--;}else if(calMonth>11){calMonth=0;calYear++;} renderCal(); }
-function calToday(){ calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); calSelectedDate=null; renderCal(); }
-
-async function renderCal(){
-  document.getElementById('cal-month-title').textContent=`${MONTHS[calMonth]} ${calYear}`;
-  const all=await fetchAll().catch(()=>[]);
-  const head=document.getElementById('cal-head');
-  head.innerHTML=['Pon','Tor','Sre','Čet','Pet','Sob','Ned'].map((d,i)=>`<div class="cal-head-cell${i>=5?' wknd':''}">${d}</div>`).join('');
-  const firstDay=new Date(calYear,calMonth,1);
-  const lastDay=new Date(calYear,calMonth+1,0);
-  const startDow=(firstDay.getDay()+6)%7;
-  const today=ymd(new Date());
-  const body=document.getElementById('cal-body');
-  let html='';
-  for(let i=0;i<startDow;i++) html+=`<div class="cal-cell empty"></div>`;
-  for(let d=1;d<=lastDay.getDate();d++){
-    const date=new Date(calYear,calMonth,d);
-    const ds=ymd(date);
-    const dow=(date.getDay()+6)%7;
-    const isWknd=dow>=5;
-    const isToday=ds===today;
-    const isSel=ds===calSelectedDate;
-    const dayR=byDate(all,ds).filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
-    const ppl=sumPpl(dayR);
-    const pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
-    const dotClass=pct>=90?'red':pct>=50?'orange':'green';
-    let dots='';
-    if(dayR.length){
-      const n=Math.min(dayR.length,4);
-      let dotItems='';
-      for(let i=0;i<n;i++) dotItems+='<span class="cal-dot '+dotClass+'"></span>';
-      dots='<div class="cal-dots">'+dotItems+'</div>';
-    }
-    const cnt=dayR.length?`<div class="cal-count">${dayR.length} rez</div>`:'';
-    html+=`<div class="cal-cell${isWknd?' weekend':''}${isToday?' today':''}${isSel?' selected':''}" onclick="calSelectDay('${ds}',${d})">
-      <div class="cal-day-num">${d}</div>${dots}${cnt}
-    </div>`;
-  }
-  const total=startDow+lastDay.getDate();
-  const rem=total%7; if(rem>0) for(let i=0;i<7-rem;i++) html+=`<div class="cal-cell empty"></div>`;
-  body.innerHTML=html;
-  if(calSelectedDate) showDayPanel(calSelectedDate, all);
-}
-
-function calSelectDay(ds,d){
-  calSelectedDate=ds;
-  document.querySelectorAll('.cal-cell').forEach(c=>c.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
-  fetchAll().then(all=>showDayPanel(ds,all));
-}
-
-function showDayPanel(ds,all){
-  const panel=document.getElementById('day-panel');
-  const date=new Date(ds+'T00:00:00');
-  document.getElementById('day-panel-title').textContent=`${slDFull(date)} – rezervacije`;
-  panel.style.display='block';
-  const dayR=byDate(all,ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const list=document.getElementById('day-panel-list');
-  list.innerHTML=dayR.length?`<div class="res-list">${dayR.map(resRow).join('')}</div>`
-    :'<div class="empty"><div class="ei">🌿</div>Ni rezervacij ta dan</div>';
-}
-
-// ── LOAD REZERVACIJE ──────────────────────────────────────────────────────────
-async function loadRez(){
-  const {sat,sun}=wkDates(wkOffR);
-  const t=wkOffR===0?'Ta vikend':wkOffR===1?'Naslednji vikend':wkOffR===-1?'Prejšnji vikend':`Vikend ${slDFull(sat)}`;
-  document.getElementById('wk-title-r').textContent=t;
-  document.getElementById('wk-r-today').classList.toggle('active',wkOffR===0);
-  const all=await fetchAll();
-  renderCap('cap-r',all,wkOffR);
-  const ss=ymd(sat),su=ymd(sun);
-  const container=document.getElementById('rez-days');
-  container.innerHTML=[{l:`Sobota · ${slDFull(sat)}`,ds:ss},{l:`Nedelja · ${slDFull(sun)}`,ds:su}].map(({l,ds})=>{
-    const dayR=byDate(all,ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-    const ppl=sumPpl(dayR.filter(r=>r.status!=='rejected'&&r.status!=='cancelled'));
-    return `<div style="margin-bottom:20px">
-      <div class="day-hdr"><span class="day-name">${l}</span><span class="day-meta">${dayR.length} rez · ${ppl} oseb</span></div>
-      ${dayR.length?`<div class="res-list">${dayR.map(resRow).join('')}</div>`:'<div class="empty"><div class="ei">🌿</div>Ni rezervacij</div>'}
-    </div>`;
-  }).join('');
-}
-
-// ── NEW MODAL ─────────────────────────────────────────────────────────────────
-(function initTimes(){
-  const s=document.getElementById('nw-time');
-  for(let h=12;h<=20;h++) for(const m of[0,15,30,45]){
-    const v=`${pad(h)}:${pad(m)}`; s.innerHTML+=`<option>${v}</option>`;
-  }
-})();
-
-function openNewModal(){
-  const {sat}=wkDates(wkOffR||wkOffP);
-  document.getElementById('nw-date').value=ymd(sat);
-  document.getElementById('new-modal').classList.remove('hidden');
+// ══════════════════════════════════════════════════════════════ NEW MODAL
+(function initTimes(){const s=document.getElementById('nw-time');for(let h=12;h<=20;h++)for(const m of[0,15,30,45]){const v=`${pad(h)}:${pad(m)}`;s.innerHTML+=`<option>${v}</option>`;}})();
+function setNewType(t){
+  _newType=t;
+  document.getElementById('nw-type-table').className=t==='table'?'btn-ok':'btn-cancel';
+  document.getElementById('nw-type-table').style.cssText='flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer';
+  document.getElementById('nw-type-room').className=t==='room'?'btn-ok':'btn-cancel';
+  document.getElementById('nw-type-room').style.cssText='flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer';
+  document.getElementById('nw-nights-wrap').style.display=t==='room'?'block':'none';
+  document.getElementById('nw-time-wrap').style.display=t==='table'?'block':'none';
+  document.getElementById('nw-room-wrap').style.display=t==='room'?'block':'none';
   checkAvail();
 }
-function closeNewModal(){ document.getElementById('new-modal').classList.add('hidden'); }
-document.getElementById('new-modal').addEventListener('click',e=>{if(e.target===document.getElementById('new-modal'))closeNewModal();});
-
-async function checkAvail(){
-  const date=document.getElementById('nw-date').value;
-  const info=document.getElementById('avail-info');
-  if(!date){info.className='';return;}
-  info.className='';info.textContent='Preverjam...';
-  const all=await fetchAll();
-  const dayR=byDate(all,date).filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
-  const ppl=sumPpl(dayR), pct=Math.round(ppl/CAP_MAX*100);
-  if(pct>=90) info.className='full';
-  else if(pct>=60) info.className='warn';
-  else info.className='ok';
-  info.textContent=pct>=90?`⛔ Polno: ${ppl}/${CAP_MAX} oseb (${dayR.length} rez.)`:
-    pct>=60?`⚠️ Skoraj polno: ${ppl}/${CAP_MAX} oseb (${dayR.length} rez.)`:
-    `✅ Prosto: ${ppl}/${CAP_MAX} oseb (${dayR.length} rez.)`;
+function openNewModal(){
+  const {sat}=wkDates(wkOffM);document.getElementById('nw-date').value=ymd(sat);
+  setNewType(activeTab==='sobe'?'room':'table');
+  document.getElementById('new-modal').classList.remove('hidden');checkAvail();
 }
-
+function closeNewModal(){document.getElementById('new-modal').classList.add('hidden');}
+document.getElementById('new-modal').addEventListener('click',e=>{if(e.target===document.getElementById('new-modal'))closeNewModal();});
+async function checkAvail(){
+  const date=document.getElementById('nw-date').value,info=document.getElementById('avail-info');
+  if(!date){info.className='';return;}
+  if(_newType==='room'){
+    const loc=document.getElementById('nw-room').value;
+    const nights=parseInt(document.getElementById('nw-nights').value)||1;
+    const all=await fetchAll();
+    let conflict=false;
+    for(let i=0;i<nights;i++){const ds=addDays(date,i);if(getRoomOnDay(all,loc,ds)){conflict=true;break;}}
+    info.className=conflict?'full':'ok';
+    info.style.display='block';
+    info.textContent=conflict?`⛔ Soba ${loc} je v tem obdobju zasedena`:`✅ Soba ${loc} je prosta`;
+  } else {
+    const all=await fetchAll();
+    const dayR=byDate(all,date).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
+    const ppl=sumPpl(dayR),pct=Math.round(ppl/CAP_MAX*100);
+    if(pct>=90)info.className='full';else if(pct>=60)info.className='warn';else info.className='ok';
+    info.style.display='block';
+    info.textContent=pct>=90?`⛔ Polno: ${ppl}/${CAP_MAX} oseb`:pct>=60?`⚠️ Skoraj polno: ${ppl}/${CAP_MAX} oseb`:`✅ Prosto: ${ppl}/${CAP_MAX} oseb (${dayR.length} rez.)`;
+  }
+}
 async function submitNew(){
-  const date=document.getElementById('nw-date').value;
-  const time=document.getElementById('nw-time').value;
-  const name=document.getElementById('nw-name').value.trim();
-  const people=document.getElementById('nw-people').value;
-  if(!date||!time||!name||!people){toast('⚠️ Datum, čas, ime in osebe so obvezni');return;}
+  const date=document.getElementById('nw-date').value,name=document.getElementById('nw-name').value.trim(),people=document.getElementById('nw-people').value;
+  if(!date||!name||!people){toast('⚠️ Datum, ime in osebe so obvezni');return;}
   const [y,m,d]=date.split('-');
-  const newRes={
-    id: _nextId++,
-    date:`${d}.${m}.${y}`, time, name,
-    people:parseInt(people),
-    reservation_type:'table',
-    status:document.getElementById('nw-status').value,
-    source:'manual',
-    phone:document.getElementById('nw-phone').value.trim()||null,
-    email:document.getElementById('nw-email').value.trim()||null,
-    kids:parseInt(document.getElementById('nw-kids').value)||0,
-    event_type:document.getElementById('nw-event').value||null,
-    note:document.getElementById('nw-note').value.trim()||null,
-  };
-  _demoData.push(newRes);
-  toast('✅ Rezervacija dodana (demo)');
-  closeNewModal();
+  const base={id:_nextId++,date:`${d}.${m}.${y}`,name,people:parseInt(people),kids:parseInt(document.getElementById('nw-kids').value)||0,phone:document.getElementById('nw-phone').value.trim()||null,email:document.getElementById('nw-email').value.trim()||null,note:document.getElementById('nw-note').value.trim()||null,status:document.getElementById('nw-status').value,source:'manual',reservation_type:_newType};
+  if(_newType==='room'){base.location=document.getElementById('nw-room').value;base.nights=parseInt(document.getElementById('nw-nights').value)||1;}
+  else{const time=document.getElementById('nw-time').value;if(!time){toast('⚠️ Izberite čas');return;}base.time=time;}
+  _demoData.push(base);
+  toast('✅ Rezervacija dodana (demo)');closeNewModal();
   ['nw-name','nw-phone','nw-email','nw-note','nw-people','nw-kids'].forEach(id=>document.getElementById(id).value='');
   await refreshAll();
 }
 
-// ── LOAD SOBE ─────────────────────────────────────────────────────────────────
-let wkOffSobe = 0;
-async function loadSobe(){
-  const {sat,sun}=wkDates(wkOffS);
-  const t=wkOffS===0?'Sobe – ta vikend':wkOffS===1?'Sobe – naslednji vikend':wkOffS===-1?'Sobe – prejšnji vikend':`Sobe – vikend ${slDFull(sat)}`;
-  document.getElementById('wk-title-s').textContent=t;
-  document.getElementById('wk-s-today').classList.toggle('active',wkOffS===0);
-  const all=await fetchAll();
-  const ss=ymd(sat), su=ymd(sun);
-
-  // Room detail cards
-  const roomsEl=document.getElementById('sobe-rooms');
-  roomsEl.innerHTML=ROOMS.map(room=>{
-    const rAll=roomsByLoc(all,room.id);
-    // Noči tega vikenda
-    const nights=[];
-    let d=new Date(ss+'T00:00:00');
-    const endD=new Date(su+'T00:00:00'); endD.setDate(endD.getDate()+1);
-    while(d<endD){
-      const ds=ymd(d);
-      const res=rAll.find(r=>isRoomOccupiedOn(r,ds));
-      nights.push({ds, res});
-      d.setDate(d.getDate()+1);
-    }
-    const satR=getRoomOnDate(all,room.id,ss);
-    const sunR=getRoomOnDate(all,room.id,su);
-    const cls=satR&&sunR?'full':satR||sunR?'partial':'free';
-    const nightRows=nights.map(({ds,res})=>{
-      const date=new Date(ds+'T00:00:00');
-      const dayName=['Ned','Pon','Tor','Sre','Čet','Pet','Sob'][date.getDay()];
-      const occupied=!!res;
-      return `<div class="room-night" style="padding:3px 0">
-        <span class="room-night-dot ${occupied?'occ':'free'}"></span>
-        <span style="font-weight:700;min-width:28px">${dayName}</span>
-        ${occupied?`<span style="cursor:pointer;color:var(--text)" onclick="openDetail(${res.id})">${esc(res.name)} · ${res.people} os.${res.kids?' +'+res.kids+' otr.':''}</span>`:'<span style="color:var(--green)">Prosta</span>'}
-      </div>`;
-    }).join('');
-    return `<div class="room-detail-card">
-      <div class="room-detail-header">
-        <div style="font-size:28px">${room.icon}</div>
-        <div style="flex:1">
-          <div class="room-detail-title">${room.name}</div>
-          <div class="room-detail-cap">do ${room.cap} osebe · ${room.desc}</div>
-        </div>
-        <div class="room-status-badge ${cls}">${cls==='full'?'Zasedena':cls==='partial'?'Delno':'Prosta'}</div>
-      </div>
-      <div class="room-reservations">
-        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Noči vikenda</div>
-        <div class="room-nights">${nightRows}</div>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Upcoming room list
-  const today=ymd(new Date());
-  const upcoming=_demoData.filter(r=>r.reservation_type==='room'&&r.status!=='rejected'&&r.status!=='cancelled'&&dateToYmd(r.date)>=today)
-    .sort((a,b)=>dateToYmd(a.date).localeCompare(dateToYmd(b.date)));
-  const listEl=document.getElementById('sobe-list');
-  if(!upcoming.length){listEl.innerHTML='<div class="empty"><div class="ei">🛏️</div>Ni prihodnjih rezervacij sob</div>';return;}
-  listEl.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'+upcoming.map(r=>{
-    const cin=dateToYmd(r.date);
-    const cout=addDays(cin,r.nights||1);
-    const cinD=new Date(cin+'T00:00:00'), coutD=new Date(cout+'T00:00:00');
-    const room=ROOMS.find(x=>x.id===r.location)||{icon:'🛏️',name:r.location||'—'};
-    return `<div class="room-res-row" onclick="openDetail(${r.id})">
-      <div style="font-size:22px">${room.icon}</div>
-      <div class="room-res-info">
-        <div class="room-res-name">${esc(r.name)}</div>
-        <div class="room-res-sub">${room.name} · ${slDFull(cinD)} → ${slDFull(coutD)} (${r.nights} noč${r.nights===1?'':'i'})</div>
-        <div class="room-res-sub">👥 ${r.people} os.${r.kids?' +'+r.kids+' otr.':''} · ${srcLbl(r.source)}</div>
-      </div>
-      <span class="badge badge-${r.status}">${stLbl(r.status)}</span>
-    </div>`;
-  }).join('')+'</div>';
-}
-
-// ── REFRESH ───────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════ REFRESH
 async function refreshAll(){
-  if(activeTab==='pregled') await loadPregled();
-  else if(activeTab==='koledar') await renderCal();
-  else if(activeTab==='rezervacije') await loadRez();
-  else if(activeTab==='sobe') await loadSobe();
+  if(activeTab==='sobe') await loadSobe();
+  else if(activeTab==='mize') await loadMize();
+  else if(activeTab==='analitika') await loadAnalitika();
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-function init(){ loadPregled(); }
-init();
+// ══════════════════════════════════════════════════════════════ INIT
+goTab('sobe');
 </script>
 </body>
 </html>
