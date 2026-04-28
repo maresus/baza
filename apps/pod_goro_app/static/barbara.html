@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pod Goro">
+  <meta name="theme-color" content="#3a6b35">
+  <title>Pod Goro – Rezervacije</title>
+  <style>
+    :root {
+      --brand: #3a6b35;
+      --brand-dark: #2a5027;
+      --brand-light: #eef5ed;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --gray: #6b7280;
+      --border: #c8dfc5;
+      --bg: #f4f9f3;
+      --white: #fff;
+      --text: #1b1f1a;
+      --muted: #6b7280;
+      --sh: 0 1px 3px rgba(0,0,0,.08);
+      --radius: 10px;
+      --cap: 40;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+    /* ── DEMO BANNER ─── */
+    #demo-banner {
+      background: var(--orange); color: #fff;
+      text-align: center; padding: 8px 16px; font-size: 13px; font-weight: 700;
+    }
+
+    /* ── TOPBAR ─── */
+    #topbar {
+      background: var(--brand); color: #fff;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 14px; height: 52px; position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    }
+    .brand { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    nav { display: flex; gap: 4px; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    nav::-webkit-scrollbar { display: none; }
+    .nav-tab { background: rgba(255,255,255,.13); border: none; color: rgba(255,255,255,.75); border-radius: 7px; padding: 6px 13px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+    .nav-tab.active { background: rgba(255,255,255,.28); color: #fff; }
+    #pending-badge { background: #ef4444; color: #fff; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: 800; display: none; align-items: center; justify-content: center; flex-shrink: 0; }
+    #pending-badge.show { display: flex; }
+    #refresh-btn { background: rgba(255,255,255,.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* ── SCREENS ─── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .page { padding: 14px 14px calc(80px + env(safe-area-inset-bottom,0px)); max-width: 700px; margin: 0 auto; }
+
+    /* ── WEEK NAV ─── */
+    .wk-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .wk-nav h2 { font-size: 16px; font-weight: 800; }
+    .wk-btns { display: flex; gap: 6px; }
+    .wk-btn { background: var(--white); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--brand); }
+    .wk-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+    /* ── SECTION LABEL ─── */
+    .sec-lbl { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 8px; }
+
+    /* ── STATS ROW ─── */
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .stat-card { background: var(--white); border-radius: var(--radius); padding: 10px 12px; text-align: center; box-shadow: var(--sh); border: 1px solid var(--border); }
+    .stat-num { font-size: 22px; font-weight: 800; color: var(--brand); }
+    .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── CAPACITY STRIP ─── */
+    .cap-strip { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .cap-card { background: var(--white); border-radius: var(--radius); padding: 10px 13px; box-shadow: var(--sh); border: 1px solid var(--border); }
+    .cap-day { font-size: 12px; font-weight: 800; margin-bottom: 1px; }
+    .cap-date { font-size: 11px; color: var(--muted); margin-bottom: 7px; }
+    .cap-bar-wrap { background: var(--bg); border-radius: 4px; height: 7px; overflow: hidden; margin-bottom: 5px; }
+    .cap-bar { height: 100%; background: var(--green); border-radius: 4px; transition: width .4s; }
+    .cap-bar.warn { background: var(--orange); }
+    .cap-bar.full { background: var(--red); }
+    .cap-lbl { font-size: 12px; color: var(--muted); }
+
+    /* ── RES ROWS ─── */
+    .res-list { display: flex; flex-direction: column; gap: 6px; }
+    .res-row { background: var(--white); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh); cursor: pointer; border: 1.5px solid transparent; transition: border-color .15s; border-left: 4px solid var(--border); }
+    .res-row:active { border-color: var(--brand); }
+    .res-row.confirmed { border-left-color: var(--green); }
+    .res-row.pending { border-left-color: var(--orange); }
+    .res-row.rejected, .res-row.cancelled { border-left-color: #d1d5db; opacity: .65; }
+    .rr-time { font-size: 13px; font-weight: 800; color: var(--brand); min-width: 40px; }
+    .rr-info { flex: 1; min-width: 0; }
+    .rr-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rr-sub { font-size: 12px; color: var(--muted); }
+    .rr-src { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .rr-badge { flex-shrink: 0; }
+
+    /* ── BADGES ─── */
+    .badge { display: inline-block; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; }
+    .badge-confirmed { background: var(--green-bg); color: var(--green); }
+    .badge-pending { background: var(--orange-bg); color: var(--orange); }
+    .badge-rejected, .badge-cancelled { background: #f3f4f6; color: var(--gray); }
+
+    /* ── DAY HEADER ─── */
+    .day-hdr { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .day-name { font-size: 14px; font-weight: 800; }
+    .day-meta { font-size: 12px; color: var(--muted); }
+
+    /* ── EMPTY ─── */
+    .empty { text-align: center; padding: 28px 16px; color: var(--muted); font-size: 13px; }
+    .ei { font-size: 28px; margin-bottom: 6px; }
+
+    /* ── CALENDAR ─── */
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cal-nav h2 { font-size: 16px; font-weight: 800; }
+    .cal-nav-btns { display: flex; gap: 6px; }
+    .cal-nav-btn { background: var(--white); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--brand); }
+    .cal-grid { background: var(--white); border-radius: var(--radius); box-shadow: var(--sh); overflow: hidden; border: 1px solid var(--border); }
+    .cal-head { display: grid; grid-template-columns: repeat(7,1fr); background: var(--brand-light); border-bottom: 1px solid var(--border); }
+    .cal-head-cell { text-align: center; font-size: 11px; font-weight: 800; color: var(--muted); padding: 7px 0; }
+    .cal-head-cell.wknd { color: var(--brand); }
+    .cal-body { display: grid; grid-template-columns: repeat(7,1fr); }
+    .cal-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5px; min-height: 54px; cursor: pointer; position: relative; transition: background .12s; }
+    .cal-cell:nth-child(7n) { border-right: none; }
+    .cal-cell.empty { cursor: default; background: var(--bg); }
+    .cal-cell:hover:not(.empty) { background: var(--brand-light); }
+    .cal-cell.selected { background: var(--brand-light); outline: 2px solid var(--brand); outline-offset: -2px; }
+    .cal-cell.today .cal-day-num { background: var(--brand); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+    .cal-cell.weekend .cal-day-num { color: var(--brand); }
+    .cal-day-num { font-size: 13px; font-weight: 700; line-height: 22px; }
+    .cal-dots { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 2px; }
+    .cal-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .cal-dot.green { background: var(--green); }
+    .cal-dot.orange { background: var(--orange); }
+    .cal-dot.red { background: var(--red); }
+    .cal-count { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    #day-panel { background: var(--white); border-radius: var(--radius); box-shadow: var(--sh); padding: 12px; margin-top: 14px; border: 1px solid var(--border); }
+    #day-panel-title { font-size: 14px; font-weight: 800; margin-bottom: 10px; color: var(--brand); }
+    @media (min-width: 600px) {
+      .cal-cell { min-height: 68px; }
+    }
+
+    /* ── FAB ─── */
+    #fab {
+      position: fixed; bottom: calc(20px + env(safe-area-inset-bottom,0px)); right: 18px;
+      width: 54px; height: 54px; border-radius: 50%; background: var(--brand); color: #fff;
+      font-size: 28px; font-weight: 300; border: none; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(58,107,53,.45); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .15s;
+    }
+    #fab:active { transform: scale(.93); }
+
+    /* ── MODAL ─── */
+    .mo { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; justify-content: center; }
+    .mo.hidden { display: none; }
+    .mo-box { background: var(--white); width: 100%; max-width: 600px; border-radius: 18px 18px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom,0px)); max-height: 92vh; overflow-y: auto; }
+    @media (min-width: 600px) { .mo-box { border-radius: 14px; max-height: 88vh; } }
+    .mo-title { font-size: 17px; font-weight: 800; color: var(--brand); margin-bottom: 16px; }
+    .mo-field { margin-bottom: 12px; }
+    .mo-field label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
+    .mo-field input, .mo-field select, .mo-field textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 11px; font-size: 15px; font-family: inherit; background: var(--white); color: var(--text); }
+    .mo-field input:focus, .mo-field select:focus, .mo-field textarea:focus { outline: none; border-color: var(--brand); }
+    .mo-field textarea { resize: none; height: 80px; }
+    .mo-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mo-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .mo-actions button { flex: 1; padding: 12px; border-radius: 9px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-ok { background: var(--brand); color: #fff; }
+    .btn-cancel { background: var(--bg); color: var(--gray); }
+
+    /* Detail modal */
+    .dm-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .dm-btn { border: none; border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    .dm-confirm { background: var(--green-bg); color: var(--green); }
+    .dm-reject  { background: var(--red-bg); color: var(--red); }
+    .dm-edit    { background: var(--brand-light); color: var(--brand); }
+    .dm-email   { background: #ede9fe; color: #6d28d9; }
+    .dm-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+    .status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .dm-kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; margin-bottom: 14px; }
+    .dm-k { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 2px 0; align-self: center; }
+    .dm-v { font-size: 14px; padding: 2px 0; }
+    .dm-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .dm-edit-grid .full { grid-column: 1/-1; }
+    .dm-edit-grid .mo-field { margin-bottom: 0; }
+    .comm-msg { border-radius: 8px; padding: 9px 11px; margin-bottom: 6px; font-size: 13px; line-height: 1.5; }
+    .comm-out { background: var(--brand-light); }
+    .comm-in  { background: var(--bg); border: 1px solid var(--border); }
+    .comm-meta { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
+
+    #avail-info { border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+    #avail-info.ok   { background: var(--green-bg); color: var(--green); display: block; }
+    #avail-info.warn { background: var(--orange-bg); color: var(--orange); display: block; }
+    #avail-info.full { background: var(--red-bg); color: var(--red); display: block; }
+
+    /* ── TOAST ─── */
+    #toast { position: fixed; bottom: calc(14px + env(safe-area-inset-bottom,0px)); left: 50%; transform: translateX(-50%) translateY(80px); background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; transition: transform .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- DEMO BANNER -->
+<div id="demo-banner">🌲 DEMO PRIKAZ – podatki so namišljeni, za predstavitev stranki</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="topbar">
+    <div class="brand"><span>🌲</span> Pod Goro</div>
+    <nav>
+      <button class="nav-tab active" onclick="goTab('pregled')">Pregled</button>
+      <button class="nav-tab" onclick="goTab('koledar')">Koledar</button>
+      <button class="nav-tab" onclick="goTab('rezervacije')">Rezervacije</button>
+    </nav>
+    <span id="pending-badge">0</span>
+    <button id="refresh-btn" onclick="refreshAll()" title="Osveži">↻</button>
+  </div>
+
+  <!-- PREGLED -->
+  <div id="screen-pregled" class="screen active">
+    <div class="page">
+      <div class="wk-nav">
+        <h2 id="wk-title-p">Ta vikend</h2>
+        <div class="wk-btns">
+          <button class="wk-btn active" onclick="setWkP(0)">Ta vikend</button>
+          <button class="wk-btn" onclick="setWkP(1)">Naslednji →</button>
+        </div>
+      </div>
+      <div class="sec-lbl">Kapaciteta vikenda</div>
+      <div class="cap-strip" id="cap-p"></div>
+      <div class="sec-lbl" style="margin-top:14px">Skupaj ta vikend</div>
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card"><div class="stat-num" id="s-rez">—</div><div class="stat-lbl">Rezervacij</div></div>
+        <div class="stat-card"><div class="stat-num" id="s-ppl">—</div><div class="stat-lbl">Oseb</div></div>
+        <div class="stat-card"><div class="stat-num" id="s-pnd">—</div><div class="stat-lbl">V čakanju</div></div>
+      </div>
+      <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
+      <div id="pnd-list"><div class="empty"><div class="ei">✅</div>Ni čakajočih rezervacij</div></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center">Za celoten urnik vikenda → zavihek <strong>Rezervacije</strong></div>
+    </div>
+  </div>
+
+  <!-- KOLEDAR -->
+  <div id="screen-koledar" class="screen">
+    <div class="page">
+      <div class="cal-nav">
+        <h2 id="cal-month-title">Maj 2026</h2>
+        <div class="cal-nav-btns">
+          <button class="cal-nav-btn" onclick="calMove(-1)">◀</button>
+          <button class="cal-nav-btn" onclick="calToday()">Danes</button>
+          <button class="cal-nav-btn" onclick="calMove(1)">▶</button>
+        </div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-head" id="cal-head"></div>
+        <div class="cal-body" id="cal-body"></div>
+      </div>
+      <div id="day-panel" style="display:none">
+        <div id="day-panel-title">—</div>
+        <div id="day-panel-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REZERVACIJE -->
+  <div id="screen-rezervacije" class="screen">
+    <div class="page">
+      <div class="wk-nav">
+        <h2 id="wk-title-r">Urnik vikenda</h2>
+        <div class="wk-btns">
+          <button class="wk-btn" onclick="wkRez(-1)">← Prej</button>
+          <button class="wk-btn active" id="wk-r-today" onclick="wkRezReset()">Ta vikend</button>
+          <button class="wk-btn" onclick="wkRez(1)">Naprej →</button>
+        </div>
+      </div>
+      <div class="cap-strip" id="cap-r" style="margin-bottom:16px"></div>
+      <div id="rez-days"><div class="empty"><div class="ei">🌿</div>Ni rezervacij</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button id="fab" onclick="openNewModal()" title="Nova rezervacija">+</button>
+
+<!-- DETAIL MODAL -->
+<div class="mo hidden" id="detail-modal">
+  <div class="mo-box" style="max-width:560px">
+    <div class="mo-title" id="dm-title">Rezervacija</div>
+    <div class="status-row">
+      <span class="badge" id="dm-badge">—</span>
+      <span id="dm-src" style="font-size:12px;color:var(--muted)"></span>
+      <span style="flex:1"></span>
+      <button class="dm-btn dm-edit" id="dm-toggle-edit" onclick="toggleEditMode()" style="padding:6px 12px;font-size:12px">✏️ Uredi</button>
+    </div>
+    <div class="dm-actions" id="dm-actions"></div>
+
+    <!-- VIEW MODE -->
+    <div id="dm-view">
+      <div class="dm-kv" id="dm-kv"></div>
+    </div>
+
+    <!-- EDIT MODE -->
+    <div id="dm-edit" style="display:none">
+      <div class="dm-edit-grid">
+        <div class="mo-field"><label>Ime in priimek</label><input type="text" id="ed-name"></div>
+        <div class="mo-field"><label>Status</label>
+          <select id="ed-status">
+            <option value="pending">V čakanju</option>
+            <option value="confirmed">Potrjeno</option>
+            <option value="rejected">Zavrnjeno</option>
+            <option value="cancelled">Preklicano</option>
+          </select>
+        </div>
+        <div class="mo-field"><label>Datum</label><input type="date" id="ed-date"></div>
+        <div class="mo-field"><label>Čas</label><select id="ed-time"></select></div>
+        <div class="mo-field"><label>Odrasli</label><input type="number" id="ed-people" min="1" max="99"></div>
+        <div class="mo-field"><label>Otroci</label><input type="number" id="ed-kids" min="0" max="20"></div>
+        <div class="mo-field"><label>Telefon</label><input type="tel" id="ed-phone"></div>
+        <div class="mo-field"><label>E-pošta</label><input type="email" id="ed-email"></div>
+        <div class="mo-field full"><label>Vrsta dogodka</label>
+          <select id="ed-event">
+            <option value="">—</option>
+            <option>Kosilo ali večerja</option>
+            <option>Družinsko srečanje ali praznovanje</option>
+            <option>Rojstni dan</option>
+            <option>Poslovno kosilo</option>
+            <option>Poroka ali večji dogodek</option>
+          </select>
+        </div>
+        <div class="mo-field full"><label>Opomba gosta</label><textarea id="ed-note" style="height:60px"></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" style="flex:1;padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer" onclick="cancelEdit()">Prekliči</button>
+        <button class="btn-ok" style="flex:2;padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer" onclick="saveEdit()">Shrani spremembe</button>
+      </div>
+      <hr class="dm-divider">
+    </div>
+
+    <hr class="dm-divider" id="dm-div1">
+
+    <!-- Admin opomba -->
+    <div class="mo-field">
+      <label>Admin opomba</label>
+      <textarea id="dm-anote" placeholder="Interna opomba (vidna samo vam)..." style="height:60px"></textarea>
+    </div>
+    <button class="btn-ok" onclick="saveNote()" style="width:100%;padding:10px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">Shrani opombo</button>
+
+    <hr class="dm-divider">
+
+    <!-- Komunikacija -->
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Komunikacija</div>
+    <div id="dm-comm"></div>
+    <button class="dm-btn dm-email" onclick="openEmailFromDetail()" style="width:100%;justify-content:center;margin-top:10px">✉️ Pošlji sporočilo gostu</button>
+
+    <div class="mo-actions" style="margin-top:14px">
+      <button class="btn-cancel" onclick="closeDetailModal()">Zapri</button>
+      <button style="flex:1;padding:12px;border-radius:9px;border:none;font-size:14px;font-weight:700;cursor:pointer;background:var(--red-bg);color:var(--red)" onclick="doDelete()">🗑 Izbriši</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW RESERVATION MODAL -->
+<div class="mo hidden" id="new-modal">
+  <div class="mo-box">
+    <div class="mo-title">+ Nova rezervacija mize</div>
+    <div class="mo-2col">
+      <div class="mo-field"><label>Datum *</label><input type="date" id="nw-date" onchange="checkAvail()"></div>
+      <div class="mo-field"><label>Čas *</label><select id="nw-time" onchange="checkAvail()"><option value="">Izberite...</option></select></div>
+    </div>
+    <div id="avail-info"></div>
+    <div class="mo-field"><label>Ime in priimek *</label><input type="text" id="nw-name" placeholder="Ana Novak"></div>
+    <div class="mo-2col">
+      <div class="mo-field"><label>Odrasli *</label><input type="number" id="nw-people" min="1" max="40" placeholder="4"></div>
+      <div class="mo-field"><label>Otroci</label><input type="number" id="nw-kids" min="0" max="20" placeholder="0"></div>
+    </div>
+    <div class="mo-2col">
+      <div class="mo-field"><label>Telefon</label><input type="tel" id="nw-phone" placeholder="+386..."></div>
+      <div class="mo-field"><label>E-pošta</label><input type="email" id="nw-email" placeholder="gost@email.com"></div>
+    </div>
+    <div class="mo-field"><label>Vrsta dogodka</label>
+      <select id="nw-event">
+        <option value="">—</option>
+        <option>Kosilo ali večerja</option>
+        <option>Družinsko srečanje ali praznovanje</option>
+        <option>Rojstni dan</option>
+        <option>Poslovno kosilo</option>
+        <option>Poroka ali večji dogodek</option>
+      </select>
+    </div>
+    <div class="mo-field"><label>Opomba</label><textarea id="nw-note" placeholder="Posebne potrebe, alergije..."></textarea></div>
+    <div class="mo-2col">
+      <div class="mo-field"><label>Status</label>
+        <select id="nw-status"><option value="pending">V čakanju</option><option value="confirmed">Potrjeno</option></select>
+      </div>
+      <div></div>
+    </div>
+    <div class="mo-actions">
+      <button class="btn-cancel" onclick="closeNewModal()">Prekliči</button>
+      <button class="btn-ok" onclick="submitNew()">Shrani</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL MODAL -->
+<div class="mo hidden" id="email-modal">
+  <div class="mo-box" style="max-width:480px">
+    <div class="mo-title">✉️ Pošlji sporočilo gostu</div>
+    <div class="mo-field"><label>Prejemnik (email)</label><input type="email" id="em-to" placeholder="gost@email.com"></div>
+    <div class="mo-field"><label>Zadeva</label><input type="text" id="em-subject"></div>
+    <div class="mo-field"><label>Sporočilo</label><textarea id="em-body" style="height:130px"></textarea></div>
+    <div class="mo-actions">
+      <button class="btn-cancel" onclick="closeEmailModal()">Prekliči</button>
+      <button class="btn-ok" onclick="sendEmail()">Pošlji ✉️</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── DEMO DATA ─────────────────────────────────────────────────────────────────
+// Namišljene rezervacije za prikaz stranki
+let _demoData = [
+  // Sobota 2026-05-02
+  { id:1, date:'2.5.2026',  time:'12:00', name:'Ana Novak',      people:4,  kids:2, phone:'041 123 456', email:'ana.novak@gmail.com',    status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
+  { id:2, date:'2.5.2026',  time:'13:00', name:'Janez Kovač',    people:6,  kids:0, phone:'040 234 567', email:'kovac.j@email.si',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'Prosimo za mizo ob oknu.' },
+  { id:3, date:'2.5.2026',  time:'14:30', name:'Maja Horvat',    people:8,  kids:3, phone:'031 345 678', email:'maja.h@gmail.com',       status:'pending',   source:'chatbot',   reservation_type:'table', event_type:'Rojstni dan',                          note:'Proslava 40. rojstnega dne, prosimo za torto.' },
+  { id:4, date:'2.5.2026',  time:'16:00', name:'Luka Petek',     people:4,  kids:0, phone:'070 456 789', email:'luka.petek@email.si',    status:'confirmed', source:'manual',    reservation_type:'table', event_type:'',                                     note:'' },
+  { id:5, date:'2.5.2026',  time:'18:00', name:'Petra Zorman',   people:10, kids:2, phone:'041 567 890', email:'petra.zorman@gmail.com', status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Družinsko srečanje ali praznovanje',   note:'Letno srečanje – prosimo za ločen prostor.' },
+
+  // Nedelja 2026-05-03
+  { id:6, date:'3.5.2026',  time:'12:00', name:'Tine Vidmar',    people:6,  kids:1, phone:'040 678 901', email:'tine.v@email.si',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
+  { id:7, date:'3.5.2026',  time:'13:30', name:'Eva Kranjc',     people:4,  kids:0, phone:'031 789 012', email:'eva.kranjc@gmail.com',   status:'pending',   source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'Vegetarijanska prehrana za 2 osebi.' },
+  { id:8, date:'3.5.2026',  time:'15:00', name:'Robert Oblak',   people:8,  kids:4, phone:'041 890 123', email:'r.oblak@email.si',       status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Družinsko srečanje ali praznovanje',   note:'Alergija na gluten pri enem otroku.' },
+  { id:9, date:'3.5.2026',  time:'17:00', name:'Lucija Štefan',  people:3,  kids:0, phone:'070 901 234', email:'lucija.s@gmail.com',     status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                     note:'' },
+
+  // Sobota 2026-05-09
+  { id:10, date:'9.5.2026', time:'12:30', name:'Peter Dolenc',   people:5,  kids:2, phone:'040 012 345', email:'peter.dolenc@email.si',  status:'pending',   source:'wordpress', reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
+  { id:11, date:'9.5.2026', time:'14:00', name:'Sara Mrak',      people:6,  kids:0, phone:'031 123 456', email:'sara.mrak@gmail.com',    status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Poslovno kosilo',                      note:'Prikaz za poslovne partnerje.' },
+  { id:12, date:'9.5.2026', time:'17:30', name:'Bojan Lesjak',   people:12, kids:0, phone:'041 234 567', email:'b.lesjak@firma.si',      status:'pending',   source:'wordpress', reservation_type:'table', event_type:'Poroka ali večji dogodek',             note:'Poroke se udeležuje 12 povabljenih.' },
+
+  // Nedelja 2026-05-10
+  { id:13, date:'10.5.2026',time:'13:00', name:'Marko Ferjan',   people:4,  kids:1, phone:'070 345 678', email:'marko.f@email.si',       status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                     note:'' },
+  { id:14, date:'10.5.2026',time:'15:00', name:'Nina Bergant',   people:6,  kids:2, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Rojstni dan',                          note:'Praznovanje 50-letnice, prosimo za glasbeno presenečenje.' },
+
+  // Preteklost – Sobota 2026-04-25
+  { id:15, date:'25.4.2026',time:'12:00', name:'Nina Bergant',   people:8,  kids:0, phone:'040 456 789', email:'nina.b@gmail.com',       status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'Poroka ali večji dogodek',             note:'Porok slavje – celoten prostor rezerviran.' },
+  { id:16, date:'25.4.2026',time:'14:00', name:'Rok Zupančič',   people:4,  kids:2, phone:'031 567 890', email:'rok.z@email.si',         status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'',                                     note:'' },
+  { id:17, date:'25.4.2026',time:'17:00', name:'Ana Grošelj',    people:6,  kids:0, phone:'041 678 901', email:'ana.g@gmail.com',        status:'confirmed', source:'manual',    reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
+
+  // Preteklost – Nedelja 2026-04-26
+  { id:18, date:'26.4.2026',time:'12:30', name:'Blaž Kastelic',  people:5,  kids:2, phone:'070 789 012', email:'blaz.k@email.si',        status:'confirmed', source:'wordpress', reservation_type:'table', event_type:'',                                     note:'' },
+  { id:19, date:'26.4.2026',time:'14:00', name:'Manja Pirnat',   people:3,  kids:0, phone:'040 890 123', email:'manja.p@gmail.com',      status:'confirmed', source:'chatbot',   reservation_type:'table', event_type:'Kosilo ali večerja',                   note:'' },
+];
+
+let _nextId = 20;
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const CAP_MAX = 40;
+
+// ── SIMULATED API ─────────────────────────────────────────────────────────────
+function fetchAll() {
+  return Promise.resolve(_demoData.slice());
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+let activeTab = 'pregled';
+function goTab(t) {
+  activeTab = t;
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['pregled','koledar','rezervacije'][i]===t));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+t).classList.add('active');
+  if (t==='pregled') loadPregled();
+  else if (t==='koledar') renderCal();
+  else if (t==='rezervacije') loadRez();
+}
+
+// ── DATES ─────────────────────────────────────────────────────────────────────
+function wkDates(off=0) {
+  const now=new Date(), day=now.getDay(), dSat=(6-day+7)%7||7;
+  const sat=new Date(now); sat.setDate(now.getDate()+dSat+off*7);
+  const sun=new Date(sat); sun.setDate(sat.getDate()+1);
+  return {sat,sun};
+}
+function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function pad(n){ return String(n).padStart(2,'0'); }
+function slD(d){ return `${d.getDate()}. ${d.getMonth()+1}.`; }
+function slDFull(d){ return `${d.getDate()}. ${d.getMonth()+1}. ${d.getFullYear()}`; }
+function normD(s){
+  if(!s) return '';
+  if(s.includes('.')){
+    const p=s.split('.');
+    if(p.length>=3) return `${p[2].trim().padStart(4,'0')}-${p[1].trim().padStart(2,'0')}-${p[0].trim().padStart(2,'0')}`;
+  }
+  return s.slice(0,10);
+}
+const MONTHS=['Januar','Februar','Marec','April','Maj','Junij','Julij','Avgust','September','Oktober','November','December'];
+
+function byDate(arr,ds){ return arr.filter(r=>normD(r.date||'')===ds); }
+function sumPpl(arr){ return arr.reduce((s,r)=>s+(parseInt(r.people)||0),0); }
+
+// ── WEEKEND OFFSETS ───────────────────────────────────────────────────────────
+let wkOffP=0, wkOffR=0;
+function setWkP(n){
+  wkOffP=n;
+  document.querySelectorAll('#screen-pregled .wk-btn').forEach((b,i)=>b.classList.toggle('active',i===n));
+  loadPregled();
+}
+function wkRez(d){ wkOffR+=d; loadRez(); }
+function wkRezReset(){ wkOffR=0; loadRez(); }
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function srcLbl(s){ return s==='chatbot'?'AI chat':s==='wordpress'?'Spletni obrazec':s==='manual'?'Ročni vnos':s||''; }
+function stLbl(s){ return {pending:'V čakanju',confirmed:'Potrjeno',rejected:'Zavrnjeno',cancelled:'Preklicano'}[s]||s; }
+
+// ── CAPACITY STRIP ────────────────────────────────────────────────────────────
+function renderCap(elId, all, off){
+  const el=document.getElementById(elId);
+  const {sat,sun}=wkDates(off);
+  el.innerHTML=[{l:'Sobota',d:sat},{l:'Nedelja',d:sun}].map(({l,d})=>{
+    const ds=ymd(d), dayR=byDate(all,ds).filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
+    const ppl=sumPpl(dayR), pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
+    const bc=pct>=90?'full':pct>=60?'warn':'';
+    return `<div class="cap-card">
+      <div class="cap-day">${l}</div><div class="cap-date">${slDFull(d)}</div>
+      <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
+      <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX} oseb · ${dayR.length} rez.</div>
+    </div>`;
+  }).join('');
+}
+
+// ── COMPACT ROW ───────────────────────────────────────────────────────────────
+function resRow(r){
+  const kids=r.kids?` + ${r.kids} otr.`:'';
+  return `<div class="res-row ${r.status}" onclick="openDetail(${r.id})">
+    <div class="rr-time">${r.time||'?'}</div>
+    <div class="rr-info">
+      <div class="rr-name">${esc(r.name||'—')}</div>
+      <div class="rr-sub">👥 ${r.people||'?'}${kids}${r.event_type?' · '+esc(r.event_type):''}</div>
+      <div class="rr-src">${srcLbl(r.source)}</div>
+    </div>
+    <div class="rr-badge"><span class="badge badge-${r.status}">${stLbl(r.status)}</span></div>
+  </div>`;
+}
+
+// ── DETAIL MODAL ──────────────────────────────────────────────────────────────
+let _currentRes = null;
+let _editMode = false;
+
+(function initEdTimes(){
+  const s=document.getElementById('ed-time');
+  for(let h=12;h<=20;h++) for(const m of[0,15,30,45]){
+    const v=`${pad(h)}:${pad(m)}`; s.innerHTML+=`<option>${v}</option>`;
+  }
+})();
+
+function openDetail(id){
+  fetchAll().then(all=>{
+    const r=all.find(x=>x.id===id); if(!r) return;
+    _currentRes=r; _editMode=false;
+    renderDetailView(r);
+    document.getElementById('dm-view').style.display='block';
+    document.getElementById('dm-edit').style.display='none';
+    document.getElementById('dm-toggle-edit').textContent='✏️ Uredi';
+    document.getElementById('detail-modal').classList.remove('hidden');
+    renderComm(r.id);
+  });
+}
+
+function renderDetailView(r){
+  document.getElementById('dm-title').textContent=`${r.time||'?'} · ${r.name||'—'}`;
+  const badge=document.getElementById('dm-badge');
+  badge.className=`badge badge-${r.status}`;
+  badge.textContent=stLbl(r.status);
+  document.getElementById('dm-src').textContent=srcLbl(r.source);
+
+  const note=r.note||'';
+  const adminNote=r.admin_notes||'';
+  const kv=document.getElementById('dm-kv');
+  kv.innerHTML=[
+    ['Datum', r.date||'—'],
+    ['Čas', r.time||'—'],
+    ['Osebe', `${r.people||'?'}${r.kids?' + '+r.kids+' otr.':''}`],
+    r.phone?['Telefon',esc(r.phone)]:[],
+    r.email?['E-pošta',esc(r.email)]:[],
+    r.event_type?['Dogodek',esc(r.event_type)]:[],
+    note?['Opomba gosta','<i>'+esc(note)+'</i>']:[],
+    adminNote?['Admin opomba','<span style="color:var(--brand)">'+esc(adminNote)+'</span>']:[],
+  ].filter(x=>x.length).map(([k,v])=>`<div class="dm-k">${k}</div><div class="dm-v">${v}</div>`).join('');
+
+  const acts=document.getElementById('dm-actions');
+  acts.innerHTML=`
+    ${r.status!=='confirmed'?`<button class="dm-btn dm-confirm" onclick="doConfirm(${r.id})">✅ Potrdi</button>`:''}
+    ${r.status!=='rejected'&&r.status!=='cancelled'?`<button class="dm-btn dm-reject" onclick="doReject(${r.id})">❌ Zavrni</button>`:''}
+  `;
+  document.getElementById('dm-anote').value=adminNote;
+}
+
+function toggleEditMode(){
+  if(!_currentRes) return;
+  _editMode=!_editMode;
+  document.getElementById('dm-view').style.display=_editMode?'none':'block';
+  document.getElementById('dm-edit').style.display=_editMode?'block':'none';
+  document.getElementById('dm-toggle-edit').textContent=_editMode?'← Nazaj':'✏️ Uredi';
+  if(_editMode) fillEditForm(_currentRes);
+}
+
+function fillEditForm(r){
+  document.getElementById('ed-name').value=r.name||'';
+  document.getElementById('ed-status').value=r.status||'pending';
+  document.getElementById('ed-date').value=normD(r.date||'');
+  const tSel=document.getElementById('ed-time');
+  tSel.value=r.time||'';
+  if(!tSel.value&&r.time){const opt=document.createElement('option');opt.value=r.time;opt.textContent=r.time;tSel.prepend(opt);tSel.value=r.time;}
+  document.getElementById('ed-people').value=r.people||'';
+  document.getElementById('ed-kids').value=r.kids||'';
+  document.getElementById('ed-phone').value=r.phone||'';
+  document.getElementById('ed-email').value=r.email||'';
+  document.getElementById('ed-event').value=r.event_type||'';
+  document.getElementById('ed-note').value=r.note||'';
+}
+
+function cancelEdit(){
+  _editMode=false;
+  document.getElementById('dm-view').style.display='block';
+  document.getElementById('dm-edit').style.display='none';
+  document.getElementById('dm-toggle-edit').textContent='✏️ Uredi';
+}
+
+function saveEdit(){
+  if(!_currentRes) return;
+  const dateVal=document.getElementById('ed-date').value;
+  const [y,m,d]=dateVal.split('-');
+  const dateSl=`${d}.${m}.${y}`;
+  const idx=_demoData.findIndex(x=>x.id===_currentRes.id);
+  if(idx<0) return;
+  _demoData[idx]={
+    ..._demoData[idx],
+    name: document.getElementById('ed-name').value.trim(),
+    status: document.getElementById('ed-status').value,
+    date: dateSl,
+    time: document.getElementById('ed-time').value,
+    people: parseInt(document.getElementById('ed-people').value)||_currentRes.people,
+    kids: parseInt(document.getElementById('ed-kids').value)||0,
+    phone: document.getElementById('ed-phone').value.trim(),
+    email: document.getElementById('ed-email').value.trim(),
+    event_type: document.getElementById('ed-event').value,
+    note: document.getElementById('ed-note').value.trim(),
+  };
+  toast('✅ Shranjeno (demo)');
+  _currentRes=_demoData[idx];
+  cancelEdit();
+  renderDetailView(_currentRes);
+  refreshAll();
+}
+
+function saveNote(){
+  if(!_currentRes) return;
+  const txt=document.getElementById('dm-anote').value;
+  const idx=_demoData.findIndex(x=>x.id===_currentRes.id);
+  if(idx>=0) _demoData[idx].admin_notes=txt;
+  toast('✅ Opomba shranjena (demo)');
+  closeDetailModal();
+  refreshAll();
+}
+
+function renderComm(id){
+  const el=document.getElementById('dm-comm');
+  // Demo communication history
+  const demos={
+    3:[
+      {direction:'inbound',  sent_at:'2026-04-28T10:15:00', body:'Živijo! Bi radi rezervirali mizo za 8 oseb + 3 otroke za 2.5. ob 14:30. Je možno?'},
+      {direction:'outbound', sent_at:'2026-04-28T11:02:00', subject:'Rezervacija – Pod Goro', body:'Pozdravljeni! Z veseljem sprejemamo vašo rezervacijo. Prosimo za potrditev s plačilom akontacije.'},
+    ],
+    7:[
+      {direction:'inbound',  sent_at:'2026-04-27T14:30:00', body:'Bi radi rezervirali kosilo za 4 osebe za 3.5. ob 13:30. 2 osebi sta vegetarijanki.'},
+    ],
+  };
+  const msgs=demos[id]||[];
+  if(!msgs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:6px 0">Ni sporočil</div>';return;}
+  el.innerHTML=msgs.map(m=>{
+    const out=m.direction==='outbound';
+    return `<div class="comm-msg ${out?'comm-out':'comm-in'}">
+      <div class="comm-meta">${out?'▶ Vi':'◀ Gost'} · ${(m.sent_at||'').slice(0,16).replace('T',' ')}</div>
+      ${m.subject?`<div style="font-weight:700;margin-bottom:2px">${esc(m.subject)}</div>`:''}
+      <div>${esc(m.body||'').replace(/\n/g,'<br>')}</div>
+    </div>`;
+  }).join('');
+}
+
+function closeDetailModal(){ document.getElementById('detail-modal').classList.add('hidden'); _currentRes=null; _editMode=false; }
+document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===document.getElementById('detail-modal'))closeDetailModal();});
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function doDelete(){
+  if(!_currentRes) return;
+  if(!confirm(`Izbrisati rezervacijo za ${_currentRes.name||'?'}?`)) return;
+  _demoData=_demoData.filter(x=>x.id!==_currentRes.id);
+  toast('🗑 Rezervacija izbrisana (demo)');
+  closeDetailModal(); refreshAll();
+}
+
+function doConfirm(id){
+  const idx=_demoData.findIndex(x=>x.id===id);
+  if(idx>=0) _demoData[idx].status='confirmed';
+  toast('✅ Potrjeno (demo)');
+  closeDetailModal(); refreshAll();
+}
+
+function doReject(id){
+  if(!confirm('Zavrniti rezervacijo?')) return;
+  const idx=_demoData.findIndex(x=>x.id===id);
+  if(idx>=0) _demoData[idx].status='rejected';
+  toast('❌ Zavrnjeno (demo)');
+  closeDetailModal(); refreshAll();
+}
+
+// ── EMAIL ─────────────────────────────────────────────────────────────────────
+function openEmailFromDetail(){
+  if(!_currentRes) return;
+  document.getElementById('em-to').value=_currentRes.email||'';
+  document.getElementById('em-subject').value=`Rezervacija – Pod Goro`;
+  document.getElementById('em-body').value=`Pozdravljeni ${_currentRes.name||''},\n\n`;
+  document.getElementById('email-modal').classList.remove('hidden');
+}
+function closeEmailModal(){ document.getElementById('email-modal').classList.add('hidden'); }
+document.getElementById('email-modal').addEventListener('click',e=>{if(e.target===document.getElementById('email-modal'))closeEmailModal();});
+function sendEmail(){
+  toast('✅ Sporočilo poslano (demo)');
+  closeEmailModal();
+}
+
+// ── LOAD PREGLED ──────────────────────────────────────────────────────────────
+async function loadPregled(){
+  const {sat,sun}=wkDates(wkOffP);
+  document.getElementById('wk-title-p').textContent=wkOffP===0?'Ta vikend':wkOffP===1?'Naslednji vikend':`Vikend ${slDFull(sat)}`;
+  const all=await fetchAll();
+  renderCap('cap-p',all,wkOffP);
+  const ss=ymd(sat),su=ymd(sun);
+  const wkR=[...byDate(all,ss),...byDate(all,su)];
+  const active=wkR.filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
+  const pnd=wkR.filter(r=>r.status==='pending');
+  document.getElementById('s-rez').textContent=active.length;
+  document.getElementById('s-ppl').textContent=sumPpl(active);
+  document.getElementById('s-pnd').textContent=pnd.length;
+  // badge
+  const allPnd=all.filter(r=>r.status==='pending');
+  const b=document.getElementById('pending-badge');
+  b.textContent=allPnd.length; b.classList.toggle('show',allPnd.length>0);
+  // pending
+  const pl=document.getElementById('pnd-list');
+  pl.innerHTML=pnd.length?`<div class="res-list">${pnd.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(resRow).join('')}</div>`
+    :'<div class="empty"><div class="ei">✅</div>Ni čakajočih rezervacij</div>';
+}
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+let calSelectedDate=null;
+
+function calMove(d){ calMonth+=d; if(calMonth<0){calMonth=11;calYear--;}else if(calMonth>11){calMonth=0;calYear++;} renderCal(); }
+function calToday(){ calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); calSelectedDate=null; renderCal(); }
+
+async function renderCal(){
+  document.getElementById('cal-month-title').textContent=`${MONTHS[calMonth]} ${calYear}`;
+  const all=await fetchAll().catch(()=>[]);
+  const head=document.getElementById('cal-head');
+  head.innerHTML=['Pon','Tor','Sre','Čet','Pet','Sob','Ned'].map((d,i)=>`<div class="cal-head-cell${i>=5?' wknd':''}">${d}</div>`).join('');
+  const firstDay=new Date(calYear,calMonth,1);
+  const lastDay=new Date(calYear,calMonth+1,0);
+  const startDow=(firstDay.getDay()+6)%7;
+  const today=ymd(new Date());
+  const body=document.getElementById('cal-body');
+  let html='';
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(calYear,calMonth,d);
+    const ds=ymd(date);
+    const dow=(date.getDay()+6)%7;
+    const isWknd=dow>=5;
+    const isToday=ds===today;
+    const isSel=ds===calSelectedDate;
+    const dayR=byDate(all,ds).filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
+    const ppl=sumPpl(dayR);
+    const pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
+    const dotClass=pct>=90?'red':pct>=50?'orange':'green';
+    let dots='';
+    if(dayR.length){
+      const n=Math.min(dayR.length,4);
+      let dotItems='';
+      for(let i=0;i<n;i++) dotItems+='<span class="cal-dot '+dotClass+'"></span>';
+      dots='<div class="cal-dots">'+dotItems+'</div>';
+    }
+    const cnt=dayR.length?`<div class="cal-count">${dayR.length} rez</div>`:'';
+    html+=`<div class="cal-cell${isWknd?' weekend':''}${isToday?' today':''}${isSel?' selected':''}" onclick="calSelectDay('${ds}',${d})">
+      <div class="cal-day-num">${d}</div>${dots}${cnt}
+    </div>`;
+  }
+  const total=startDow+lastDay.getDate();
+  const rem=total%7; if(rem>0) for(let i=0;i<7-rem;i++) html+=`<div class="cal-cell empty"></div>`;
+  body.innerHTML=html;
+  if(calSelectedDate) showDayPanel(calSelectedDate, all);
+}
+
+function calSelectDay(ds,d){
+  calSelectedDate=ds;
+  document.querySelectorAll('.cal-cell').forEach(c=>c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  fetchAll().then(all=>showDayPanel(ds,all));
+}
+
+function showDayPanel(ds,all){
+  const panel=document.getElementById('day-panel');
+  const date=new Date(ds+'T00:00:00');
+  document.getElementById('day-panel-title').textContent=`${slDFull(date)} – rezervacije`;
+  panel.style.display='block';
+  const dayR=byDate(all,ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const list=document.getElementById('day-panel-list');
+  list.innerHTML=dayR.length?`<div class="res-list">${dayR.map(resRow).join('')}</div>`
+    :'<div class="empty"><div class="ei">🌿</div>Ni rezervacij ta dan</div>';
+}
+
+// ── LOAD REZERVACIJE ──────────────────────────────────────────────────────────
+async function loadRez(){
+  const {sat,sun}=wkDates(wkOffR);
+  const t=wkOffR===0?'Ta vikend':wkOffR===1?'Naslednji vikend':wkOffR===-1?'Prejšnji vikend':`Vikend ${slDFull(sat)}`;
+  document.getElementById('wk-title-r').textContent=t;
+  document.getElementById('wk-r-today').classList.toggle('active',wkOffR===0);
+  const all=await fetchAll();
+  renderCap('cap-r',all,wkOffR);
+  const ss=ymd(sat),su=ymd(sun);
+  const container=document.getElementById('rez-days');
+  container.innerHTML=[{l:`Sobota · ${slDFull(sat)}`,ds:ss},{l:`Nedelja · ${slDFull(sun)}`,ds:su}].map(({l,ds})=>{
+    const dayR=byDate(all,ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const ppl=sumPpl(dayR.filter(r=>r.status!=='rejected'&&r.status!=='cancelled'));
+    return `<div style="margin-bottom:20px">
+      <div class="day-hdr"><span class="day-name">${l}</span><span class="day-meta">${dayR.length} rez · ${ppl} oseb</span></div>
+      ${dayR.length?`<div class="res-list">${dayR.map(resRow).join('')}</div>`:'<div class="empty"><div class="ei">🌿</div>Ni rezervacij</div>'}
+    </div>`;
+  }).join('');
+}
+
+// ── NEW MODAL ─────────────────────────────────────────────────────────────────
+(function initTimes(){
+  const s=document.getElementById('nw-time');
+  for(let h=12;h<=20;h++) for(const m of[0,15,30,45]){
+    const v=`${pad(h)}:${pad(m)}`; s.innerHTML+=`<option>${v}</option>`;
+  }
+})();
+
+function openNewModal(){
+  const {sat}=wkDates(wkOffR||wkOffP);
+  document.getElementById('nw-date').value=ymd(sat);
+  document.getElementById('new-modal').classList.remove('hidden');
+  checkAvail();
+}
+function closeNewModal(){ document.getElementById('new-modal').classList.add('hidden'); }
+document.getElementById('new-modal').addEventListener('click',e=>{if(e.target===document.getElementById('new-modal'))closeNewModal();});
+
+async function checkAvail(){
+  const date=document.getElementById('nw-date').value;
+  const info=document.getElementById('avail-info');
+  if(!date){info.className='';return;}
+  info.className='';info.textContent='Preverjam...';
+  const all=await fetchAll();
+  const dayR=byDate(all,date).filter(r=>r.status!=='rejected'&&r.status!=='cancelled');
+  const ppl=sumPpl(dayR), pct=Math.round(ppl/CAP_MAX*100);
+  if(pct>=90) info.className='full';
+  else if(pct>=60) info.className='warn';
+  else info.className='ok';
+  info.textContent=pct>=90?`⛔ Polno: ${ppl}/${CAP_MAX} oseb (${dayR.length} rez.)`:
+    pct>=60?`⚠️ Skoraj polno: ${ppl}/${CAP_MAX} oseb (${dayR.length} rez.)`:
+    `✅ Prosto: ${ppl}/${CAP_MAX} oseb (${dayR.length} rez.)`;
+}
+
+async function submitNew(){
+  const date=document.getElementById('nw-date').value;
+  const time=document.getElementById('nw-time').value;
+  const name=document.getElementById('nw-name').value.trim();
+  const people=document.getElementById('nw-people').value;
+  if(!date||!time||!name||!people){toast('⚠️ Datum, čas, ime in osebe so obvezni');return;}
+  const [y,m,d]=date.split('-');
+  const newRes={
+    id: _nextId++,
+    date:`${d}.${m}.${y}`, time, name,
+    people:parseInt(people),
+    reservation_type:'table',
+    status:document.getElementById('nw-status').value,
+    source:'manual',
+    phone:document.getElementById('nw-phone').value.trim()||null,
+    email:document.getElementById('nw-email').value.trim()||null,
+    kids:parseInt(document.getElementById('nw-kids').value)||0,
+    event_type:document.getElementById('nw-event').value||null,
+    note:document.getElementById('nw-note').value.trim()||null,
+  };
+  _demoData.push(newRes);
+  toast('✅ Rezervacija dodana (demo)');
+  closeNewModal();
+  ['nw-name','nw-phone','nw-email','nw-note','nw-people','nw-kids'].forEach(id=>document.getElementById(id).value='');
+  await refreshAll();
+}
+
+// ── REFRESH ───────────────────────────────────────────────────────────────────
+async function refreshAll(){
+  if(activeTab==='pregled') await loadPregled();
+  else if(activeTab==='koledar') await renderCal();
+  else if(activeTab==='rezervacije') await loadRez();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init(){ loadPregled(); }
+init();
+</script>
+</body>
+</html>

@@ -165,6 +165,14 @@ class KnowledgeFeedbackRequest(BaseModel):
 # STATIC FILE ROUTES
 # ============================================================
 
+@router.get("/barbara", response_class=HTMLResponse)
+def barbara_page() -> HTMLResponse:
+    html_path = Path("static/barbara.html")
+    if not html_path.exists():
+        return HTMLResponse("<h1>Barbara UI manjka (static/barbara.html)</h1>", status_code=500)
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+
+
 @router.get("/admin", response_class=HTMLResponse)
 def admin_page() -> HTMLResponse:
     html_path = Path("static/admin.html")
