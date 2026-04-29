@@ -228,6 +228,26 @@
     #avail-info.warn { background: var(--orange-bg); color: var(--orange); display: block; }
     #avail-info.full { background: var(--red-bg); color: var(--red); display: block; }
 
+    /* ── DINING ROOM CAPACITY ─── */
+    .dr-wknd { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .dr-day-card { background: var(--white); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--sh); border: 1px solid var(--border); }
+    .dr-day-title { font-size: 12px; font-weight: 800; margin-bottom: 7px; }
+    .dr-room-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; cursor: pointer; border-radius: 6px; padding: 4px 5px; transition: background .12s; }
+    .dr-room-row:hover { background: var(--brand-light); }
+    .dr-room-row.active-filter { background: var(--brand-light); outline: 2px solid var(--brand); }
+    .dr-room-label { font-size: 11px; font-weight: 700; min-width: 70px; }
+    .dr-bar-wrap { flex: 1; background: var(--bg); border-radius: 3px; height: 6px; overflow: hidden; }
+    .dr-bar { height: 100%; border-radius: 3px; transition: width .4s; }
+    .dr-bar.green { background: var(--green); }
+    .dr-bar.orange { background: var(--orange); }
+    .dr-bar.red { background: var(--red); }
+    .dr-ppl { font-size: 10px; color: var(--muted); min-width: 36px; text-align: right; white-space: nowrap; }
+    .cal-dr-chips { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+    .cal-dr-chip { font-size: 9px; font-weight: 700; border-radius: 2px; padding: 1px 3px; white-space: nowrap; overflow: hidden; }
+    .cal-dr-chip.green { background: var(--green-bg); color: var(--green); }
+    .cal-dr-chip.orange { background: var(--orange-bg); color: var(--orange); }
+    .cal-dr-chip.red { background: var(--red-bg); color: var(--red); }
+
     /* ── TOAST ─── */
     #toast { position: fixed; bottom: calc(14px + env(safe-area-inset-bottom,0px)); left: 50%; transform: translateX(-50%) translateY(80px); background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; transition: transform .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
     #toast.show { transform: translateX(-50%) translateY(0); }
@@ -252,12 +272,12 @@
   <!-- ══════════════════════════════════════════════════════════════ SOBE -->
   <div id="screen-sobe" class="screen active">
     <div class="sub-tabs" id="sobe-subtabs">
-      <button class="sub-tab active" onclick="goSubSobe('odprte')">Odprte rezervacije</button>
-      <button class="sub-tab"        onclick="goSubSobe('potrjene')">Potrjene rezervacije</button>
+      <button class="sub-tab"        onclick="goSubSobe('odprte')">Odprte rezervacije</button>
+      <button class="sub-tab active" onclick="goSubSobe('potrjene')">Potrjene rezervacije</button>
     </div>
 
     <!-- Odprte -->
-    <div id="sub-sobe-odprte" class="sub-screen active">
+    <div id="sub-sobe-odprte" class="sub-screen">
       <div class="page">
         <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
         <div id="sobe-pnd-list"></div>
@@ -267,7 +287,7 @@
     </div>
 
     <!-- Potrjene + Koledar -->
-    <div id="sub-sobe-potrjene" class="sub-screen">
+    <div id="sub-sobe-potrjene" class="sub-screen active">
       <div class="page">
         <div class="cal-nav">
           <h2 id="cal-room-month">Maj 2026</h2>
@@ -290,7 +310,8 @@
             <div id="day-panel-list"></div>
           </div>
         </div>
-        <div class="sec-lbl" style="margin-top:18px">Potrjene rezervacije sob</div>
+        <div class="sec-lbl" id="sobe-conf-lbl" style="margin-top:18px">Potrjene rezervacije sob</div>
+        <div id="wknd-quick-s"></div>
         <div id="sobe-conf-list"></div>
       </div>
     </div>
@@ -334,9 +355,10 @@
             <div id="mize-day-panel-list"></div>
           </div>
         </div>
-        <div class="sec-lbl" style="margin-top:18px">Kapaciteta jedilnice</div>
-        <div class="cap-strip" id="cap-mize"></div>
-        <div class="sec-lbl">Potrjene rezervacije miz</div>
+        <div class="sec-lbl" style="margin-top:18px">Zasedenost ta vikend</div>
+        <div id="wknd-cap"></div>
+        <div class="sec-lbl" id="mize-conf-lbl">Potrjene rezervacije miz</div>
+        <div id="wknd-quick-m"></div>
         <div id="mize-conf-list"></div>
       </div>
     </div>
@@ -496,6 +518,7 @@ const ROOMS = [
 ];
 const CAP_MAX = 40;
 const MONTHS = ['Januar','Februar','Marec','April','Maj','Junij','Julij','Avgust','September','Oktober','November','December'];
+const DINING = [{ id:'jedilnica', name:'Jedilnica', icon:'🍽', cap:40 }];
 
 let _demoData = [
   // ── MIZE ──────────────────────────────────────────────────────────────────
@@ -540,9 +563,12 @@ let _nextId = 30;
 
 // ══════════════════════════════════════════════════════════════ STATE
 let activeTab = 'sobe';
-let activeSobeSubTab = 'odprte';
+let activeSobeSubTab = 'potrjene';
 let activeMizeSubTab = 'potrjene';
 let wkOffM = 0;
+let _drFilter = null;
+let _wkndFilterM = null; // null | 0 | 1 (ta vikend / naslednji vikend) za mize
+let _wkndFilterS = null; // null | 0 | 1 za sobe
 let calRoomYear = new Date().getFullYear(), calRoomMonth = new Date().getMonth();
 let calRoomSelected = null;
 let calMizeYear = new Date().getFullYear(), calMizeMonth = new Date().getMonth();
@@ -588,7 +614,7 @@ function goTab(t){
   document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['sobe','mize','analitika'][i]===t));
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+t).classList.add('active');
-  if(t==='sobe'){ activeSobeSubTab='odprte'; goSubSobe('odprte'); }
+  if(t==='sobe'){ activeSobeSubTab='potrjene'; goSubSobe('potrjene'); }
   else if(t==='mize'){ activeMizeSubTab='potrjene'; goSubMize('potrjene'); }
   else if(t==='analitika') loadAnalitika();
 }
@@ -646,11 +672,63 @@ async function loadSobeOdprte(){
 async function loadSobePotrjene(){
   const all=await fetchAll();
   renderRoomCalendar(all);
-  const today=ymd(new Date());
-  const conf=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&normD(r.date)>=today)
-    .sort((a,b)=>normD(a.date).localeCompare(normD(b.date)));
+  renderWkndQuickFilterS(all);
+  renderSobeConfList(all);
+}
+
+function renderSobeConfList(all){
   const confEl=document.getElementById('sobe-conf-list');
-  confEl.innerHTML=conf.length?conf.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih prihodnjih rezervacij</div>';
+  const lbl=document.getElementById('sobe-conf-lbl');
+  // 1. Weekend filter
+  if(_wkndFilterS!==null){
+    const {sat,sun}=wkDates(_wkndFilterS);
+    const sds=ymd(sat),sus=ymd(sun);
+    const wlbl=_wkndFilterS===0?'Ta vikend':'Naslednji vikend';
+    // Show rooms where check-in is within or overlaps the weekend
+    const filtered=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&isRoomOccOn(r,sds)||isRoomOccOn(r,sus));
+    if(lbl) lbl.textContent='Potrjene sobe – '+wlbl;
+    confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">📅 '+wlbl+': '+slDShort(sat)+'–'+slDShort(sun)+'<span style="flex:1"></span><button onclick="_wkndFilterS=null;fetchAll().then(a=>{renderWkndQuickFilterS(a);renderSobeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?filtered.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih sob ta vikend</div>');
+    return;
+  }
+  // 2. Default: current calendar month
+  const ms=calRoomYear+'-'+pad(calRoomMonth+1)+'-01';
+  const me=ymd(new Date(calRoomYear,calRoomMonth+1,0));
+  if(lbl) lbl.textContent='Potrjene sobe – '+MONTHS[calRoomMonth]+' '+calRoomYear;
+  // Show rooms with any night in current calendar month
+  const conf=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed').filter(r=>{
+    const cin=normD(r.date);const cout=addDays(cin,r.nights||1);
+    return cin<=me&&cout>=ms;
+  }).sort((a,b)=>normD(a.date).localeCompare(normD(b.date)));
+  confEl.innerHTML=conf.length?conf.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih rezervacij sob v '+MONTHS[calRoomMonth]+'</div>';
+}
+
+function renderWkndQuickFilterS(all){
+  const el=document.getElementById('wknd-quick-s');
+  if(!el) return;
+  const chips=[0,1].map(off=>{
+    const {sat,sun}=wkDates(off);
+    const sds=ymd(sat),sus=ymd(sun);
+    const rez=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&(isRoomOccOn(r,sds)||isRoomOccOn(r,sus)));
+    const ppl=sumPpl(rez);
+    const active=_wkndFilterS===off;
+    const lbl=off===0?'Ta vikend':'Nasl. vikend';
+    const bc=active?'var(--brand-light)':'var(--white)';
+    const cc=active?'var(--brand)':'var(--text)';
+    const bdr=active?'var(--brand)':'var(--border)';
+    return '<button onclick="setWkndFilterS('+off+')" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid '+bdr+';background:'+bc+';color:'+cc+';font-size:12px;font-weight:700;cursor:pointer;text-align:left">'+lbl+'<br><span style="font-size:11px;font-weight:400;color:var(--muted)">'+slDShort(sat)+'–'+slDShort(sun)+' · '+rez.length+' sob · '+ppl+' gostov</span></button>';
+  }).join('');
+  el.innerHTML='<div style="display:flex;gap:6px;margin-bottom:10px">'+chips+'</div>';
+}
+
+function setWkndFilterS(off){
+  if(_wkndFilterS===off){
+    _wkndFilterS=null;
+  } else {
+    _wkndFilterS=off;
+    const {sat}=wkDates(off);
+    calRoomYear=sat.getFullYear();calRoomMonth=sat.getMonth();
+  }
+  fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);});
 }
 
 function roomResCard(r){
@@ -674,8 +752,10 @@ function roomResCard(r){
 }
 
 // ══════════════════════════════════════════════════════════════ ROOM CALENDAR
-function calRoomMove(d){ calRoomMonth+=d;if(calRoomMonth<0){calRoomMonth=11;calRoomYear--;}else if(calRoomMonth>11){calRoomMonth=0;calRoomYear++;}fetchAll().then(all=>renderRoomCalendar(all)); }
-function calRoomToday(){ calRoomYear=new Date().getFullYear();calRoomMonth=new Date().getMonth();calRoomSelected=null;fetchAll().then(all=>renderRoomCalendar(all)); }
+function drColor(ppl,cap){ const pct=Math.min(100,Math.round(ppl/cap*100));return pct>=90?'red':pct>=50?'orange':'green'; }
+
+function calRoomMove(d){ _wkndFilterS=null;calRoomMonth+=d;if(calRoomMonth<0){calRoomMonth=11;calRoomYear--;}else if(calRoomMonth>11){calRoomMonth=0;calRoomYear++;}fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);}); }
+function calRoomToday(){ _wkndFilterS=null;calRoomYear=new Date().getFullYear();calRoomMonth=new Date().getMonth();calRoomSelected=null;fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);}); }
 
 function renderRoomCalendar(all){
   document.getElementById('cal-room-month').textContent=`${MONTHS[calRoomMonth]} ${calRoomYear}`;
@@ -765,39 +845,114 @@ async function loadMizeOdprte(){
 async function loadMizePotrjene(){
   const all=await fetchAll();
   renderMizeCalendar(all);
-  // Capacity
+  renderWkndCap(all);
+  renderWkndQuickFilterM(all);
+  renderMizeConfList(all);
+}
+
+function renderWkndCap(all){
+  const el=document.getElementById('wknd-cap');
+  if(!el) return;
   const {sat,sun}=wkDates(0);
-  const capEl=document.getElementById('cap-mize');
-  capEl.innerHTML=[{l:'Ta Sob',d:sat},{l:'Ta Ned',d:sun}].map(({l,d})=>{
-    const ds=ymd(d),dayR=byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
-    const ppl=sumPpl(dayR),pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
-    const bc=pct>=90?'full':pct>=60?'warn':'';
-    return `<div class="cap-card"><div class="cap-day">${l}</div><div class="cap-date">${slDFull(d)}</div>
-      <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
-      <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX} oseb · ${dayR.length} rez.</div></div>`;
+  const rows=[{l:'Sobota',d:sat},{l:'Nedelja',d:sun}].map(({l,d})=>{
+    const ds=ymd(d);
+    const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
+    const diningRows=DINING.map(dr=>{
+      const ppl=sumPpl(dayR);
+      const pct=Math.min(100,Math.round(ppl/dr.cap*100));
+      const cls=drColor(ppl,dr.cap);
+      const isActive=_drFilter&&_drFilter.date===ds&&_drFilter.loc===dr.id;
+      return '<div class="dr-room-row'+(isActive?' active-filter':'')+'" onclick="toggleDrFilter(\''+ds+'\',\''+dr.id+'\',this)"><span class="dr-room-label">'+dr.icon+' '+dr.name+'</span><div class="dr-bar-wrap"><div class="dr-bar '+cls+'" style="width:'+pct+'%"></div></div><span class="dr-ppl">'+ppl+'/'+dr.cap+'</span></div>';
+    }).join('');
+    const total=sumPpl(dayR);
+    return '<div class="dr-day-card"><div class="dr-day-title">'+l+' · '+slDShort(d)+' · <span style="color:var(--muted);font-weight:400">'+total+'/'+CAP_MAX+' oseb</span></div>'+diningRows+'</div>';
   }).join('');
-  // Confirmed list
-  const today=ymd(new Date());
-  const conf=all.filter(r=>r.reservation_type==='table'&&r.status==='confirmed'&&normD(r.date)>=today)
-    .sort((a,b)=>normD(a.date).localeCompare(normD(b.date))||((a.time||'').localeCompare(b.time||'')));
+  el.innerHTML='<div class="dr-wknd">'+rows+'</div>';
+}
+
+function toggleDrFilter(ds, loc, el){
+  _wkndFilterM=null;
+  if(_drFilter&&_drFilter.date===ds&&_drFilter.loc===loc){
+    _drFilter=null;
+  } else {
+    _drFilter={date:ds,loc};
+    const d=new Date(ds+'T00:00:00');calMizeYear=d.getFullYear();calMizeMonth=d.getMonth();
+  }
+  fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);});
+}
+
+function renderWkndQuickFilterM(all){
+  const el=document.getElementById('wknd-quick-m');
+  if(!el) return;
+  const chips=[0,1].map(off=>{
+    const {sat,sun}=wkDates(off);
+    const sds=ymd(sat),sus=ymd(sun);
+    const rez=all.filter(r=>r.reservation_type==='table'&&r.status==='confirmed'&&(normD(r.date)===sds||normD(r.date)===sus));
+    const ppl=sumPpl(rez);
+    const active=_wkndFilterM===off;
+    const lbl=off===0?'Ta vikend':'Nasl. vikend';
+    const bc=active?'var(--brand-light)':'var(--white)';
+    const cc=active?'var(--brand)':'var(--text)';
+    const bdr=active?'var(--brand)':'var(--border)';
+    return '<button onclick="setWkndFilterM('+off+')" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid '+bdr+';background:'+bc+';color:'+cc+';font-size:12px;font-weight:700;cursor:pointer;text-align:left">'+lbl+'<br><span style="font-size:11px;font-weight:400;color:var(--muted)">'+slDShort(sat)+'–'+slDShort(sun)+' · '+rez.length+' rez · '+ppl+' gostov</span></button>';
+  }).join('');
+  el.innerHTML='<div style="display:flex;gap:6px;margin-bottom:10px">'+chips+'</div>';
+}
+
+function setWkndFilterM(off){
+  _drFilter=null;
+  if(_wkndFilterM===off){
+    _wkndFilterM=null;
+  } else {
+    _wkndFilterM=off;
+    const {sat}=wkDates(off);
+    calMizeYear=sat.getFullYear();calMizeMonth=sat.getMonth();
+  }
+  fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);});
+}
+
+function renderMizeConfList(all){
   const confEl=document.getElementById('mize-conf-list');
-  if(!conf.length){confEl.innerHTML='<div class="empty"><div class="ei">🌿</div>Ni potrjenih prihodnjih rezervacij</div>';return;}
-  // Group by date
+  const lbl=document.getElementById('mize-conf-lbl');
+  // 1. Weekend filter
+  if(_wkndFilterM!==null){
+    const {sat,sun}=wkDates(_wkndFilterM);
+    const sds=ymd(sat),sus=ymd(sun);
+    const wlbl=_wkndFilterM===0?'Ta vikend':'Naslednji vikend';
+    const filtered=all.filter(r=>r.reservation_type==='table'&&r.status==='confirmed'&&(normD(r.date)===sds||normD(r.date)===sus))
+      .sort((a,b)=>normD(a.date).localeCompare(normD(b.date))||((a.time||'').localeCompare(b.time||'')));
+    if(lbl) lbl.textContent='Potrjene – '+wlbl;
+    confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">📅 '+wlbl+': '+slDShort(sat)+'–'+slDShort(sun)+'<span style="flex:1"></span><button onclick="_wkndFilterM=null;fetchAll().then(a=>{renderWkndCap(a);renderWkndQuickFilterM(a);renderMizeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?'<div class="res-list">'+filtered.map(resRow).join('')+'</div>':'<div class="empty"><div class="ei">🌿</div>Ni potrjenih rezervacij ta vikend</div>');
+    return;
+  }
+  // 2. DR filter
+  if(_drFilter){
+    const filtered=all.filter(r=>r.reservation_type==='table'&&r.status==='confirmed'&&normD(r.date)===_drFilter.date);
+    const dr=DINING.find(d=>d.id===_drFilter.loc);
+    const d=new Date(_drFilter.date+'T00:00:00');
+    if(lbl) lbl.textContent='Potrjene – '+(dr?dr.name:'');
+    confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">'+(dr?dr.icon+' '+dr.name:'')+' · '+slDFull(d)+'<span style="flex:1"></span><button onclick="_drFilter=null;fetchAll().then(a=>{renderWkndCap(a);renderWkndQuickFilterM(a);renderMizeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?'<div class="res-list">'+filtered.map(resRow).join('')+'</div>':'<div class="empty"><div class="ei">🌿</div>Ni rezervacij za ta dan</div>');
+    return;
+  }
+  // 3. Default: current calendar month
+  const ms=calMizeYear+'-'+pad(calMizeMonth+1)+'-01';
+  const me=ymd(new Date(calMizeYear,calMizeMonth+1,0));
+  if(lbl) lbl.textContent='Potrjene – '+MONTHS[calMizeMonth]+' '+calMizeYear;
+  const conf=all.filter(r=>r.reservation_type==='table'&&r.status==='confirmed'&&normD(r.date)>=ms&&normD(r.date)<=me)
+    .sort((a,b)=>normD(a.date).localeCompare(normD(b.date))||((a.time||'').localeCompare(b.time||'')));
+  if(!conf.length){confEl.innerHTML='<div class="empty"><div class="ei">🌿</div>Ni potrjenih rezervacij v '+MONTHS[calMizeMonth]+' '+calMizeYear+'</div>';return;}
   const byDateMap={};
   conf.forEach(r=>{const ds=normD(r.date);if(!byDateMap[ds])byDateMap[ds]=[];byDateMap[ds].push(r);});
   confEl.innerHTML=Object.entries(byDateMap).map(([ds,dayR])=>{
     const d=new Date(ds+'T00:00:00');
     const ppl=sumPpl(dayR);
-    return `<div style="margin-bottom:16px">
-      <div class="day-hdr"><span class="day-name">${slDFull(d)}</span><span class="day-meta">${dayR.length} rez · ${ppl} oseb</span></div>
-      <div class="res-list">${dayR.map(resRow).join('')}</div>
-    </div>`;
+    return '<div style="margin-bottom:16px"><div class="day-hdr"><span class="day-name">'+slDFull(d)+'</span><span class="day-meta">'+dayR.length+' rez · '+ppl+' oseb</span></div><div class="res-list">'+dayR.map(resRow).join('')+'</div></div>';
   }).join('');
 }
 
 // Mize calendar
-function calMizeMove(d){ calMizeMonth+=d;if(calMizeMonth<0){calMizeMonth=11;calMizeYear--;}else if(calMizeMonth>11){calMizeMonth=0;calMizeYear++;}fetchAll().then(all=>renderMizeCalendar(all)); }
-function calMizeToday(){ calMizeYear=new Date().getFullYear();calMizeMonth=new Date().getMonth();calMizeSelected=null;fetchAll().then(all=>renderMizeCalendar(all)); }
+function calMizeMove(d){ _wkndFilterM=null;_drFilter=null;calMizeMonth+=d;if(calMizeMonth<0){calMizeMonth=11;calMizeYear--;}else if(calMizeMonth>11){calMizeMonth=0;calMizeYear++;}fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);}); }
+function calMizeToday(){ _wkndFilterM=null;_drFilter=null;calMizeYear=new Date().getFullYear();calMizeMonth=new Date().getMonth();calMizeSelected=null;fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);}); }
 
 function renderMizeCalendar(all){
   document.getElementById('cal-mize-month').textContent=`${MONTHS[calMizeMonth]} ${calMizeYear}`;
@@ -819,17 +974,14 @@ function renderMizeCalendar(all){
     const isSel=ds===calMizeSelected;
     const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
     const ppl=sumPpl(dayR);
-    const pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
-    const dotClass=pct>=90?'red':pct>=50?'orange':'green';
-    let dots='';
+    let chips='';
     if(dayR.length){
-      const n=Math.min(dayR.length,4);let dotItems='';
-      for(let i=0;i<n;i++) dotItems+='<span class="cal-dot '+dotClass+'"></span>';
-      dots='<div class="cal-dots">'+dotItems+'</div>';
+      const pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
+      const cls=drColor(ppl,CAP_MAX);
+      chips='<div class="cal-dr-chips"><div class="cal-dr-chip '+cls+'">🍽 '+ppl+'/'+CAP_MAX+'</div></div>';
     }
-    const cnt=dayR.length?`<div class="cal-count">${dayR.length} rez</div>`:'';
     html+=`<div class="cal-cell${isWknd?' weekend':''}${isToday?' today':''}${isSel?' selected':''}" onclick="calMizeSelectDay('${ds}')">
-      <div class="cal-day-num">${d}</div>${dots}${cnt}
+      <div class="cal-day-num">${d}</div>${chips}
     </div>`;
   }
   const total=startDow+lastDay.getDate();
@@ -847,7 +999,9 @@ function calMizeSelectDay(ds){
 function showMizeDayPanel(ds,all){
   const panel=document.getElementById('mize-day-panel');
   const date=new Date(ds+'T00:00:00');
-  document.getElementById('mize-day-panel-title').textContent=`${slDFull(date)} – rezervacije miz`;
+  const pplDay=sumPpl(byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled'));
+  const cls=drColor(pplDay,CAP_MAX);
+  document.getElementById('mize-day-panel-title').innerHTML=slDFull(date)+' <span class="cal-dr-chip '+cls+'" style="font-size:11px;margin-left:6px">🍽 '+pplDay+'/'+CAP_MAX+'</span>';
   panel.style.display='block';
   const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   document.getElementById('mize-day-panel-list').innerHTML=dayR.length
@@ -1082,7 +1236,7 @@ async function refreshAll(){
 }
 
 // ══════════════════════════════════════════════════════════════ INIT
-goTab('sobe');
+goTab('sobe'); // opens potrjene by default (activeSobeSubTab='potrjene')
 </script>
 </body>
 </html>
