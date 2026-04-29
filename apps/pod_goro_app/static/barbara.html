@@ -264,6 +264,7 @@
       <button class="nav-tab active"   onclick="goTab('sobe')">🛏 Sobe</button>
       <button class="nav-tab"          onclick="goTab('mize')">🍽 Mize</button>
       <button class="nav-tab"          onclick="goTab('analitika')">📊 Analitika</button>
+      <button class="nav-tab"          onclick="goTab('ai')">💬 Pogovori</button>
     </nav>
     <span id="pending-badge">0</span>
     <button id="refresh-btn" onclick="refreshAll()" title="Osveži">↻</button>
@@ -279,9 +280,9 @@
     <!-- Odprte -->
     <div id="sub-sobe-odprte" class="sub-screen">
       <div class="page">
-        <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
+        <div class="sec-lbl">Nove – čakajo potrditev (status: novo)</div>
         <div id="sobe-pnd-list"></div>
-        <div class="sec-lbl" style="margin-top:18px">Vse odprte (čakajoče)</div>
+        <div class="sec-lbl" style="margin-top:18px">V obdelavi – že videne, še ne potrjene</div>
         <div id="sobe-open-list"></div>
       </div>
     </div>
@@ -327,9 +328,9 @@
     <!-- Odprte mize -->
     <div id="sub-mize-odprte" class="sub-screen">
       <div class="page">
-        <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
+        <div class="sec-lbl">Nove – čakajo potrditev (status: novo)</div>
         <div id="mize-pnd-list"></div>
-        <div class="sec-lbl" style="margin-top:18px">Vse odprte (čakajoče)</div>
+        <div class="sec-lbl" style="margin-top:18px">V obdelavi – že videne, še ne potrjene</div>
         <div id="mize-open-list"></div>
       </div>
     </div>
@@ -361,6 +362,14 @@
         <div id="wknd-quick-m"></div>
         <div id="mize-conf-list"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ POGOVORI -->
+  <div id="screen-ai" class="screen">
+    <div class="page">
+      <div class="sec-lbl">Zadnji pogovori z AI chatom</div>
+      <div id="ai-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -617,12 +626,13 @@ function toast(msg){ const t=document.getElementById('toast');t.textContent=msg;
 // ══════════════════════════════════════════════════════════════ TABS
 function goTab(t){
   activeTab=t;
-  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['sobe','mize','analitika'][i]===t));
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['sobe','mize','analitika','ai'][i]===t));
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+t).classList.add('active');
   if(t==='sobe'){ activeSobeSubTab='potrjene'; goSubSobe('potrjene'); }
   else if(t==='mize'){ activeMizeSubTab='potrjene'; goSubMize('potrjene'); }
   else if(t==='analitika') loadAnalitika();
+  else if(t==='ai') loadAI();
 }
 function goSubSobe(sub){
   activeSobeSubTab=sub;
@@ -690,7 +700,8 @@ function renderSobeConfList(all){
     const {mon,sun}=wkWeekDates(_tednFilterS);
     const sds=ymd(mon),sus=ymd(sun);
     const wlbl=_tednFilterS===0?'Ta teden':'Naslednji teden';
-    const filtered=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&(isRoomOccOn(r,sds)||isRoomOccOn(r,sus)));
+    const allDays=[];{const d=new Date(mon);while(d<=sun){allDays.push(ymd(d));d.setDate(d.getDate()+1);}}
+    const filtered=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&allDays.some(ds=>isRoomOccOn(r,ds)));
     if(lbl) lbl.textContent='Potrjene sobe – '+wlbl;
     confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">📅 '+wlbl+': '+slDShort(mon)+'–'+slDShort(sun)+'<span style="flex:1"></span><button onclick="_tednFilterS=null;fetchAll().then(a=>{renderTednQuickFilterS(a);renderSobeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?filtered.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih sob ta teden</div>');
     return;
@@ -724,11 +735,13 @@ function renderTednQuickFilterS(all){
     const rez=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&allDays.some(ds=>isRoomOccOn(r,ds)));
     const ppl=sumPpl(rez);
     const active=_tednFilterS===off;
-    const lbl=off===0?'Ta teden':'Nasl. teden';
+    const lbl=off===0?'Ta teden':'Naslednji teden';
     const bc=active?'var(--brand-light)':'var(--white)';
     const cc=active?'var(--brand)':'var(--text)';
     const bdr=active?'var(--brand)':'var(--border)';
-    return '<button onclick="setTednFilterS('+off+')" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid '+bdr+';background:'+bc+';color:'+cc+';font-size:12px;font-weight:700;cursor:pointer;text-align:left">'+lbl+'<br><span style="font-size:11px;font-weight:400;color:var(--muted)">'+slDShort(mon)+'–'+slDShort(sun)+' · '+rez.length+' sob · '+ppl+' gostov</span></button>';
+    const sobLbl=rez.length===1?'soba':rez.length===2?'sobi':'sob';
+    const gstLbl=ppl===1?'gost':ppl===2?'gosta':'gostov';
+    return '<button onclick="setTednFilterS('+off+')" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid '+bdr+';background:'+bc+';color:'+cc+';font-size:12px;font-weight:700;cursor:pointer;text-align:left">'+lbl+'<br><span style="font-size:11px;font-weight:400;color:var(--muted)">'+slDShort(mon)+'–'+slDShort(sun)+' · '+rez.length+' '+sobLbl+' · '+ppl+' '+gstLbl+'</span></button>';
   }).join('');
   el.innerHTML='<div style="display:flex;gap:6px;margin-bottom:10px">'+chips+'</div>';
 }
@@ -1104,14 +1117,33 @@ async function loadAnalitika(){
   const capEl=document.getElementById('anl-cap');
   capEl.innerHTML=[0,1,2].map(off=>{
     const {sat,sun}=wkDates(off);
-    const ss=ymd(sat),su=ymd(sun);
-    const dayR=[...byDate(all,ss),...byDate(all,su)].filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
-    const ppl=sumPpl(dayR),pct=Math.min(100,Math.round(ppl/CAP_MAX/2*100));
-    const bc=pct>=90?'full':pct>=60?'warn':'';
-    return `<div class="cap-card"><div class="cap-day">Vikend ${off===0?'ta':'+'+(off)} (${slDShort(sat)}–${slDShort(sun)})</div>
-      <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
-      <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX*2} oseb · ${dayR.length} rez.</div></div>`;
+    const wlbl=off===0?'Ta vikend':'Vikend +'+(off);
+    return [{l:'Sob',d:sat},{l:'Ned',d:sun}].map(({l,d})=>{
+      const ds=ymd(d);
+      const dayR=byDate(all,ds).filter(r=>r.reservation_type==='table'&&r.status!=='rejected'&&r.status!=='cancelled');
+      const ppl=sumPpl(dayR),pct=Math.min(100,Math.round(ppl/CAP_MAX*100));
+      const bc=pct>=90?'full':pct>=60?'warn':'';
+      return `<div class="cap-card"><div class="cap-day">${wlbl} · ${l} ${slDShort(d)}</div>
+        <div class="cap-bar-wrap"><div class="cap-bar ${bc}" style="width:${pct}%"></div></div>
+        <div class="cap-lbl"><strong>${ppl}</strong> / ${CAP_MAX} oseb · ${dayR.length} rez.</div></div>`;
+    }).join('');
   }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════ POGOVORI
+async function loadAI(){
+  const el=document.getElementById('ai-list');
+  try{
+    const r=await fetch(`${API}/conversations?limit=40`);
+    const d=await r.json();
+    const convs=(d.conversations||[]).slice(0,30);
+    if(!convs.length){el.innerHTML='<div class="empty"><div class="ei">💬</div>Ni pogovorov</div>';return;}
+    el.innerHTML=convs.map(c=>`<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;margin-bottom:6px;box-shadow:var(--sh)">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${c.created_at||''}</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px">👤 ${esc(c.user_message||'')}</div>
+      <div style="font-size:12px;color:var(--muted)">🤖 ${esc((c.bot_reply||'').slice(0,140))}${(c.bot_reply||'').length>140?'...':''}</div>
+    </div>`).join('');
+  } catch(e){ el.innerHTML='<div class="empty">❌ Napaka pri nalaganju</div>'; }
 }
 
 // ══════════════════════════════════════════════════════════════ DETAIL MODAL
@@ -1270,6 +1302,7 @@ async function refreshAll(){
   if(activeTab==='sobe') await loadSobe();
   else if(activeTab==='mize') await loadMize();
   else if(activeTab==='analitika') await loadAnalitika();
+  else if(activeTab==='ai') await loadAI();
 }
 
 // ══════════════════════════════════════════════════════════════ INIT
