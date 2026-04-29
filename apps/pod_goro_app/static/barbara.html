@@ -568,7 +568,7 @@ let activeMizeSubTab = 'potrjene';
 let wkOffM = 0;
 let _drFilter = null;
 let _wkndFilterM = null; // null | 0 | 1 (ta vikend / naslednji vikend) za mize
-let _wkndFilterS = null; // null | 0 | 1 za sobe
+let _tednFilterS = null; // null | 0 | 1 (ta teden / naslednji teden) za sobe
 let calRoomYear = new Date().getFullYear(), calRoomMonth = new Date().getMonth();
 let calRoomSelected = null;
 let calMizeYear = new Date().getFullYear(), calMizeMonth = new Date().getMonth();
@@ -589,7 +589,7 @@ function normD(s){
 function addDays(ymdStr,n){ const d=new Date(ymdStr+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d); }
 function fetchAll(){ return Promise.resolve(_demoData.slice()); }
 function byDate(arr,ds){ return arr.filter(r=>normD(r.date||'')===ds); }
-function sumPpl(arr){ return arr.reduce((s,r)=>s+(parseInt(r.people)||0),0); }
+function sumPpl(arr){ return arr.reduce((s,r)=>s+(parseInt(r.people)||0)+(parseInt(r.kids)||0),0); }
 function srcLbl(s){ return s==='chatbot'?'AI chat':s==='wordpress'?'Spletni obrazec':s==='manual'?'Ročni vnos':s||''; }
 function stLbl(s){ return {pending:'V čakanju',confirmed:'Potrjeno',rejected:'Zavrnjeno',cancelled:'Preklicano'}[s]||s; }
 function roomById(id){ return ROOMS.find(r=>r.id===id)||{icon:'🛏️',name:id,cap:4,desc:''}; }
@@ -605,6 +605,12 @@ function wkDates(off=0){
   const sat=new Date(now);sat.setDate(now.getDate()+dSat+off*7);
   const sun=new Date(sat);sun.setDate(sat.getDate()+1);
   return {sat,sun};
+}
+function wkWeekDates(off=0){
+  const now=new Date(),day=now.getDay(),dMon=day===0?-6:1-day;
+  const mon=new Date(now);mon.setDate(now.getDate()+dMon+off*7);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  return {mon,sun};
 }
 function toast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500); }
 
@@ -672,22 +678,21 @@ async function loadSobeOdprte(){
 async function loadSobePotrjene(){
   const all=await fetchAll();
   renderRoomCalendar(all);
-  renderWkndQuickFilterS(all);
+  renderTednQuickFilterS(all);
   renderSobeConfList(all);
 }
 
 function renderSobeConfList(all){
   const confEl=document.getElementById('sobe-conf-list');
   const lbl=document.getElementById('sobe-conf-lbl');
-  // 1. Weekend filter
-  if(_wkndFilterS!==null){
-    const {sat,sun}=wkDates(_wkndFilterS);
-    const sds=ymd(sat),sus=ymd(sun);
-    const wlbl=_wkndFilterS===0?'Ta vikend':'Naslednji vikend';
-    // Show rooms where check-in is within or overlaps the weekend
+  // 1. Teden filter
+  if(_tednFilterS!==null){
+    const {mon,sun}=wkWeekDates(_tednFilterS);
+    const sds=ymd(mon),sus=ymd(sun);
+    const wlbl=_tednFilterS===0?'Ta teden':'Naslednji teden';
     const filtered=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&(isRoomOccOn(r,sds)||isRoomOccOn(r,sus)));
     if(lbl) lbl.textContent='Potrjene sobe – '+wlbl;
-    confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">📅 '+wlbl+': '+slDShort(sat)+'–'+slDShort(sun)+'<span style="flex:1"></span><button onclick="_wkndFilterS=null;fetchAll().then(a=>{renderWkndQuickFilterS(a);renderSobeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?filtered.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih sob ta vikend</div>');
+    confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">📅 '+wlbl+': '+slDShort(mon)+'–'+slDShort(sun)+'<span style="flex:1"></span><button onclick="_tednFilterS=null;fetchAll().then(a=>{renderTednQuickFilterS(a);renderSobeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?filtered.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih sob ta teden</div>');
     return;
   }
   // 2. Selected day filter
@@ -710,33 +715,33 @@ function renderSobeConfList(all){
   confEl.innerHTML=conf.length?conf.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih rezervacij sob v '+MONTHS[calRoomMonth]+'</div>';
 }
 
-function renderWkndQuickFilterS(all){
+function renderTednQuickFilterS(all){
   const el=document.getElementById('wknd-quick-s');
   if(!el) return;
   const chips=[0,1].map(off=>{
-    const {sat,sun}=wkDates(off);
-    const sds=ymd(sat),sus=ymd(sun);
-    const rez=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&(isRoomOccOn(r,sds)||isRoomOccOn(r,sus)));
+    const {mon,sun}=wkWeekDates(off);
+    const allDays=[];const d=new Date(mon);while(d<=sun){allDays.push(ymd(d));d.setDate(d.getDate()+1);}
+    const rez=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&allDays.some(ds=>isRoomOccOn(r,ds)));
     const ppl=sumPpl(rez);
-    const active=_wkndFilterS===off;
-    const lbl=off===0?'Ta vikend':'Nasl. vikend';
+    const active=_tednFilterS===off;
+    const lbl=off===0?'Ta teden':'Nasl. teden';
     const bc=active?'var(--brand-light)':'var(--white)';
     const cc=active?'var(--brand)':'var(--text)';
     const bdr=active?'var(--brand)':'var(--border)';
-    return '<button onclick="setWkndFilterS('+off+')" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid '+bdr+';background:'+bc+';color:'+cc+';font-size:12px;font-weight:700;cursor:pointer;text-align:left">'+lbl+'<br><span style="font-size:11px;font-weight:400;color:var(--muted)">'+slDShort(sat)+'–'+slDShort(sun)+' · '+rez.length+' sob · '+ppl+' gostov</span></button>';
+    return '<button onclick="setTednFilterS('+off+')" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid '+bdr+';background:'+bc+';color:'+cc+';font-size:12px;font-weight:700;cursor:pointer;text-align:left">'+lbl+'<br><span style="font-size:11px;font-weight:400;color:var(--muted)">'+slDShort(mon)+'–'+slDShort(sun)+' · '+rez.length+' sob · '+ppl+' gostov</span></button>';
   }).join('');
   el.innerHTML='<div style="display:flex;gap:6px;margin-bottom:10px">'+chips+'</div>';
 }
 
-function setWkndFilterS(off){
-  if(_wkndFilterS===off){
-    _wkndFilterS=null;
+function setTednFilterS(off){
+  if(_tednFilterS===off){
+    _tednFilterS=null;
   } else {
-    _wkndFilterS=off;
-    const {sat}=wkDates(off);
-    calRoomYear=sat.getFullYear();calRoomMonth=sat.getMonth();
+    _tednFilterS=off;
+    const {mon}=wkWeekDates(off);
+    calRoomYear=mon.getFullYear();calRoomMonth=mon.getMonth();
   }
-  fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);});
+  fetchAll().then(all=>{renderRoomCalendar(all);renderTednQuickFilterS(all);renderSobeConfList(all);});
 }
 
 function roomResCard(r){
@@ -762,8 +767,8 @@ function roomResCard(r){
 // ══════════════════════════════════════════════════════════════ ROOM CALENDAR
 function drColor(ppl,cap){ const pct=Math.min(100,Math.round(ppl/cap*100));return pct>=90?'red':pct>=50?'orange':'green'; }
 
-function calRoomMove(d){ _wkndFilterS=null;calRoomSelected=null;calRoomMonth+=d;if(calRoomMonth<0){calRoomMonth=11;calRoomYear--;}else if(calRoomMonth>11){calRoomMonth=0;calRoomYear++;}fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);document.getElementById('day-panel').style.display='none';}); }
-function calRoomToday(){ _wkndFilterS=null;calRoomYear=new Date().getFullYear();calRoomMonth=new Date().getMonth();calRoomSelected=null;fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);document.getElementById('day-panel').style.display='none';}); }
+function calRoomMove(d){ _tednFilterS=null;calRoomSelected=null;calRoomMonth+=d;if(calRoomMonth<0){calRoomMonth=11;calRoomYear--;}else if(calRoomMonth>11){calRoomMonth=0;calRoomYear++;}fetchAll().then(all=>{renderRoomCalendar(all);renderTednQuickFilterS(all);renderSobeConfList(all);document.getElementById('day-panel').style.display='none';}); }
+function calRoomToday(){ _tednFilterS=null;calRoomYear=new Date().getFullYear();calRoomMonth=new Date().getMonth();calRoomSelected=null;fetchAll().then(all=>{renderRoomCalendar(all);renderTednQuickFilterS(all);renderSobeConfList(all);document.getElementById('day-panel').style.display='none';}); }
 
 function renderRoomCalendar(all){
   document.getElementById('cal-room-month').textContent=`${MONTHS[calRoomMonth]} ${calRoomYear}`;
@@ -789,7 +794,9 @@ function renderRoomCalendar(all){
       const res=getRoomOnDay(all,room.id,ds);
       if(res){
         const cls=res.status==='confirmed'?'occ':'pnd';
-        chips+=`<div class="cal-room-chip ${cls}">${room.icon} ${esc(res.name.split(' ')[0])}</div>`;
+        const parts=res.name.trim().split(/\s+/);
+        const priimek=parts.length>1?parts[parts.length-1]:parts[0];
+        chips+=`<div class="cal-room-chip ${cls}">${room.icon} ${esc(priimek)}</div>`;
       }
     });
     html+=`<div class="cal-cell${isWknd?' weekend':''}${isToday?' today':''}${isSel?' selected':''}" onclick="calRoomSelectDay('${ds}')">
