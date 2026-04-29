@@ -685,12 +685,20 @@ function renderSobeConfList(all){
     const sds=ymd(sat),sus=ymd(sun);
     const wlbl=_wkndFilterS===0?'Ta vikend':'Naslednji vikend';
     // Show rooms where check-in is within or overlaps the weekend
-    const filtered=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&isRoomOccOn(r,sds)||isRoomOccOn(r,sus));
+    const filtered=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&(isRoomOccOn(r,sds)||isRoomOccOn(r,sus)));
     if(lbl) lbl.textContent='Potrjene sobe – '+wlbl;
     confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">📅 '+wlbl+': '+slDShort(sat)+'–'+slDShort(sun)+'<span style="flex:1"></span><button onclick="_wkndFilterS=null;fetchAll().then(a=>{renderWkndQuickFilterS(a);renderSobeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?filtered.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni potrjenih sob ta vikend</div>');
     return;
   }
-  // 2. Default: current calendar month
+  // 2. Selected day filter
+  if(calRoomSelected){
+    const selD=new Date(calRoomSelected+'T00:00:00');
+    if(lbl) lbl.textContent='Potrjene sobe – '+slDFull(selD);
+    const dayConf=all.filter(r=>r.reservation_type==='room'&&r.status==='confirmed'&&isRoomOccOn(r,calRoomSelected));
+    confEl.innerHTML=dayConf.length?dayConf.map(roomResCard).join(''):'<div class="empty"><div class="ei">🛏️</div>Ni zasedenih sob ta dan</div>';
+    return;
+  }
+  // 3. Default: current calendar month
   const ms=calRoomYear+'-'+pad(calRoomMonth+1)+'-01';
   const me=ymd(new Date(calRoomYear,calRoomMonth+1,0));
   if(lbl) lbl.textContent='Potrjene sobe – '+MONTHS[calRoomMonth]+' '+calRoomYear;
@@ -754,8 +762,8 @@ function roomResCard(r){
 // ══════════════════════════════════════════════════════════════ ROOM CALENDAR
 function drColor(ppl,cap){ const pct=Math.min(100,Math.round(ppl/cap*100));return pct>=90?'red':pct>=50?'orange':'green'; }
 
-function calRoomMove(d){ _wkndFilterS=null;calRoomMonth+=d;if(calRoomMonth<0){calRoomMonth=11;calRoomYear--;}else if(calRoomMonth>11){calRoomMonth=0;calRoomYear++;}fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);}); }
-function calRoomToday(){ _wkndFilterS=null;calRoomYear=new Date().getFullYear();calRoomMonth=new Date().getMonth();calRoomSelected=null;fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);}); }
+function calRoomMove(d){ _wkndFilterS=null;calRoomSelected=null;calRoomMonth+=d;if(calRoomMonth<0){calRoomMonth=11;calRoomYear--;}else if(calRoomMonth>11){calRoomMonth=0;calRoomYear++;}fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);document.getElementById('day-panel').style.display='none';}); }
+function calRoomToday(){ _wkndFilterS=null;calRoomYear=new Date().getFullYear();calRoomMonth=new Date().getMonth();calRoomSelected=null;fetchAll().then(all=>{renderRoomCalendar(all);renderWkndQuickFilterS(all);renderSobeConfList(all);document.getElementById('day-panel').style.display='none';}); }
 
 function renderRoomCalendar(all){
   document.getElementById('cal-room-month').textContent=`${MONTHS[calRoomMonth]} ${calRoomYear}`;
@@ -796,10 +804,17 @@ function renderRoomCalendar(all){
 }
 
 function calRoomSelectDay(ds){
+  if(calRoomSelected===ds){
+    calRoomSelected=null;
+    document.querySelectorAll('#cal-room-body .cal-cell').forEach(c=>c.classList.remove('selected'));
+    document.getElementById('day-panel').style.display='none';
+    fetchAll().then(all=>renderSobeConfList(all));
+    return;
+  }
   calRoomSelected=ds;
   document.querySelectorAll('#cal-room-body .cal-cell').forEach(c=>c.classList.remove('selected'));
   event.currentTarget.classList.add('selected');
-  fetchAll().then(all=>showRoomDayPanel(ds,all));
+  fetchAll().then(all=>{showRoomDayPanel(ds,all);renderSobeConfList(all);});
 }
 
 function showRoomDayPanel(ds,all){
@@ -934,7 +949,15 @@ function renderMizeConfList(all){
     confEl.innerHTML='<div style="background:var(--brand-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px">'+(dr?dr.icon+' '+dr.name:'')+' · '+slDFull(d)+'<span style="flex:1"></span><button onclick="_drFilter=null;fetchAll().then(a=>{renderWkndCap(a);renderWkndQuickFilterM(a);renderMizeConfList(a);})" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">✕</button></div>'+(filtered.length?'<div class="res-list">'+filtered.map(resRow).join('')+'</div>':'<div class="empty"><div class="ei">🌿</div>Ni rezervacij za ta dan</div>');
     return;
   }
-  // 3. Default: current calendar month
+  // 3. Selected day filter
+  if(calMizeSelected){
+    const selD=new Date(calMizeSelected+'T00:00:00');
+    if(lbl) lbl.textContent='Potrjene – '+slDFull(selD);
+    const dayConf=all.filter(r=>r.reservation_type==='table'&&r.status==='confirmed'&&normD(r.date)===calMizeSelected).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    confEl.innerHTML=dayConf.length?'<div class="res-list">'+dayConf.map(resRow).join('')+'</div>':'<div class="empty"><div class="ei">🌿</div>Ni potrjenih rezervacij ta dan</div>';
+    return;
+  }
+  // 4. Default: current calendar month
   const ms=calMizeYear+'-'+pad(calMizeMonth+1)+'-01';
   const me=ymd(new Date(calMizeYear,calMizeMonth+1,0));
   if(lbl) lbl.textContent='Potrjene – '+MONTHS[calMizeMonth]+' '+calMizeYear;
@@ -951,8 +974,8 @@ function renderMizeConfList(all){
 }
 
 // Mize calendar
-function calMizeMove(d){ _wkndFilterM=null;_drFilter=null;calMizeMonth+=d;if(calMizeMonth<0){calMizeMonth=11;calMizeYear--;}else if(calMizeMonth>11){calMizeMonth=0;calMizeYear++;}fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);}); }
-function calMizeToday(){ _wkndFilterM=null;_drFilter=null;calMizeYear=new Date().getFullYear();calMizeMonth=new Date().getMonth();calMizeSelected=null;fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);}); }
+function calMizeMove(d){ _wkndFilterM=null;_drFilter=null;calMizeSelected=null;calMizeMonth+=d;if(calMizeMonth<0){calMizeMonth=11;calMizeYear--;}else if(calMizeMonth>11){calMizeMonth=0;calMizeYear++;}fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);document.getElementById('mize-day-panel').style.display='none';}); }
+function calMizeToday(){ _wkndFilterM=null;_drFilter=null;calMizeYear=new Date().getFullYear();calMizeMonth=new Date().getMonth();calMizeSelected=null;fetchAll().then(all=>{renderMizeCalendar(all);renderWkndCap(all);renderWkndQuickFilterM(all);renderMizeConfList(all);document.getElementById('mize-day-panel').style.display='none';}); }
 
 function renderMizeCalendar(all){
   document.getElementById('cal-mize-month').textContent=`${MONTHS[calMizeMonth]} ${calMizeYear}`;
@@ -991,10 +1014,17 @@ function renderMizeCalendar(all){
 }
 
 function calMizeSelectDay(ds){
+  if(calMizeSelected===ds){
+    calMizeSelected=null;
+    document.querySelectorAll('#cal-mize-body .cal-cell').forEach(c=>c.classList.remove('selected'));
+    document.getElementById('mize-day-panel').style.display='none';
+    fetchAll().then(all=>renderMizeConfList(all));
+    return;
+  }
   calMizeSelected=ds;
   document.querySelectorAll('#cal-mize-body .cal-cell').forEach(c=>c.classList.remove('selected'));
   event.currentTarget.classList.add('selected');
-  fetchAll().then(all=>showMizeDayPanel(ds,all));
+  fetchAll().then(all=>{showMizeDayPanel(ds,all);renderMizeConfList(all);});
 }
 function showMizeDayPanel(ds,all){
   const panel=document.getElementById('mize-day-panel');
