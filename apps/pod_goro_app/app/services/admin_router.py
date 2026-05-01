@@ -409,6 +409,40 @@ def send_message(data: SendMessageRequest):
     return {"ok": True}
 
 
+@router.get("/api/admin/messages/pending")
+def get_pending_messages():
+    """Rezervacije z neprebranimi odgovori gostov."""
+    items = service.get_pending_replies()
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/api/admin/reservations/{reservation_id}/mark-read")
+def mark_reservation_read(reservation_id: int):
+    """Označi pogovor kot prebran."""
+    res = service.get_reservation(reservation_id)
+    if not res:
+        raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
+    service.add_reservation_message(
+        reservation_id=reservation_id,
+        direction="outbound",
+        subject="[PREBRANO]",
+        body="",
+        from_email=os.getenv("ADMIN_EMAIL", "info@podgoro.si"),
+        to_email=res.get("email") or "",
+        message_id=None,
+    )
+    return {"ok": True}
+
+
+@router.delete("/api/admin/reservations/{reservation_id}")
+def delete_reservation(reservation_id: int):
+    """Izbriše posamezno rezervacijo."""
+    ok = service.delete_reservation(reservation_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Rezervacija ni najdena")
+    return {"success": True, "deleted": reservation_id}
+
+
 @router.get("/api/admin/reservations/{reservation_id}/messages")
 def get_reservation_messages(reservation_id: int):
     messages = service.list_reservation_messages(reservation_id)

@@ -276,6 +276,73 @@ class ReservationService:
         conn.close()
         return updated
 
+    def delete_reservation(self, reservation_id: int) -> bool:
+        p = self._placeholder()
+        conn = self._conn()
+        cur = conn.cursor()
+        cur.execute(f"DELETE FROM reservations WHERE id = {p}", (reservation_id,))
+        deleted = cur.rowcount > 0
+        conn.commit()
+        cur.close()
+        conn.close()
+        return deleted
+
+    def get_pending_replies(self) -> list[dict]:
+        """Rezervacije kjer gost čaka na odgovor (last inbound > last outbound)."""
+        conn = self._conn()
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                SELECT r.id, r.name, r.email, r.date, r.people, r.status,
+                       MAX(CASE WHEN m.direction='inbound' THEN m.created_at END) AS last_inbound,
+                       MAX(CASE WHEN m.direction='outbound' THEN m.created_at END) AS last_outbound
+                FROM reservations r
+                JOIN reservation_messages m ON r.id = m.reservation_id
+                GROUP BY r.id, r.name, r.email, r.date, r.people, r.status
+                HAVING MAX(CASE WHEN m.direction='inbound' THEN m.created_at END) >
+                       COALESCE(MAX(CASE WHEN m.direction='outbound' THEN m.created_at END), '1970-01-01')
+                ORDER BY last_inbound DESC
+            """)
+            rows = cur.fetchall()
+            results = []
+            for row in rows:
+                d = dict(row) if isinstance(row, dict) else {
+                    "id": row[0], "name": row[1], "email": row[2],
+                    "date": row[3], "people": row[4], "status": row[5],
+                    "last_inbound": row[6], "last_outbound": row[7],
+                }
+                p2 = self._placeholder()
+                cur2 = conn.cursor()
+                cur2.execute(
+                    f"SELECT body FROM reservation_messages WHERE reservation_id = {p2} "
+                    f"AND direction = 'inbound' ORDER BY created_at DESC LIMIT 1",
+                    (d["id"],),
+                )
+                brow = cur2.fetchone()
+                body = (brow["body"] if isinstance(brow, dict) else brow[0]) if brow else ""
+                d["preview"] = (body or "")[:120]
+                cur2.close()
+                results.append(d)
+            return results
+        finally:
+            cur.close()
+            conn.close()
+
+    def message_exists(self, message_id: str) -> bool:
+        if not message_id:
+            return False
+        p = self._placeholder()
+        conn = self._conn()
+        cur = conn.cursor()
+        try:
+            cur.execute(f"SELECT COUNT(1) FROM reservation_messages WHERE message_id = {p}", (message_id,))
+            row = cur.fetchone()
+            count = list(row.values())[0] if isinstance(row, dict) else row[0]
+            return count > 0
+        finally:
+            cur.close()
+            conn.close()
+
     def delete_all_reservations(self) -> int:
         conn = self._conn()
         cur = conn.cursor()
