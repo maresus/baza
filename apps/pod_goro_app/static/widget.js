@@ -674,6 +674,8 @@
     sendBtn.disabled = true;
     showTyping();
 
+    var bookingAction = null, bookingHint = null, bookingPrefill = null;
+
     try {
       const response = await fetch(CONFIG.apiUrl, {
         method: 'POST',
@@ -685,21 +687,60 @@
       const data = await response.json();
       const reply = data.reply || data.response || data.message || 'Oprostite, prišlo je do napake.';
       addMessage(reply, 'bot');
-
-      // Auto-odpri formo ob booking intentu
-      if (data.action === 'open_booking_form') {
-        var hint = data.booking_type_hint || 'room';
-        document.querySelectorAll('.pg-bf-tab').forEach(function(t) { t.classList.remove('active'); });
-        var activeTab = document.querySelector('.pg-bf-tab[data-type="' + hint + '"]');
-        if (activeTab) { activeTab.classList.add('active'); activeTab.onclick && activeTab.onclick(); }
-        setTimeout(function() {
-          document.getElementById('pg-booking-form').classList.add('pg-open');
-        }, 400);
-      }
+      bookingAction = data.action;
+      bookingHint = data.booking_type_hint;
+      bookingPrefill = data.booking_prefill || null;
     } catch (err) {
       hideTyping();
       addMessage('Oprostite, trenutno ni mogoče vzpostaviti povezave. Poskusite ponovno.', 'bot');
       console.error('[PG Widget] Error:', err);
+    }
+
+    // Odpri formo IZVEN try-catch — napaka v formi ne sme skriti bot odgovora
+    if (bookingAction === 'open_booking_form') {
+      try {
+        var hint = bookingHint || 'room';
+        document.querySelectorAll('.pg-bf-tab').forEach(function(t) { t.classList.remove('active'); });
+        var activeTab = document.querySelector('.pg-bf-tab[data-type="' + hint + '"]');
+        if (activeTab) { activeTab.classList.add('active'); activeTab.onclick && activeTab.onclick(); }
+
+        // Prednapolni formo če so podatki
+        if (bookingPrefill) {
+          setTimeout(function() {
+            try {
+              if (bookingPrefill.date) {
+                var dateEl = document.getElementById('pg-bf-date');
+                if (dateEl) dateEl.value = bookingPrefill.date;
+              }
+              if (bookingPrefill.nights) {
+                stepValues.nights = bookingPrefill.nights;
+                var nightsEl = document.getElementById('pg-bf-nights-val');
+                if (nightsEl) nightsEl.textContent = bookingPrefill.nights;
+              }
+              if (bookingPrefill.adults) {
+                stepValues.adults = bookingPrefill.adults;
+                var adultsEl = document.getElementById('pg-bf-adults-val');
+                if (adultsEl) adultsEl.textContent = bookingPrefill.adults;
+              }
+              if (bookingPrefill.children) {
+                stepValues.children = bookingPrefill.children;
+                var childrenEl = document.getElementById('pg-bf-children-val');
+                if (childrenEl) childrenEl.textContent = bookingPrefill.children;
+                var agesWrap = document.getElementById('pg-bf-children-ages-wrap');
+                if (agesWrap) agesWrap.style.display = '';
+              }
+            } catch (prefillErr) {
+              console.error('[PG Widget] Prefill napaka:', prefillErr);
+            }
+          }, 450);
+        }
+
+        setTimeout(function() {
+          document.getElementById('pg-booking-form').classList.add('pg-open');
+        }, 400);
+      } catch (formErr) {
+        console.error('[PG Widget] Forma napaka:', formErr);
+      }
     }
 
     sendBtn.disabled = false;

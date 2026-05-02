@@ -4,11 +4,14 @@ Hybrid: Direct LLM for info, State machine for bookings.
 """
 from __future__ import annotations
 
+import re as _re
 import uuid
-from fastapi import APIRouter
+from datetime import datetime as _dt
+from fastapi import APIRouter, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.chat.llm_chat import chat
+from app.chat.llm_chat import chat, chat_stream
 from app.booking.state_machine import (
     BookingState,
     detect_booking_intent,
@@ -34,6 +37,7 @@ class ChatResponse(BaseModel):
     session_id: str
     action: str | None = None
     booking_type_hint: str | None = None
+    booking_prefill: dict | None = None
 
 
 class QuickBookingRequest(BaseModel):
@@ -63,6 +67,145 @@ def _get_session(session_id: str | None) -> tuple[str, dict]:
     new_id = str(uuid.uuid4())
     _sessions[new_id] = {"history": [], "booking": None}
     return new_id, _sessions[new_id]
+
+
+def _try_extract_prefill(message: str) -> dict | None:
+    """Izvleče datum, noči, odrasle, otroke iz sporočila. Vrne prefill dict ali None."""
+    msg = message.lower()
+    prefill: dict = {}
+
+    # Datumski range: "6.-8.5." ali "od 6.5. do 8.5."
+    range_match = _re.search(r'(\d{1,2})\.\s*[-–do]+\s*(\d{1,2})\.(\d{1,2})\.?(\d{4})?', msg)
+    if range_match:
+        day1, day2, month = int(range_match.group(1)), int(range_match.group(2)), int(range_match.group(3))
+        year = int(range_match.group(4)) if range_match.group(4) else _dt.now().year
+        try:
+            d1 = _dt(year, month, day1)
+            d2 = _dt(year, month, day2)
+            prefill["date"] = d1.strftime("%Y-%m-%d")
+            nights = (d2 - d1).days
+            if 1 <= nights <= 30:
+                prefill["nights"] = nights
+        except ValueError:
+            pass
+    else:
+        # Enojni datum: "6.5."
+        single_match = _re.search(r'(\d{1,2})\.(\d{1,2})\.?(\d{4})?', msg)
+        if single_match:
+            day, month = int(single_match.group(1)), int(single_match.group(2))
+            year = int(single_match.group(3)) if single_match.group(3) else _dt.now().year
+            try:
+                prefill["date"] = _dt(year, month, day).strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+
+    if not prefill.get("date"):
+        return None
+
+    # Odrasli
+    adults_match = _re.search(r'(\d+)\s*(?:odrasl|oseb[^i]|gost)', msg)
+    if adults_match:
+        prefill["adults"] = int(adults_match.group(1))
+
+    # Otroci
+    kids_match = _re.search(r'(\d+)\s*(?:otro[kc]|malčk)', msg)
+    if kids_match:
+        prefill["children"] = int(kids_match.group(1))
+
+    # Besedni zapis
+    word_nums = {"en ": 1, "ena ": 1, "dva ": 2, "dve ": 2, "tri ": 3, "štiri ": 4, "pet ": 5}
+    if not prefill.get("adults"):
+        for w, n in word_nums.items():
+            if w + "odrasl" in msg or w + "oseb" in msg:
+                prefill["adults"] = n
+                break
+    if not prefill.get("children"):
+        for w, n in word_nums.items():
+            if w + "otro" in msg or w + "malč" in msg:
+                prefill["children"] = n
+                break
+
+    return prefill
+
+
+def _try_auto_save_inquiry(session_id: str, session: dict) -> None:
+    """Po 4+ sporočilih LLM avtomatsko shrani povpraševanje iz pogovora."""
+    history = session.get("history", [])
+    if len(history) < 8:  # 4 user + 4 bot = 8 entries
+        return
+    if session.get("_inquiry_saved"):
+        return
+
+    session["_inquiry_saved"] = True  # označi takoj da ne teče dvakrat
+
+    try:
+        import os
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+
+        conversation_text = "\n".join(
+            f"{'Gost' if m['role'] == 'user' else 'Bot'}: {m['content']}"
+            for m in history[-12:]
+        )
+
+        prompt = f"""Iz spodnjega pogovora izvleci podatke o rezervaciji/povpraševanju.
+Vrni JSON z polji (prazno polje = null):
+{{
+  "booking_type": "room" | "table" | "bike" | "animals" | null,
+  "date": "YYYY-MM-DD" | null,
+  "nights": number | null,
+  "adults": number | null,
+  "children": number | null,
+  "name": "ime priimek" | null,
+  "phone": "tel" | null,
+  "note": "kratka opomba" | null
+}}
+Če ni jasnih podatkov za rezervacijo, vrni {{"booking_type": null}}.
+
+Pogovor:
+{conversation_text}
+
+Vrni SAMO JSON brez razlage:"""
+
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_completion_tokens=200,
+        )
+        raw = resp.choices[0].message.content if resp.choices else ""
+        raw = raw.strip().strip("```json").strip("```").strip()
+
+        import json
+        data = json.loads(raw)
+
+        if not data.get("booking_type") or not data.get("date"):
+            return
+
+        from app.services.reservation_service import ReservationService
+        svc = ReservationService()
+        svc.log_conversation(
+            session_id,
+            "[Auto-ekstrakcija] Povpraševanje zaznano v pogovoru",
+            f"{data.get('booking_type')} | {data.get('date')} | {data.get('name') or 'ni imena'}",
+        )
+
+        # Shrani kot rezervacijo (pending) samo če je dovolj podatkov
+        if data.get("name") and data.get("date"):
+            svc.create_reservation(
+                date=data["date"],
+                people=(data.get("adults") or 1) + (data.get("children") or 0),
+                reservation_type=data["booking_type"],
+                nights=data.get("nights"),
+                name=data["name"],
+                phone=data.get("phone"),
+                note=data.get("note"),
+                source="chat_autoextract",
+                status="pending",
+            )
+            print(f"[auto_save] Rezervacija shranjena iz pogovora {session_id}")
+    except Exception as e:
+        print(f"[auto_save] Napaka: {e}")
 
 
 def _is_side_question(message: str, booking: BookingState) -> bool:
@@ -148,8 +291,16 @@ def _get_booking_continuation(booking: BookingState) -> str:
     return prompts.get(booking.step, "Kako nadaljujemo?")
 
 
+def _log(session_id: str, user_msg: str, bot_reply: str) -> None:
+    try:
+        from app.services.reservation_service import ReservationService
+        ReservationService().log_conversation(session_id, user_msg, bot_reply)
+    except Exception:
+        pass
+
+
 @router.post("", response_model=ChatResponse)
-async def chat_endpoint(payload: ChatRequest) -> ChatResponse:
+async def chat_endpoint(payload: ChatRequest, background_tasks: BackgroundTasks) -> ChatResponse:
     """Main chat endpoint - hybrid approach."""
     session_id, session = _get_session(payload.session_id)
     message = payload.message.strip()
@@ -169,62 +320,91 @@ async def chat_endpoint(payload: ChatRequest) -> ChatResponse:
         if booking.step in ("confirmed", "cancelled"):
             session["booking"] = None
 
-        # Log conversation
-        try:
-            from app.services.reservation_service import ReservationService
-            service = ReservationService()
-            service.log_conversation(session_id, message, reply)
-        except Exception:
-            pass
-
+        _log(session_id, message, reply)
         return ChatResponse(reply=reply, session_id=session_id)
 
-    # Check for new booking intent → open visual form
+    # Booking intent + prefill detekcija
     booking_type = detect_booking_intent(message)
+    prefill = _try_extract_prefill(message)
+    if not booking_type and prefill:
+        booking_type = "room"
+
     if booking_type:
-        if booking_type == "room":
-            reply = "Odpiramo rezervacijsko formo za sobo. Izpolnite podatke in pošljite! 🛏️"
-        elif booking_type == "table":
-            reply = "Odpiramo rezervacijsko formo za mizo. Izpolnite podatke in pošljite! 🍽️"
-        else:
-            reply = "Odpiramo rezervacijsko formo. Izpolnite podatke in pošljite! 📅"
-
-        try:
-            from app.services.reservation_service import ReservationService
-            service = ReservationService()
-            service.log_conversation(session_id, message, reply)
-        except Exception:
-            pass
-
+        result = chat(message=message, history=session["history"], booking_type_hint=booking_type)
+        reply = result["reply"]
+        session["history"].append({"role": "user", "content": message})
+        session["history"].append({"role": "assistant", "content": reply})
+        if len(session["history"]) > 20:
+            session["history"] = session["history"][-20:]
+        _log(session_id, message, reply)
         return ChatResponse(
             reply=reply,
             session_id=session_id,
             action="open_booking_form",
             booking_type_hint=booking_type,
+            booking_prefill=prefill,
         )
 
     # Regular chat - direct LLM
-    result = chat(
-        message=message,
-        history=session["history"],
-    )
+    result = chat(message=message, history=session["history"])
 
-    # Update history
     session["history"].append({"role": "user", "content": message})
     session["history"].append({"role": "assistant", "content": result["reply"]})
 
     if len(session["history"]) > 20:
         session["history"] = session["history"][-20:]
 
-    # Log conversation
-    try:
-        from app.services.reservation_service import ReservationService
-        service = ReservationService()
-        service.log_conversation(session_id, message, result["reply"])
-    except Exception:
-        pass
+    _log(session_id, message, result["reply"])
+    background_tasks.add_task(_try_auto_save_inquiry, session_id, session)
 
     return ChatResponse(reply=result["reply"], session_id=session_id)
+
+
+@router.post("/stream")
+async def chat_stream_endpoint(payload: ChatRequest, background_tasks: BackgroundTasks):
+    """Streaming chat endpoint — SSE, besedo po besedo."""
+    session_id, session = _get_session(payload.session_id)
+    message = payload.message.strip()
+
+    booking: BookingState | None = session.get("booking")
+
+    # Med aktivno rezervacijo ne streamamo — vrni navaden odgovor
+    if is_booking_active(booking):
+        side_answer = _handle_side_question(message, booking, session)
+        if side_answer:
+            continuation = _get_booking_continuation(booking)
+            reply = f"{side_answer}\n\n—\nNadaljujemo z rezervacijo?\n{continuation}"
+        else:
+            booking, reply = process_booking(booking, message)
+            session["booking"] = booking
+            if booking.step in ("confirmed", "cancelled"):
+                session["booking"] = None
+        _log(session_id, message, reply)
+
+        async def _single():
+            yield f"data: {reply}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(_single(), media_type="text/event-stream",
+                                 headers={"X-Session-Id": session_id})
+
+    async def _generate():
+        full_reply = []
+        for chunk in chat_stream(message=message, history=session["history"]):
+            if chunk == "[DONE]":
+                session["history"].append({"role": "user", "content": message})
+                session["history"].append({"role": "assistant", "content": "".join(full_reply)})
+                if len(session["history"]) > 20:
+                    session["history"] = session["history"][-20:]
+                _log(session_id, message, "".join(full_reply))
+                background_tasks.add_task(_try_auto_save_inquiry, session_id, session)
+                yield "data: [DONE]\n\n"
+            else:
+                full_reply.append(chunk)
+                yield f"data: {chunk}\n\n"
+
+    return StreamingResponse(_generate(), media_type="text/event-stream",
+                             headers={"X-Session-Id": session_id})
 
 
 @router.post("/quick-booking")
@@ -296,10 +476,7 @@ async def quick_booking(payload: QuickBookingRequest):
             pass
 
         sid = payload.session_id or str(uuid.uuid4())
-        try:
-            service.log_conversation(sid, f"[Widget forma] {payload.booking_type}: {payload.date}, {payload.name}", f"Rezervacija #{reservation_id} shranjena.")
-        except Exception:
-            pass
+        _log(sid, f"[Widget forma] {payload.booking_type}: {payload.date}, {payload.name}", f"Rezervacija #{reservation_id} shranjena.")
 
         return {"ok": True, "reservation_id": reservation_id}
     except Exception as e:
