@@ -197,6 +197,27 @@ class ReservationService:
         event_type: Optional[str] = None,
         special_needs: Optional[str] = None,
     ) -> int:
+        # Deduplication: če obstaja rezervacija z istim datumom+tipom+imenom ali telefonom → vrni obstoječo
+        try:
+            conn_check = self._conn()
+            p_c = self._placeholder()
+            cur_c = conn_check.cursor()
+            cur_c.execute(
+                f"SELECT id FROM reservations WHERE date={p_c} AND reservation_type={p_c} "
+                f"AND status NOT IN ('rejected','cancelled') "
+                f"AND (LOWER(name)=LOWER({p_c}) OR (phone IS NOT NULL AND phone={p_c}))",
+                (date, reservation_type, name or "", phone or ""),
+            )
+            existing = cur_c.fetchone()
+            cur_c.close()
+            conn_check.close()
+            if existing:
+                existing_id = existing["id"] if isinstance(existing, dict) else existing[0]
+                print(f"[dedup] Podvojena rezervacija preskočena — obstoječa #{existing_id}")
+                return int(existing_id)
+        except Exception as _dedup_err:
+            print(f"[dedup] Napaka pri preverjanju: {_dedup_err}")
+
         p = self._placeholder()
         conn = self._conn()
         cur = conn.cursor()
