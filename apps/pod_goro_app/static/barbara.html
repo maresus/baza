@@ -69,22 +69,6 @@
     }
     #demo-banner.show { display: block; }
 
-    /* ── PIN ─── */
-    #pin-screen {
-      position: fixed; inset: 0; z-index: 9999; background: var(--brand);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-    }
-    .pin-logo { background: rgba(255,255,255,.15); border-radius: 18px; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; font-size: 34px; }
-    #pin-screen h1 { color: #fff; font-size: 19px; font-weight: 700; }
-    #pin-screen p  { color: rgba(255,255,255,.65); font-size: 13px; }
-    #pin-dots { display: flex; gap: 14px; }
-    #pin-dots span { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); transition: background .15s; }
-    #pin-dots span.on { background: #fff; border-color: #fff; }
-    #pin-grid { display: grid; grid-template-columns: repeat(3,72px); gap: 10px; }
-    #pin-grid button { height: 72px; border-radius: 50%; border: none; background: rgba(255,255,255,.15); color: #fff; font-size: 22px; font-weight: 600; cursor: pointer; transition: background .1s; }
-    #pin-grid button:active { background: rgba(255,255,255,.35); }
-    #pin-err { color: #fca5a5; font-size: 13px; min-height: 18px; }
-
     /* ── TOPBAR ─── */
     #topbar {
       height: 52px; background: var(--white); border-bottom: 1px solid var(--border);
@@ -285,25 +269,10 @@
 <!-- DEMO BANNER -->
 <div id="demo-banner">⚠️ DEMO NAČIN – akcije so blokirane, podatki so samo za ogled</div>
 
-<!-- PIN -->
-<div id="pin-screen">
-  <div class="pin-logo">🌲</div>
-  <h1>Kmetija Pod Goro</h1>
-  <p>Vnesite PIN za dostop</p>
-  <div id="pin-dots"><span></span><span></span><span></span><span></span></div>
-  <div id="pin-grid">
-    <button onclick="pk('1')">1</button><button onclick="pk('2')">2</button><button onclick="pk('3')">3</button>
-    <button onclick="pk('4')">4</button><button onclick="pk('5')">5</button><button onclick="pk('6')">6</button>
-    <button onclick="pk('7')">7</button><button onclick="pk('8')">8</button><button onclick="pk('9')">9</button>
-    <button onclick="pk('del')" style="font-size:15px">⌫</button>
-    <button onclick="pk('0')">0</button>
-    <button onclick="pk('ok')" style="font-size:12px;font-weight:800">OK</button>
-  </div>
-  <div id="pin-err"></div>
-</div>
+<!-- PIN removed -->
 
 <!-- APP -->
-<div id="app" style="display:none">
+<div id="app">
   <div id="topbar">
     <div class="brand"><span>🌲</span> Pod Goro</div>
     <nav>
@@ -613,7 +582,6 @@ const DEMO = new URLSearchParams(location.search).get('demo') === '1';
 if (DEMO) document.getElementById('demo-banner').classList.add('show');
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const PIN = '1234';
 const API = '/api/admin';
 const CAP_MAX = 40;
 const DINING = [
@@ -660,33 +628,6 @@ function renderInbox(items) {
   }).join('');
 }
 
-// ── PIN ───────────────────────────────────────────────────────────────────────
-let pinBuf = '';
-function pk(k) {
-  document.getElementById('pin-err').textContent = '';
-  if (k === 'del') { pinBuf = pinBuf.slice(0,-1); }
-  else if (k === 'ok' || pinBuf.length >= 4) {
-    if (k !== 'ok') pinBuf += k;
-    if (pinBuf === PIN) {
-      sessionStorage.setItem('kv_pin','1');
-      document.getElementById('pin-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      init();
-    } else {
-      document.getElementById('pin-err').textContent = '❌ Napačen PIN';
-      pinBuf = ''; dots();
-      setTimeout(()=>document.getElementById('pin-err').textContent='', 2000);
-    }
-    return;
-  } else { pinBuf += k; }
-  if (pinBuf.length > 4) pinBuf = pinBuf.slice(0,4);
-  dots();
-}
-function dots() { document.querySelectorAll('#pin-dots span').forEach((d,i)=>d.classList.toggle('on',i<pinBuf.length)); }
-if (sessionStorage.getItem('kv_pin')==='1') {
-  document.getElementById('pin-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-}
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
 let activeTab = 'sobe';
@@ -1856,8 +1797,8 @@ let _tt;
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-function init(){ goSubSobe('potrjene'); setInterval(refreshAll,60000); }
-if(sessionStorage.getItem('kv_pin')==='1') init();
+function init(){ goTab('sobe'); setInterval(refreshAll,60000); }
+init();
 </script>
 </body>
 </html>
