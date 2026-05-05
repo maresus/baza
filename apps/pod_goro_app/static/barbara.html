@@ -662,7 +662,7 @@ function goSubSobe(sub){
 
 async function fetchSobe(force=false){
   // Fetch samo sobne rezervacije
-  const r=await fetch(`${API}/reservations?reservation_type=room&limit=500`);
+  const r=await fetch(`${API}/reservations?type=room&limit=500`);
   const d=await r.json();
   return d.reservations||[];
 }
@@ -1209,7 +1209,7 @@ const DAYS_SHORT=['Ned','Pon','Tor','Sre','Čet','Pet','Sob'];
 let _cache=null, _cacheTs=0;
 async function fetchAll(force=false){
   if(!force && _cache && Date.now()-_cacheTs<30000) return _cache;
-  const r=await fetch(`${API}/reservations?reservation_type=table&limit=500`);
+  const r=await fetch(`${API}/reservations?type=table&limit=500`);
   const d=await r.json();
   _cache=(d.reservations||[]); _cacheTs=Date.now();
   return _cache;
