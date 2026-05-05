@@ -550,9 +550,10 @@
     <div class="mo-title">✅ Potrdi rezervacijo</div>
     <div id="cm-guest" style="font-size:14px;font-weight:700;margin-bottom:4px"></div>
     <div id="cm-info" style="font-size:12px;color:var(--muted);margin-bottom:16px"></div>
-    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Razporedi v jedilnico</div>
-    <div id="cm-dining-btns" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:16px">Gostova izbira: <span id="cm-guest-loc" style="font-weight:700"></span></div>
+    <div id="cm-loc-section" style="display:none">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Izberi sobo</div>
+      <div id="cm-dining-btns" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+    </div>
     <div class="mo-actions">
       <button class="btn-cancel" onclick="closeConfirmModal()">Prekliči</button>
       <button class="btn-ok" id="cm-confirm-btn" onclick="submitConfirm()" disabled>✅ Potrdi</button>
@@ -1469,45 +1470,42 @@ function doConfirm(id){
   if(DEMO){toast('🔒 Demo način – akcija blokirana');return;}
   _confirmId=id; _confirmLoc=null;
   const r=_currentRes;
-  document.getElementById('cm-guest').textContent=`${r.name||'—'} · ${r.people||'?'}${r.kids?` + ${r.kids} otr.`:''} oseb`;
-  document.getElementById('cm-info').textContent=`📅 ${r.date||'—'} ob ${r.time||'?'}`;
-  document.getElementById('cm-guest-loc').textContent=r.location||'— ni izbral —';
-  document.getElementById('cm-confirm-btn').disabled=true;
-  // Pridobi zasedenost za ta dan
   const isRoom=r.reservation_type==='room';
-  const options=isRoom?ROOMS_SOBE:DINING;
-  fetchSobe().then(allSobe=>{ fetchAll().then(allMize=>{
-    const all=isRoom?allSobe:allMize;
+  document.getElementById('cm-guest').textContent=`${r.name||'—'} · ${r.people||'?'}${r.kids?` + ${r.kids} otr.`:''} oseb`;
+  document.getElementById('cm-info').textContent=isRoom
+    ? `📅 ${r.date||'—'} · ${r.nights||1} noč(i)`
+    : `📅 ${r.date||'—'} ob ${r.time||'?'}`;
+  const locSection=document.getElementById('cm-loc-section');
+  const confirmBtn=document.getElementById('cm-confirm-btn');
+  if(!isRoom){
+    // Miza: potrdi takoj, brez izbire lokacije
+    locSection.style.display='none';
+    confirmBtn.disabled=false;
+    document.getElementById('confirm-modal').classList.remove('hidden');
+    return;
+  }
+  // Soba: prikaži izbirnik sob, gumb onemogočen dokler ni izbrana
+  locSection.style.display='';
+  confirmBtn.disabled=true;
+  fetchSobe().then(allSobe=>{
     const btns=document.getElementById('cm-dining-btns');
-    btns.innerHTML=options.map(dr=>{
-      let used=0,cap=dr.cap;
-      if(isRoom){
-        // Soba: zasedena če ima potrjeno rezervacijo na ta datum
-        const checkin=normD(r.date||'');
-        const nights=parseInt(r.nights)||1;
-        // Preveri overlap
-        used=all.filter(x=>x.status==='confirmed'&&x.location===dr.id&&sobeCoversDate(x,checkin)).length;
-        cap=1; // vsaka soba je bodisi prosta ali zasedena
-      } else {
-        used=sumPpl(all.filter(x=>x.status==='confirmed'&&normD(x.date)===normD(r.date||'')&&x.location===dr.id));
-      }
-      const pct=Math.min(100,Math.round(used/cap*100));
-      const barColor=pct>=90?'#dc2626':pct>=60?'#f97316':'#16a34a';
+    btns.innerHTML=ROOMS_SOBE.map(dr=>{
+      const checkin=normD(r.date||'');
+      const used=allSobe.filter(x=>x.status==='confirmed'&&x.location===dr.id&&sobeCoversDate(x,checkin)).length;
       const isGuestChoice=r.location===dr.id;
-      const availLbl=isRoom?(used>0?'<span style="color:#dc2626;font-size:11px;font-weight:700">ZASEDENA</span>':'<span style="color:#16a34a;font-size:11px;font-weight:700">PROSTA</span>'):`${used}/${cap}`;
+      const availLbl=used>0?'<span style="color:#dc2626;font-size:11px;font-weight:700">ZASEDENA</span>':'<span style="color:#16a34a;font-size:11px;font-weight:700">PROSTA</span>';
       return `<div onclick="selectConfirmLoc('${dr.id}')" id="cm-dr-${dr.id.replace(/[^a-z]/gi,'_')}"
         style="border:2px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:.15s">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:15px">${dr.icon}</span>
           <span style="font-weight:700;font-size:13px">${dr.name}</span>
           ${isGuestChoice?'<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-weight:700">Gostova izbira</span>':''}
           <span style="margin-left:auto;font-size:12px;font-weight:700">${availLbl}</span>
         </div>
-        ${!isRoom?`<div style="height:6px;background:#f3f4f6;border-radius:3px"><div style="height:6px;border-radius:3px;background:${barColor};width:${pct}%"></div></div>`:''}
       </div>`;
     }).join('');
     if(r.location) selectConfirmLoc(r.location);
-  });});
+  });
   document.getElementById('confirm-modal').classList.remove('hidden');
 }
 function selectConfirmLoc(locId){
