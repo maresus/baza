@@ -1291,8 +1291,8 @@ let _editMode = false;
 })();
 
 function openDetail(id){
-  fetchAll().then(all=>{
-    const r=all.find(x=>x.id===id); if(!r) return;
+  Promise.all([fetchAll(), fetchSobe()]).then(([tables, rooms])=>{
+    const r=[...tables,...rooms].find(x=>x.id===id); if(!r) return;
     _currentRes=r; _editMode=false;
     renderDetailView(r);
     document.getElementById('dm-view').style.display='block';
