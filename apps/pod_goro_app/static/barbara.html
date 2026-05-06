@@ -1542,7 +1542,13 @@ async function submitConfirm(){
   const isRoom=_currentRes&&_currentRes.reservation_type==='room';
   await fetch(`${API}/reservations/${_confirmId}/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:_confirmLoc})});
   toast('✅ Potrjeno'); closeConfirmModal(); closeDetailModal(); _cache=null;
+  // Preklopi na pravi tab + potrjene subtab (ne glede na to kje je bil activeTab)
+  const targetTab=isRoom?'sobe':'mize';
+  activeTab=targetTab;
   if(isRoom){ activeSobeSubTab='potrjene'; } else { activeMizeSubTab='potrjene'; }
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',['sobe','mize','analitika','ai'][i]===targetTab));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+targetTab).classList.add('active');
   await refreshAll();
 }
 async function doReject(id){
