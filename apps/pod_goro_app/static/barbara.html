@@ -1540,7 +1540,10 @@ function closeConfirmModal(){ document.getElementById('confirm-modal').classList
 async function submitConfirm(){
   if(!_confirmId) return;
   const isRoom=_currentRes&&_currentRes.reservation_type==='room';
-  await fetch(`${API}/reservations/${_confirmId}/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:_confirmLoc})});
+  const resp=await fetch(`${API}/reservations/${_confirmId}/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:_confirmLoc,room:_confirmLoc})});
+  if(!resp.ok){ const err=await resp.text(); toast('❌ '+err); return; }
+  const result=await resp.json();
+  if(result.warning){ toast('⚠️ '+result.warning); return; }
   toast('✅ Potrjeno'); closeConfirmModal(); closeDetailModal(); _cache=null;
   // Preklopi na pravi tab + potrjene subtab (ne glede na to kje je bil activeTab)
   const targetTab=isRoom?'sobe':'mize';
