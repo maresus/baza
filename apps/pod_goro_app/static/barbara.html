@@ -1102,7 +1102,7 @@ function renderMizeCalendar(all){
         const confPpl=DINING.length===1 ? sumPpl(confR) : sumPpl(confR.filter(r=>r.location===dr.id));
         if(confPpl>0){
           const cls=drColor(confPpl,dr.cap);
-          chips+=`<div class="cal-dr-chip ${cls}">${dr.icon}${confPpl}/${dr.cap}</div>`;
+          chips+=`<div class="cal-dr-chip ${cls}">${dr.icon} ${dr.name}: ${confPpl}/${dr.cap}</div>`;
         }
       });
       chips+='</div>';
