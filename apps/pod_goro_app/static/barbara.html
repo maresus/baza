@@ -940,9 +940,9 @@ function renderWkndCap(all){
     const conf=byDate(all,ds).filter(r=>r.status==='confirmed');
     const pend=byDate(all,ds).filter(r=>r.status==='pending');
     const rows=DINING.map(dr=>{
-      const confPpl=sumPpl(conf.filter(r=>r.location===dr.id));
+      const confPpl=DINING.length===1 ? sumPpl(conf) : sumPpl(conf.filter(r=>r.location===dr.id));
       // pending ki so izbrali to jedilnico
-      const pendChosen=pend.filter(r=>r.location===dr.id);
+      const pendChosen=DINING.length===1 ? pend : pend.filter(r=>r.location===dr.id);
       const pendChosenPpl=pendChosen.map(r=>(parseInt(r.people)||0)+(parseInt(r.kids)||0));
       const pct=Math.min(100,Math.round(confPpl/dr.cap*100));
       const cls=drColor(confPpl,dr.cap);
@@ -1098,7 +1098,8 @@ function renderMizeCalendar(all){
     if(confR.length){
       chips='<div class="cal-dr-chips">';
       DINING.forEach(dr=>{
-        const confPpl=sumPpl(confR.filter(r=>r.location===dr.id));
+        // Če je samo ena jedilnica, štej vse potrjene (brez filtra po lokaciji)
+        const confPpl=DINING.length===1 ? sumPpl(confR) : sumPpl(confR.filter(r=>r.location===dr.id));
         if(confPpl>0){
           const cls=drColor(confPpl,dr.cap);
           chips+=`<div class="cal-dr-chip ${cls}">${dr.icon}${confPpl}/${dr.cap}</div>`;
