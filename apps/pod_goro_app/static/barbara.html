@@ -301,6 +301,7 @@
     <!-- Odprte sobe -->
     <div id="sub-sobe-odprte" class="sub-screen">
       <div class="page">
+        <div id="sobe-summary-strip" style="display:flex;gap:10px;margin-bottom:14px"></div>
         <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
         <div id="sobe-pnd-list"><div class="loading"><div class="spinner"></div></div></div>
       </div>
@@ -343,6 +344,7 @@
     <!-- Odprte -->
     <div id="sub-mize-odprte" class="sub-screen">
       <div class="page">
+        <div id="mize-summary-strip" style="display:flex;gap:10px;margin-bottom:14px"></div>
         <div class="sec-lbl">Čakajoče – zahtevajo potrditev</div>
         <div id="mize-pnd-list"><div class="loading"><div class="spinner"></div></div></div>
         <div class="sec-lbl" style="margin-top:18px">Vse odprte (čakajoče)</div>
@@ -672,6 +674,15 @@ async function loadSobeOdprte(){
   try{
     const all=await fetchSobe();
     const pnd=all.filter(r=>r.status==='pending').sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+    const conf=all.filter(r=>r.status==='confirmed');
+    const strip=document.getElementById('sobe-summary-strip');
+    if(strip) strip.innerHTML=[
+      {label:'Čakajoče',val:pnd.length,color:'#d97706',bg:'#fef3c7'},
+      {label:'Potrjene',val:conf.length,color:'#16a34a',bg:'#dcfce7'},
+    ].map(s=>`<div style="flex:1;background:${s.bg};border-radius:10px;padding:10px 14px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:${s.color}">${s.val}</div>
+      <div style="font-size:11px;font-weight:600;color:${s.color}">${s.label}</div>
+    </div>`).join('');
     const seen={};
     pnd.forEach(r=>{
       const key=`${(r.name||'').toLowerCase()}|${normD(r.date)}|${(r.email||'').toLowerCase()}`;
@@ -881,6 +892,15 @@ async function loadMizeOdprte(){
   try{
     const all=await fetchAll();
     const pnd=all.filter(r=>r.status==='pending').sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+    const conf=all.filter(r=>r.status==='confirmed');
+    const strip=document.getElementById('mize-summary-strip');
+    if(strip) strip.innerHTML=[
+      {label:'Čakajoče',val:pnd.length,color:'#d97706',bg:'#fef3c7'},
+      {label:'Potrjene',val:conf.length,color:'#16a34a',bg:'#dcfce7'},
+    ].map(s=>`<div style="flex:1;background:${s.bg};border-radius:10px;padding:10px 14px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:${s.color}">${s.val}</div>
+      <div style="font-size:11px;font-weight:600;color:${s.color}">${s.label}</div>
+    </div>`).join('');
     // Označi duplikate (isto ime + datum + email)
     const seen={};
     pnd.forEach(r=>{
@@ -1519,8 +1539,11 @@ function selectConfirmLoc(locId){
 function closeConfirmModal(){ document.getElementById('confirm-modal').classList.add('hidden'); }
 async function submitConfirm(){
   if(!_confirmId) return;
+  const isRoom=_currentRes&&_currentRes.reservation_type==='room';
   await fetch(`${API}/reservations/${_confirmId}/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:_confirmLoc})});
-  toast('✅ Potrjeno'); closeConfirmModal(); closeDetailModal(); _cache=null; await refreshAll();
+  toast('✅ Potrjeno'); closeConfirmModal(); closeDetailModal(); _cache=null;
+  if(isRoom){ activeSobeSubTab='potrjene'; } else { activeMizeSubTab='potrjene'; }
+  await refreshAll();
 }
 async function doReject(id){
   if(DEMO){toast('🔒 Demo način – akcija blokirana');return;}
@@ -1781,10 +1804,10 @@ async function refreshAll(){
   if(activeTab==='sobe') await goSubSobe(activeSobeSubTab);
   else if(activeTab==='mize') await goSubMize(activeMizeSubTab);
   else if(activeTab==='analitika') await loadAnalitika();
-  // Update badge always
+  // Update badge — sobe + mize pending skupaj
   try{
-    const all=await fetchAll();
-    const n=all.filter(r=>r.status==='pending').length;
+    const [mize, sobe]=await Promise.all([fetchAll(), fetchSobe()]);
+    const n=[...mize,...sobe].filter(r=>r.status==='pending').length;
     const b=document.getElementById('pending-badge');
     b.textContent=n; b.classList.toggle('show',n>0);
   } catch(e){}
