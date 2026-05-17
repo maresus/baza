@@ -547,7 +547,7 @@
   </div>
   <div class="top-right">
     <span class="imap-badge" id="current-date"></span>
-    <input class="top-search" placeholder="Iskanje gostov, rezervacij..." />
+    <input class="top-search" id="top-search" placeholder="Iskanje gostov, rezervacij..." oninput="onSearchInput(this.value)" />
     <div class="top-user">
       <span>Barbara Štern</span>
       <div class="avatar">BŠ</div>
@@ -1652,6 +1652,13 @@
   let lastReservations = [];
   let currentRoomReservation = null;
   let currentTableReservation = null;
+  let searchQuery = '';
+
+  function onSearchInput(val) {
+    searchQuery = val.trim().toLowerCase();
+    renderReservations(lastReservations);
+    if (searchQuery) showView('view-rezervacije', document.querySelector('.nav-item[data-view="view-rezervacije"]'));
+  }
 
   function isRepeatGuest(r) {
     if (!r || (!r.email && !r.phone)) return false;
@@ -1849,6 +1856,11 @@
     const dateTo = dtVal ? new Date(dtVal) : null;
     const statusFilter = qs('filter-status').value;
     const filtered = expanded.filter(r => {
+      if (searchQuery) {
+        const haystack = [r.name, r.email, r.phone, r.note, r.location, String(r.id||'')].join(' ').toLowerCase();
+        if (!haystack.includes(searchQuery)) return false;
+        return true;
+      }
       const d = parseDDMMYYYY(r.date);
       if (!d) return false;
       if (statusFilter === 'active' && r.status === 'rejected') return false;
