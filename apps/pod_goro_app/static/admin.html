@@ -747,6 +747,10 @@
       <!-- Filtri za seznam -->
       <div class="filter-block">
         <div class="filter-row">
+          <div style="flex:2; min-width:180px;">
+            <label>Iskanje</label>
+            <input type="text" id="filter-search" placeholder="Ime, email, tel, opomba..." oninput="onSearchInput(this.value)" style="width:100%; box-sizing:border-box;" />
+          </div>
           <div>
             <label>Status</label>
             <select id="filter-status">
@@ -1656,8 +1660,11 @@
 
   function onSearchInput(val) {
     searchQuery = val.trim().toLowerCase();
+    const topEl = document.getElementById('top-search');
+    const filterEl = document.getElementById('filter-search');
+    if (topEl && topEl !== document.activeElement) topEl.value = val;
+    if (filterEl && filterEl !== document.activeElement) filterEl.value = val;
     renderReservations(lastReservations);
-    if (searchQuery) showView('view-rezervacije', document.querySelector('.nav-item[data-view="view-rezervacije"]'));
   }
 
   function isRepeatGuest(r) {
